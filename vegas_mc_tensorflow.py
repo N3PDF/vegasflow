@@ -1,10 +1,9 @@
 #!/usr/env python
 import time
-from integrand import MC_INTEGRAND, setup
+from integrand import MC_INTEGRAND, setup, DTYPE, DTYPEINT
 import numpy as np
 import tensorflow as tf
 
-DTYPE = tf.float32
 BINS_MAX = 50
 ALPHA = 1.5
 
@@ -43,12 +42,12 @@ def generate_random_array(n_dim, divisions, x, div_index):
             x_ini = divisions[i, int_xn - 1]
         xdelta = divisions[i, int_xn] - x_ini
         rand_x = x_ini + xdelta*aux_rand
-        x[i] = reg_i + rand_x*(reg_f - reg_i)
+        x[i].assign(reg_i + rand_x*(reg_f - reg_i))
         wgt *= xdelta*BINS_MAX
-        div_index[i] = int_xn
+        div_index[i].assign(int_xn)
     return wgt
 
-def rebin(rw, rc, subdivisions):
+def rebin(rw, rc, subdivisions, dim):
     """ broken from function above to use it for initialiation """
     k = -1
     dr = 0.0
@@ -59,17 +58,15 @@ def rebin(rw, rc, subdivisions):
             k += 1
             dr += rw[k]
         if k > 0:
-            old_xi = subdivisions[k-1]
-        old_xf = subdivisions[k]
+            old_xi = subdivisions[dim, k-1]
+        old_xf = subdivisions[dim, k]
         dr -= rc
         delta_x = old_xf-old_xi
         aux.append(old_xf - delta_x*(dr / rw[k]))
     aux.append(1.0)
-    for i, tmp in enumerate(aux):
-        subdivisions[i] = tmp
+    subdivisions[dim,:].assign(aux)
 
-
-def refine_grid(res_sq, subdivisions):
+def refine_grid(res_sq, subdivisions, dim):
     """
     Resize the grid
     # Arguments in:
@@ -98,7 +95,7 @@ def refine_grid(res_sq, subdivisions):
         rw.append(tmp)
     rw = np.array(rw)
     rc = np.sum(rw)/BINS_MAX
-    rebin(rw, rc, subdivisions)
+    rebin(rw, rc, subdivisions, dim)
 
 def vegas(n_dim, n_iter, n_events, results, sigmas):
     """
@@ -116,26 +113,28 @@ def vegas(n_dim, n_iter, n_events, results, sigmas):
         - error
     """
     # Initialize variables
-    xjac = 1.0/n_events
-    divisions = np.zeros( (n_dim, BINS_MAX) )
-    divisions[:, 0] = 1.0
-    # Do a fake initialization at the begining
-    rw_tmp = np.ones(BINS_MAX)
-    for i in range(n_dim):
-        rebin(rw_tmp, 1.0/BINS_MAX, divisions[i])
+    xjac = tf.constant(1.0/n_events, dtype=DTYPE)
+    divisions = tf.Variable(tf.zeros((n_dim, BINS_MAX), dtype=DTYPE))
+    divisions[:, 0].assign(tf.ones(n_dim, dtype=DTYPE))
 
+    # Do a fake initialization at the begining
+    rw_tmp = tf.Variable(tf.ones(BINS_MAX, dtype=DTYPE))
+
+    rc = tf.constant(1.0/BINS_MAX, dtype=DTYPE)
+    for i in tf.range(n_dim):
+        rebin(rw_tmp, rc, divisions, i)
     # "allocate" arrays
-    x = np.zeros(n_dim, dtype=np.float32)
-    div_index = np.zeros(n_dim, dtype = np.int64)
+    x = tf.Variable(tf.zeros(n_dim, dtype=DTYPE))
+    div_index = tf.Variable(tf.zeros(n_dim, dtype = DTYPEINT))
     all_results = []
 
     # Loop of iterations
     for k in range(n_iter):
         res = 0.0
         res2 = 0.0
-        arr_res2 = np.zeros( (n_dim, BINS_MAX) )
+        arr_res2 = tf.Variable(tf.zeros( (n_dim, BINS_MAX), dtype=DTYPE ))
 
-        for i in range(n_events):
+        for i in tf.range(n_events):
             xwgt = generate_random_array(n_dim, divisions, x, div_index)
             wgt = xjac*xwgt
 
@@ -146,18 +145,17 @@ def vegas(n_dim, n_iter, n_events, results, sigmas):
             res += tmp
             res2 += tmp2
 
-            for j, ind in enumerate(div_index):
-                arr_res2[j, ind] += tmp2
+            for j in range(n_dim):
+                arr_res2[j, div_index[j]].assign(arr_res2[j, div_index[j]]+tmp2)
 
         err_tmp2 = max((n_events*res2 - res**2)/(n_events-1.0), 1e-30)
         sigma = np.sqrt(err_tmp2)
-
         print("Results for interation {0}: {1} +/- {2}".format(k+1, res, sigma))
         results[k] = res
         sigmas[k] = sigma
         all_results.append( (res, sigma) )
         for j in range(n_dim):
-            refine_grid(arr_res2[j], divisions[j])
+            refine_grid(arr_res2[j], divisions, j)
 
     # Compute the final results
     aux_res = 0.0
@@ -172,6 +170,7 @@ def vegas(n_dim, n_iter, n_events, results, sigmas):
     final_result = aux_res/weight_sum
     sigma = np.sqrt(1.0/weight_sum)
     return final_result, sigma
+
 
 class make_vegas:
     """A Vegas MC integrator using importance sampling"""
