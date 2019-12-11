@@ -7,11 +7,7 @@ import tensorflow as tf
 BINS_MAX = 50
 ALPHA = 1.5
 
-def internal_rand():
-    """ Generates a random number """
-    return np.random.uniform(0,1)
-
-def generate_random_array(n_dim, divisions, x, div_index):
+def generate_random_array(n_events, n_dim, divisions):
     """
     Generates a random array
     # Arguments in:
@@ -26,26 +22,27 @@ def generate_random_array(n_dim, divisions, x, div_index):
     # Returns:
         - wgt: weight of the point
     """
-    reg_i = 0.0
-    reg_f = 1.0
-    wgt = 1.0
-    for i in range(n_dim):
-        rn = internal_rand()
-        # Get a random number randomly assigned to a subdivision
-        xn = BINS_MAX*(1.0 - rn)
-        int_xn = max(0, min(int(xn), BINS_MAX))
-        # In practice int_xn = int(xn)-1 unless xn < 1
-        aux_rand = xn - int_xn
-        if int_xn == 0:
-            x_ini = 0.0
-        else:
-            x_ini = divisions[i, int_xn - 1]
-        xdelta = divisions[i, int_xn] - x_ini
-        rand_x = x_ini + xdelta*aux_rand
-        x[i].assign(reg_i + rand_x*(reg_f - reg_i))
-        wgt *= xdelta*BINS_MAX
-        div_index[i].assign(int_xn)
-    return wgt
+    shape = (n_dim, n_events)
+    reg_i = tf.Variable(tf.zeros(shape, dtype=DTYPE))
+    reg_f = tf.Variable(tf.ones(shape, dtype=DTYPE))
+    rn = tf.random.uniform(shape, minval=0, maxval=1, dtype=DTYPE)
+    xn = BINS_MAX*(1.0 - rn)
+    int_xn = tf.maximum(tf.cast(0, DTYPEINT),
+                        tf.minimum(tf.cast(xn, DTYPEINT), BINS_MAX))
+    aux_rand = xn - tf.cast(int_xn, dtype=DTYPE)
+    x_ini = tf.Variable(tf.zeros(rn.shape, dtype=DTYPE))
+    xdelta = tf.Variable(tf.zeros(rn.shape, dtype=DTYPE))
+    for i in tf.range(x_ini.shape[0], dtype=DTYPEINT):
+        for j in tf.range(x_ini.shape[1], dtype=DTYPEINT):
+            if int_xn[i,j] > 0:
+                x_ini[i,j].assign(divisions[i, int_xn[i,j] - 1])
+            xdelta[i,j].assign(divisions[i, int_xn[i,j]])
+    xdelta.assign_sub(x_ini)
+    rand_x = x_ini + xdelta*aux_rand
+    x = reg_i + rand_x*(reg_f - reg_i)
+    wgt = tf.reduce_prod(xdelta*BINS_MAX, axis=0)
+    div_index = int_xn
+    return x, wgt, div_index
 
 def rebin(rw, rc, subdivisions, dim):
     """ broken from function above to use it for initialiation """
@@ -124,32 +121,28 @@ def vegas(n_dim, n_iter, n_events, results, sigmas):
     for i in tf.range(n_dim):
         rebin(rw_tmp, rc, divisions, i)
     # "allocate" arrays
-    x = tf.Variable(tf.zeros(n_dim, dtype=DTYPE))
-    div_index = tf.Variable(tf.zeros(n_dim, dtype = DTYPEINT))
     all_results = []
 
     # Loop of iterations
     for k in range(n_iter):
         res = 0.0
         res2 = 0.0
-        arr_res2 = tf.Variable(tf.zeros( (n_dim, BINS_MAX), dtype=DTYPE ))
+        arr_res2 = tf.Variable(tf.zeros((n_dim, BINS_MAX), dtype=DTYPE))
 
-        for i in tf.range(n_events):
-            xwgt = generate_random_array(n_dim, divisions, x, div_index)
-            wgt = xjac*xwgt
+        x, xwgt, div_index = generate_random_array(n_events, n_dim, divisions)
+        wgt = xjac*xwgt
+        tmp = wgt*MC_INTEGRAND(x)
+        tmp2 = tf.square(tmp)
 
-            # Call the integrand
-            tmp = wgt*MC_INTEGRAND(x)
-            tmp2 = pow(tmp, 2)
+        res = tf.reduce_sum(tmp)
+        res2 = tf.reduce_sum(tmp2)
 
-            res += tmp
-            res2 += tmp2
+        for j in range(n_dim):
+            for z in range(n_events):
+                arr_res2[j, div_index[j,z]].assign(arr_res2[j, div_index[j,z]]+tmp2[z])
 
-            for j in range(n_dim):
-                arr_res2[j, div_index[j]].assign(arr_res2[j, div_index[j]]+tmp2)
-
-        err_tmp2 = max((n_events*res2 - res**2)/(n_events-1.0), 1e-30)
-        sigma = np.sqrt(err_tmp2)
+        err_tmp2 = tf.maximum((n_events*res2 - res**2)/(n_events-1.0), 1e-30)
+        sigma = tf.sqrt(err_tmp2)
         print("Results for interation {0}: {1} +/- {2}".format(k+1, res, sigma))
         results[k] = res
         sigmas[k] = sigma
@@ -169,8 +162,7 @@ def vegas(n_dim, n_iter, n_events, results, sigmas):
 
     final_result = aux_res/weight_sum
     sigma = np.sqrt(1.0/weight_sum)
-    return final_result, sigma
-
+    return final_result.numpy(), sigma
 
 class make_vegas:
     """A Vegas MC integrator using importance sampling"""
