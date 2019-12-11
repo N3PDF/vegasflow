@@ -94,6 +94,12 @@ def refine_grid(res_sq, subdivisions, dim):
     rc = np.sum(rw)/BINS_MAX
     rebin(rw, rc, subdivisions, dim)
 
+@tf.function
+def loop(n_dim, n_events, arr_res2, div_index, tmp2):
+    for j in tf.range(n_dim, dtype=DTYPEINT):
+        for z in tf.range(n_events, dtype=DTYPEINT):
+            arr_res2[j, div_index[j,z]].assign(arr_res2[j, div_index[j,z]]+tmp2[z])
+
 def vegas(n_dim, n_iter, n_events, results, sigmas):
     """
     # Arguments in:
@@ -130,6 +136,7 @@ def vegas(n_dim, n_iter, n_events, results, sigmas):
         arr_res2 = tf.Variable(tf.zeros((n_dim, BINS_MAX), dtype=DTYPE))
 
         x, xwgt, div_index = generate_random_array(n_events, n_dim, divisions)
+
         wgt = xjac*xwgt
         tmp = wgt*MC_INTEGRAND(x)
         tmp2 = tf.square(tmp)
@@ -137,9 +144,7 @@ def vegas(n_dim, n_iter, n_events, results, sigmas):
         res = tf.reduce_sum(tmp)
         res2 = tf.reduce_sum(tmp2)
 
-        for j in range(n_dim):
-            for z in range(n_events):
-                arr_res2[j, div_index[j,z]].assign(arr_res2[j, div_index[j,z]]+tmp2[z])
+        loop(n_dim, n_events, arr_res2, div_index, tmp2)
 
         err_tmp2 = tf.maximum((n_events*res2 - res**2)/(n_events-1.0), 1e-30)
         sigma = tf.sqrt(err_tmp2)
