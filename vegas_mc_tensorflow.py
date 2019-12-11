@@ -8,7 +8,7 @@ BINS_MAX = 50
 ALPHA = 1.5
 
 @tf.function
-def generate_random_array(shape, divisions, x_ini, xdelta):
+def generate_random_array(rnds, divisions, x, div_index):
     """
     Generates a random array
     # Arguments in:
@@ -23,25 +23,27 @@ def generate_random_array(shape, divisions, x_ini, xdelta):
     # Returns:
         - wgt: weight of the point
     """
-    reg_i = tf.zeros(shape, dtype=DTYPE)
-    reg_f = tf.ones(shape, dtype=DTYPE)
-    rn = tf.random.uniform(shape, minval=0, maxval=1, dtype=DTYPE)
-    xn = BINS_MAX*(1.0 - rn)
-    int_xn = tf.maximum(tf.cast(0, DTYPEINT),
-                        tf.minimum(tf.cast(xn, DTYPEINT), BINS_MAX))
-    aux_rand = xn - tf.cast(int_xn, dtype=DTYPE)
-    for i in tf.range(x_ini.shape[0], dtype=DTYPEINT):
-        for j in tf.range(x_ini.shape[1], dtype=DTYPEINT):
-            if int_xn[i,j] > 0:
-                x_ini[i,j].assign(divisions[i, int_xn[i,j] - 1])
-            xdelta[i,j].assign(divisions[i, int_xn[i,j]])
-    xdelta.assign_sub(x_ini)
-    rand_x = x_ini + xdelta*aux_rand
-    x = reg_i + rand_x*(reg_f - reg_i)
-    wgt = tf.reduce_prod(xdelta*BINS_MAX, axis=0)
-    div_index = int_xn
-    return x, wgt, div_index
-
+    reg_i = 0.0
+    reg_f = 1.0
+    wgt = 1.0
+    for i in range(rnds.shape[0]):
+        # Get a random number randomly assigned to a subdivision
+        rn = rnds[i]
+        xn = BINS_MAX*(1.0 - rn)
+        int_xn = tf.maximum(tf.cast(0 , DTYPEINT),
+                            tf.minimum(tf.cast(xn, DTYPEINT), BINS_MAX) )
+        # In practice int_xn = int(xn)-1 unless xn < 1
+        aux_rand = xn - tf.cast(int_xn, dtype=DTYPE)
+        mask =  tf.not_equal(int_xn, tf.zeros(int_xn.shape, dtype=DTYPEINT))
+        indices = tf.where(mask)
+        indices2 = tf.gather(int_xn, indices)-1
+        x_ini = tf.scatter_nd(indices, tf.reshape(tf.gather(divisions[i], indices2), [-1]), int_xn.shape)
+        xdelta = tf.gather(divisions[i], int_xn) - x_ini
+        rand_x = x_ini + xdelta*aux_rand
+        x[i].assign(reg_i + rand_x*(reg_f - reg_i))
+        wgt *= xdelta*BINS_MAX
+        div_index[i].assign(int_xn)
+    return wgt
 
 def rebin(rw, rc, subdivisions, dim):
     """ broken from function above to use it for initialiation """
@@ -95,8 +97,8 @@ def refine_grid(res_sq, subdivisions, dim):
 
 @tf.function
 def loop(n_dim, n_events, arr_res2, div_index, tmp2):
-    for j in tf.range(n_dim, dtype=DTYPEINT):
-        for z in tf.range(n_events, dtype=DTYPEINT):
+    for j in range(n_dim):
+        for z in range(n_events):
             arr_res2[j, div_index[j,z]].assign(arr_res2[j, div_index[j,z]]+tmp2[z])
 
 def vegas(n_dim, n_iter, n_events, results, sigmas):
@@ -127,6 +129,8 @@ def vegas(n_dim, n_iter, n_events, results, sigmas):
         rebin(rw_tmp, rc, divisions, i)
     # "allocate" arrays
     all_results = []
+    x = tf.Variable(tf.zeros((n_dim, n_events), dtype=DTYPE))
+    div_index = tf.Variable(tf.zeros((n_dim, n_events), dtype=DTYPEINT))
 
     # Loop of iterations
     for k in range(n_iter):
@@ -134,10 +138,8 @@ def vegas(n_dim, n_iter, n_events, results, sigmas):
         res2 = 0.0
         arr_res2 = tf.Variable(tf.zeros((n_dim, BINS_MAX), dtype=DTYPE))
 
-        shape = (n_dim, n_events)
-        x_ini = tf.Variable(tf.zeros(shape, dtype=DTYPE))
-        xdelta = tf.Variable(tf.zeros(shape, dtype=DTYPE))
-        x, xwgt, div_index = generate_random_array(shape, divisions, x_ini, xdelta)
+        rnds = tf.random.uniform((n_dim,n_events), minval=0, maxval=1, dtype=DTYPE)
+        xwgt = generate_random_array(rnds, divisions, x, div_index)
 
         wgt = xjac*xwgt
         tmp = wgt*MC_INTEGRAND(x)
@@ -179,7 +181,6 @@ class make_vegas:
         self.xl = xl
         self.xu = xu
 
-
     def integrate(self, iters = 5, calls = 1e4):
         results = np.zeros(iters)
         sigmas = np.zeros(iters)
@@ -194,7 +195,7 @@ if __name__ == '__main__':
     xupp = setup['xupp']
     dim = setup['dim']
 
-    print(f'VEGAS MC numba, ncalls={ncalls}:')
+    print(f'VEGAS MC, ncalls={ncalls}:')
     start = time.time()
     v = make_vegas(dim=dim, xl = xlow, xu = xupp)
     r = v.integrate(calls=ncalls)

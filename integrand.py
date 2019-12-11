@@ -10,7 +10,7 @@ DTYPEINT = tf.int64
 setup = {
     'xlow': np.array([0]*DIM, dtype=np.float64),
     'xupp': np.array([1]*DIM, dtype=np.float64),
-    'ncalls': int(1e4),
+    'ncalls': int(1e3),
     'dim': DIM
 }
 
