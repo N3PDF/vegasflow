@@ -7,7 +7,8 @@ import tensorflow as tf
 BINS_MAX = 50
 ALPHA = 1.5
 
-def generate_random_array(n_events, n_dim, divisions):
+@tf.function
+def generate_random_array(shape, divisions, x_ini, xdelta):
     """
     Generates a random array
     # Arguments in:
@@ -22,16 +23,13 @@ def generate_random_array(n_events, n_dim, divisions):
     # Returns:
         - wgt: weight of the point
     """
-    shape = (n_dim, n_events)
-    reg_i = tf.Variable(tf.zeros(shape, dtype=DTYPE))
-    reg_f = tf.Variable(tf.ones(shape, dtype=DTYPE))
+    reg_i = tf.zeros(shape, dtype=DTYPE)
+    reg_f = tf.ones(shape, dtype=DTYPE)
     rn = tf.random.uniform(shape, minval=0, maxval=1, dtype=DTYPE)
     xn = BINS_MAX*(1.0 - rn)
     int_xn = tf.maximum(tf.cast(0, DTYPEINT),
                         tf.minimum(tf.cast(xn, DTYPEINT), BINS_MAX))
     aux_rand = xn - tf.cast(int_xn, dtype=DTYPE)
-    x_ini = tf.Variable(tf.zeros(rn.shape, dtype=DTYPE))
-    xdelta = tf.Variable(tf.zeros(rn.shape, dtype=DTYPE))
     for i in tf.range(x_ini.shape[0], dtype=DTYPEINT):
         for j in tf.range(x_ini.shape[1], dtype=DTYPEINT):
             if int_xn[i,j] > 0:
@@ -43,6 +41,7 @@ def generate_random_array(n_events, n_dim, divisions):
     wgt = tf.reduce_prod(xdelta*BINS_MAX, axis=0)
     div_index = int_xn
     return x, wgt, div_index
+
 
 def rebin(rw, rc, subdivisions, dim):
     """ broken from function above to use it for initialiation """
@@ -135,7 +134,10 @@ def vegas(n_dim, n_iter, n_events, results, sigmas):
         res2 = 0.0
         arr_res2 = tf.Variable(tf.zeros((n_dim, BINS_MAX), dtype=DTYPE))
 
-        x, xwgt, div_index = generate_random_array(n_events, n_dim, divisions)
+        shape = (n_dim, n_events)
+        x_ini = tf.Variable(tf.zeros(shape, dtype=DTYPE))
+        xdelta = tf.Variable(tf.zeros(shape, dtype=DTYPE))
+        x, xwgt, div_index = generate_random_array(shape, divisions, x_ini, xdelta)
 
         wgt = xjac*xwgt
         tmp = wgt*MC_INTEGRAND(x)
