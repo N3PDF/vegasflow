@@ -97,8 +97,8 @@ def refine_grid(res_sq, subdivisions, dim):
 
 @tf.function
 def loop(n_dim, n_events, arr_res2, div_index, tmp2):
-    for j in range(n_dim):
-        for z in range(n_events):
+    for j in tf.range(n_dim, dtype=DTYPEINT):
+        for z in tf.range(n_events, dtype=DTYPEINT):
             arr_res2[j, div_index[j,z]].assign(arr_res2[j, div_index[j,z]]+tmp2[z])
 
 def vegas(n_dim, n_iter, n_events, results, sigmas):
