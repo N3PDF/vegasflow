@@ -2,15 +2,15 @@
 import numpy as np
 import tensorflow as tf
 
-DIM = 2
-DTYPE = tf.float32
-DTYPEINT = tf.int64
+DIM = 4
+DTYPE = tf.float64
+DTYPEINT = tf.int32
 
 # MC integration setup
 setup = {
-    'xlow': np.array([0]*DIM, dtype=np.float64),
-    'xupp': np.array([1]*DIM, dtype=np.float64),
-    'ncalls': int(1e3),
+    'xlow': np.array([0]*DIM, dtype=np.float32),
+    'xupp': np.array([1]*DIM, dtype=np.float32),
+    'ncalls': np.int32(1e7),
     'dim': DIM
 }
 
