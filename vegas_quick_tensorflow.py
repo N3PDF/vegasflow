@@ -71,11 +71,8 @@ def quick_integrand(xarr, n_dim = None):
     a = tf.constant(0.1, dtype=DTYPE)
     n100 = tf.cast(100*n_dim, dtype=DTYPE)
     pref = tf.pow(1.0/a/np.sqrt(np.pi), n_dim)
-    coef = fzero
-    for i in range(n100+1):
-        coef += i
-    for i in range(n_dim):
-        coef += tf.pow( (xarr[:,i]-1.0/2.0)/a, 2)
+    coef = tf.reduce_sum(tf.range(n100+1))
+    coef +=  tf.reduce_sum(tf.square( (xarr-1.0/2.0)/a ), axis=1)
     coef -= (n100+1)*n100/2.0
     return pref*tf.exp(-coef)
 
@@ -138,7 +135,7 @@ def consume_results(res2, indices):
     res_tmp = tf.where(eq, res2, fzero)
     arr_res2 = tf.reduce_sum(res_tmp, axis = 1)
     return arr_res2
-    
+
 
 def vegas(n_dim, n_iter, n_events):
     """
