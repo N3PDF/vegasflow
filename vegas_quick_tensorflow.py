@@ -1,11 +1,12 @@
 #!/usr/env python
 import time
-from integrand import MC_INTEGRAND, setup, DTYPE, DTYPEINT
 import numpy as np
 import tensorflow as tf
+from integrand import MC_INTEGRAND, setup, DTYPE, DTYPEINT
 
 BINS_MAX = 50
 ALPHA = 1.5
+EVENTS_LIMIT = int(1e6)
 
 
 # Define some constants
@@ -70,21 +71,6 @@ def generate_random_array(rnds, divisions):
     x = reg_i + rand_x * (reg_f - reg_i)
     weights = tf.reduce_prod(xdelta * BINS_MAX, axis=1)
     return x, int_xn, weights
-
-
-@tf.function
-def quick_integrand(xarr, n_dim=None):
-    """Le page test function"""
-    if n_dim is None:
-        n_dim = xarr.shape[-1]
-    a = tf.constant(0.1, dtype=DTYPE)
-    n100 = tf.cast(100 * n_dim, dtype=DTYPE)
-    pref = tf.pow(1.0 / a / np.sqrt(np.pi), n_dim)
-    coef = tf.reduce_sum(tf.range(n100 + 1))
-    coef += tf.reduce_sum(tf.square((xarr - 1.0 / 2.0) / a), axis=1)
-    coef -= (n100 + 1) * n100 / 2.0
-    return pref * tf.exp(-coef)
-
 
 @tf.function
 def refine_grid_per_dimension(t_res_sq, subdivisions):
@@ -174,7 +160,7 @@ def consume_results(res2, indices):
     return arr_res2
 
 
-def vegas(n_dim, n_iter, n_events):
+def vegas(n_dim, n_iter, total_n_events):
     """
     # Arguments in:
         n_dim: number of dimensions
@@ -187,12 +173,13 @@ def vegas(n_dim, n_iter, n_events):
         - error
     """
     # Initialize constant variables, we can use python numbers here
-    xjac = 1.0 / n_events
+    xjac = 1.0 / total_n_events 
 
     # Initialize variable variables
     subdivision_np = np.linspace(1 / BINS_MAX, 1, BINS_MAX)
     divisions_np = subdivision_np.repeat(n_dim).reshape(-1, n_dim).T
     divisions = tf.Variable(divisions_np, dtype=DTYPE)
+
 
     # "allocate" arrays
     all_results = []
@@ -201,29 +188,43 @@ def vegas(n_dim, n_iter, n_events):
     for iteration in range(n_iter):
         start = time.time()
 
-        # Generate all random number for this iteration
-        rnds = tf.random.uniform((n_events, n_dim), minval=0, maxval=1, dtype=DTYPE)
+        # Initialize iteration values
+        all_arr_res2 = [tf.zeros(BINS_MAX, dtype=DTYPE) for _ in range(n_dim)]
+        res = fzero
+        res2 = fzero
+        events_to_do = total_n_events
 
-        # Pass them through the Vegas digestion
-        x, ind, w = generate_random_array(rnds, divisions)
+        while events_to_do > 0:
+            n_events = min(events_to_do, EVENTS_LIMIT)
 
-        # Now compute the integrand
-        tmp = xjac * w * quick_integrand(x, n_dim=n_dim)
+            # Generate all random number for this iteration
+            rnds = tf.random.uniform((n_events, n_dim), minval=0, maxval=1, dtype=DTYPE)
 
-        # Compute the final result for this iteration
-        res = tf.reduce_sum(tmp)
-        # Compute the error
-        tmp2 = tf.square(tmp)
-        res2 = tf.reduce_sum(tmp2)
-        err_tmp2 = (n_events * res2 - tf.square(res)) / (n_events - fone)
-        sigma = tf.sqrt(tf.maximum(err_tmp2, fzero))
+            # Pass them through the Vegas digestion
+            x, ind, w = generate_random_array(rnds, divisions)
 
-        # Rebin Vegas
-        for j in range(n_dim):
-            arr_res2 = consume_results(tmp2, ind[:, j : j + 1])
+            # Now compute the integrand
+            tmp = xjac * w * MC_INTEGRAND(x, n_dim=n_dim)
+            tmp2 = tf.square(tmp)
+
+            # Compute the final result for this sub-iteration
+            res += tf.reduce_sum(tmp)
+            res2 += tf.reduce_sum(tmp2)
+
+            # Rebin Vegas
+            for j in range(n_dim):
+                arr_res2 = consume_results(tmp2, ind[:, j : j + 1])
+                all_arr_res2[j] += arr_res2
+
+            events_to_do -= n_events
+
+        for j, arr_res2 in enumerate(all_arr_res2):
             new_divisions = refine_grid_per_dimension(arr_res2, divisions[j, :])
             divisions[j, :].assign(new_divisions)
 
+        # Compute the error
+        err_tmp2 = (total_n_events * res2 - tf.square(res)) / (total_n_events - fone)
+        sigma = tf.sqrt(tf.maximum(err_tmp2, fzero))
         # Print the results
         end = time.time()
         print(f"Results for {iteration} {res:.5f} +/- {sigma:.5f} (took {end-start} s)")
