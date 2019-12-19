@@ -1,21 +1,18 @@
 # Place your function here
+import time
 import numpy as np
 import tensorflow as tf
+from vegasflow.vegas import vegas, DTYPE, DTYPEINT
 
-DIM = 4
-DTYPE = tf.float64
-DTYPEINT = tf.int32
 
 # MC integration setup
-setup = {
-    'xlow': np.array([0]*DIM, dtype=np.float32),
-    'xupp': np.array([1]*DIM, dtype=np.float32),
-    'ncalls': np.int32(2e6),
-    'dim': DIM
-}
+dim = 4
+ncalls = np.int32(2e6)
+n_iter = 5
+
 
 @tf.function
-def MC_INTEGRAND(xarr, n_dim=None):
+def lepage(xarr, n_dim=None):
     """Lepage test function"""
     if n_dim is None:
         n_dim = xarr.shape[-1]
@@ -26,3 +23,12 @@ def MC_INTEGRAND(xarr, n_dim=None):
     coef += tf.reduce_sum(tf.square((xarr - 1.0 / 2.0) / a), axis=1)
     coef -= (n100 + 1) * n100 / 2.0
     return pref * tf.exp(-coef)
+
+
+if __name__ == "__main__":
+    """Testing a basic integration"""
+    print(f"VEGAS MC, ncalls={ncalls}:")
+    start = time.time()
+    r = vegas(lepage, dim, n_iter, ncalls)
+    end = time.time()
+    print(f"time (s): {end-start}")
