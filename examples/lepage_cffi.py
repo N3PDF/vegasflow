@@ -53,7 +53,7 @@ def lepage(xarr, n_dim=None):
         n_dim = xarr.shape[-1]
     n_events = xarr.shape[0]
 
-    res = np.empty(n_events, dtype = DTYPE)
+    res = np.empty(n_events, dtype = DTYPE.as_numpy_dtype)
     x_flat = xarr.numpy().flatten()
 
     pinput = ffi.cast(f'{C_type}*', ffi.from_buffer(x_flat))
