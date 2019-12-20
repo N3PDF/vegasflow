@@ -2,15 +2,12 @@
 import time
 import numpy as np
 import tensorflow as tf
-from integrand import MC_INTEGRAND, setup, DTYPE, DTYPEINT
 
+DTYPE = tf.float64
+DTYPEINT = tf.int32
 BINS_MAX = 50
 ALPHA = 1.5
 EVENTS_LIMIT = int(1e6)
-
-
-# Define some constants
-n_dim = setup["dim"]
 
 
 def int_me(i):
@@ -26,11 +23,8 @@ izero = int_me(0)
 fone = float_me(1)
 fzero = float_me(0)
 
-shape_rn = tf.TensorSpec(shape=(None, n_dim), dtype=DTYPE)
-shape_sub = tf.TensorSpec(shape=(n_dim, BINS_MAX), dtype=DTYPE)
 
-
-@tf.function(input_signature=[shape_rn, shape_sub])
+@tf.function
 def generate_random_array(rnds, divisions):
     """
         Generates the Vegas random array for any number of events
@@ -160,7 +154,7 @@ def consume_results(res2, indices):
     return arr_res2
 
 
-def vegas(n_dim, n_iter, total_n_events):
+def vegas(integrand, n_dim, n_iter, total_n_events):
     """
     # Arguments in:
         n_dim: number of dimensions
@@ -173,7 +167,7 @@ def vegas(n_dim, n_iter, total_n_events):
         - error
     """
     # Initialize constant variables, we can use python numbers here
-    xjac = 1.0 / total_n_events 
+    xjac = 1.0 / total_n_events
 
     # Initialize variable variables
     subdivision_np = np.linspace(1 / BINS_MAX, 1, BINS_MAX)
@@ -204,7 +198,7 @@ def vegas(n_dim, n_iter, total_n_events):
             x, ind, w = generate_random_array(rnds, divisions)
 
             # Now compute the integrand
-            tmp = xjac * w * MC_INTEGRAND(x, n_dim=n_dim)
+            tmp = xjac * w * integrand(x, n_dim=n_dim)
             tmp2 = tf.square(tmp)
 
             # Compute the final result for this sub-iteration
@@ -245,15 +239,3 @@ def vegas(n_dim, n_iter, total_n_events):
     print(f" > Final results: {final_result.numpy()} +/- {sigma}")
     return final_result, sigma
 
-
-if __name__ == "__main__":
-    """Testing a basic integration"""
-    ncalls = setup["ncalls"]
-    xlow = setup["xlow"]
-    xupp = setup["xupp"]
-
-    print(f"VEGAS MC, ncalls={ncalls}:")
-    start = time.time()
-    r = vegas(n_dim, 5, ncalls)
-    end = time.time()
-    print(f"time (s): {end-start}")
