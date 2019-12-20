@@ -2,6 +2,7 @@
 import time
 import numpy as np
 from vegasflow.vegas import vegas, DTYPE, DTYPEINT
+import tensorflow as tf
 
 from cffi import FFI
 ffibuilder = FFI()
@@ -9,42 +10,55 @@ ffibuilder = FFI()
 
 # MC integration setup
 dim = 4
-ncalls = np.int32(1e3)
+ncalls = np.int32(1e5)
 n_iter = 5
 
-ffibuilder.cdef("""
-    void lepage(double*, int, int, double*);
+if DTYPE is tf.float64:
+    C_type = "double"
+elif DTYPE is tf.float32:
+    C_type = "float"
+else:
+    raise TypeError(f"Datatype {DTYPE} not understood")
+
+
+ffibuilder.cdef(f"""
+    void lepage({C_type}*, int, int, {C_type}*);
 """)
 
-ffibuilder.set_source("_lepage_cffi",
-    """
-    void lepage(double *x, int n, int evts, double* out)
-    {
+ffibuilder.set_source("_lepage_cffi", f"""
+    void lepage({C_type} *x, int n, int evts, {C_type}* out)
+    {{
         for (int e = 0; e < evts; e++)
-        {
-            double a = 0.1;
-            double pref = pow(1.0/a/sqrt(M_PI), n);
-            double coef = 0.0;
-            for (int i = 1; i <= 100*n; i++) {
-                coef += (float) i;
-            }
-            for (int i = 0; i < n; i++) {
+        {{
+            {C_type} a = 0.1;
+            {C_type} pref = pow(1.0/a/sqrt(M_PI), n);
+            {C_type} coef = 0.0;
+            for (int i = 1; i <= 100*n; i++) {{
+                coef += ({C_type}) i;
+            }}
+            for (int i = 0; i < n; i++) {{
                 coef += pow((x[i+e*n] - 1.0/2.0)/a, 2);
-            }
+            }}
             coef -= 100.0*n*(100.0*n+1.0)/2.0;
             out[e] = pref*exp(-coef);
-        }
-    }
+        }}
+    }}
 """)
 ffibuilder.compile(verbose=True)
 
 from _lepage_cffi import ffi, lib
 
 def lepage(xarr, n_dim=None):
-    res = np.zeros(xarr.shape[0])
-    pinput = ffi.cast('double*', ffi.from_buffer(xarr.numpy().flatten()))
-    pres = ffi.cast('double*', res.ctypes.data)
-    lib.lepage(pinput, n_dim, xarr.shape[0], pres)
+    if n_dim is None:
+        n_dim = xarr.shape[-1]
+    n_events = xarr.shape[0]
+
+    res = np.empty(n_events, dtype = DTYPE)
+    x_flat = xarr.numpy().flatten()
+
+    pinput = ffi.cast(f'{C_type}*', ffi.from_buffer(x_flat))
+    pres = ffi.cast(f'{C_type}*', ffi.from_buffer(res))
+    lib.lepage(pinput, n_dim, n_events, pres)
     return res
 
 if __name__ == "__main__":
