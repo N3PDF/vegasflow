@@ -129,3 +129,6 @@ dmypy.json
 .pyre/
 
 # Cffi
+_*.c
+*.o
+*.so
