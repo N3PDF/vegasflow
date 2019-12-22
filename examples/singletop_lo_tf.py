@@ -4,7 +4,7 @@ import tensorflow as tf
 from vegasflow.vegas import vegas, DTYPE, DTYPEINT
 
 # MC integration setup
-dim = 4
+dim = 3
 ncalls = np.int32(1e5)
 n_iter = 5
 
