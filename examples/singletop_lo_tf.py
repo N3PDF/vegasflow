@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
+import sys
 import time
 import numpy as np
 import tensorflow as tf
-from vegasflow.vegas import vegas, DTYPE, DTYPEINT
+from vegasflow.vegas import DTYPE, DTYPEINT
+from vegasflow.vegas import vegas as vegasflow_wrapper
 
 # MC integration setup
 dim = 3
@@ -34,7 +37,6 @@ conv = tf.constant(0.3893793e9, dtype=DTYPE) # GeV to pb conversion
 gaw2 = tf.square(gaw)
 mw2 = tf.square(mw)
 gw4 = tf.square(4*np.sqrt(2)*mw2*gf)
-
 
 @tf.function
 def get_x1x2(xarr):
@@ -268,6 +270,24 @@ if __name__ == "__main__":
     """Testing a basic integration"""
     print(f"VEGAS MC, ncalls={ncalls}:")
     start = time.time()
-    r = vegas(singletop, dim, n_iter, ncalls)
+    r = vegasflow_wrapper(singletop, dim, n_iter, ncalls)
     end = time.time()
     print(f"time (s): {end-start}")
+
+    try:
+        from vegas import Integrator
+    except ModuleNotFoundError:
+        sys.exit(0)
+
+    def fun(xarr):
+        x = xarr.reshape(1, -1)
+        return singletop(x)
+    print("Comparing with Lepage's Vegas")
+    limits = dim*[[0.0, 1.0]]
+    integrator = Integrator(limits)
+    start = time.time()
+    vr = integrator(fun, neval = ncalls, nitn = n_iter)
+    end = time.time()
+    print(vr.summary())
+    print(f"time (s): {end-start}")
+    print(f"Per iteration (s): {(end-start)/n_iter}")
