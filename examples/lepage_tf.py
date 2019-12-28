@@ -7,7 +7,7 @@ from vegasflow.vegas import vegas, DTYPE, DTYPEINT
 
 # MC integration setup
 dim = 4
-ncalls = np.int32(1e5)
+ncalls = np.int32(1e4)
 n_iter = 5
 
 
