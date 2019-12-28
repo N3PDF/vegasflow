@@ -90,9 +90,7 @@ def refine_grid_per_dimension(t_res_sq, subdivisions):
     # Pad the vector of results
     res_padded = tf.pad(t_res_sq, paddings)
     # First we need to smear out the array of results squared
-    smeared_tensor_tmp = tf.math.accumulate_n(
-        (res_padded[1:-1], res_padded[2:], res_padded[:-2])
-    )
+    smeared_tensor_tmp = res_padded[1:-1] + res_padded[2:] + res_padded[:-2]
     smeared_tensor = tf.maximum(smeared_tensor_tmp / meaner, float_me(1e-30))
     # Now we refine the grid according to
     # journal of comp phys, 27, 192-203 (1978) G.P. Lepage
@@ -177,10 +175,10 @@ def run_event(events_to_do, n_dim, divisions, xjac, integrand):
     # Rebin Vegas
     for j in range(n_dim):
         arr_res2 = consume_results(tmp2, ind[:, j : j + 1])
-        all_arr_res2.append( arr_res2 )
-    all_arr_res2 = tf.stack(all_arr_res2)
+        new_divisions = refine_grid_per_dimension(arr_res2, divisions[j, :])
+        divisions[j, :].assign(new_divisions)
 
-    return res, res2, all_arr_res2
+    return res, res2
 
 
 def vegas(integrand, n_dim, n_iter, total_n_events):
@@ -211,11 +209,7 @@ def vegas(integrand, n_dim, n_iter, total_n_events):
     for iteration in range(n_iter):
         start = time.time()
 
-        res, res2, all_arr_res2 = run_event(total_n_events, n_dim, divisions, xjac, integrand)
-
-        for j, arr_res2 in enumerate(all_arr_res2):
-            new_divisions = refine_grid_per_dimension(arr_res2, divisions[j, :])
-            divisions[j, :].assign(new_divisions)
+        res, res2 = run_event(total_n_events, n_dim, divisions, xjac, integrand)
 
         # Compute the error
         err_tmp2 = (total_n_events * res2 - tf.square(res)) / (total_n_events - fone)
