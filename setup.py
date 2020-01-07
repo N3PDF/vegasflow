@@ -24,6 +24,7 @@ setup(name='vegasflow',
           'sphinx_rtd_theme',
           'recommonmark',
           'sphinxcontrib-bibtex',
+          'vegas', # Lepage's Vegas for benchmarking
       ],
       setup_requires=[
           "cffi>1.0.0"
