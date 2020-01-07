@@ -31,7 +31,7 @@ zero = tf.constant(0.0, dtype=DTYPE)
 def lepage(xarr, n_dim=None):
     """Asian options test function"""
     sum1 = tf.reduce_sum(ndtri(xarr), axis=1)
-    a = S0 * tf.exp((r-sigma2/2)*t + sigma*sqrtdt*sum1)
+    a = S0 * tf.exp((r-sigma2/2) + sigma*sqrtdt*sum1)
     arg = 1 / d * tf.reduce_sum(a)
     return e*tf.maximum(zero, arg-K)
 
