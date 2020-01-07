@@ -90,9 +90,7 @@ def refine_grid_per_dimension(t_res_sq, subdivisions):
     # Pad the vector of results
     res_padded = tf.pad(t_res_sq, paddings)
     # First we need to smear out the array of results squared
-    smeared_tensor_tmp = tf.math.accumulate_n(
-        (res_padded[1:-1], res_padded[2:], res_padded[:-2])
-    )
+    smeared_tensor_tmp = res_padded[1:-1] + res_padded[2:] + res_padded[:-2]
     smeared_tensor = tf.maximum(smeared_tensor_tmp / meaner, float_me(1e-30))
     # Now we refine the grid according to
     # journal of comp phys, 27, 192-203 (1978) G.P. Lepage
@@ -154,6 +152,35 @@ def consume_results(res2, indices):
     return arr_res2
 
 
+@tf.function
+def run_event(events_to_do, n_dim, divisions, xjac, integrand):
+    n_events = events_to_do
+
+    # Generate all random number for this iteration
+    rnds = tf.random.uniform((n_events, n_dim), minval=0, maxval=1, dtype=DTYPE)
+    
+    # Pass them through the Vegas digestion
+    x, ind, w = generate_random_array(rnds, divisions)
+
+    # Now compute the integrand
+    tmp = xjac * w * integrand(x, n_dim=n_dim)
+    tmp2 = tf.square(tmp)
+
+    # Compute the final result for this sub-iteration
+    res = tf.reduce_sum(tmp)
+    res2 = tf.reduce_sum(tmp2)
+
+    # Initialize iteration values
+    all_arr_res2 = []
+    # Rebin Vegas
+    for j in range(n_dim):
+        arr_res2 = consume_results(tmp2, ind[:, j : j + 1])
+        new_divisions = refine_grid_per_dimension(arr_res2, divisions[j, :])
+        divisions[j, :].assign(new_divisions)
+
+    return res, res2
+
+
 def vegas(integrand, n_dim, n_iter, total_n_events):
     """
     # Arguments in:
@@ -182,39 +209,7 @@ def vegas(integrand, n_dim, n_iter, total_n_events):
     for iteration in range(n_iter):
         start = time.time()
 
-        # Initialize iteration values
-        all_arr_res2 = [tf.zeros(BINS_MAX, dtype=DTYPE) for _ in range(n_dim)]
-        res = fzero
-        res2 = fzero
-        events_to_do = total_n_events
-
-        while events_to_do > 0:
-            n_events = min(events_to_do, EVENTS_LIMIT)
-
-            # Generate all random number for this iteration
-            rnds = tf.random.uniform((n_events, n_dim), minval=0, maxval=1, dtype=DTYPE)
-
-            # Pass them through the Vegas digestion
-            x, ind, w = generate_random_array(rnds, divisions)
-
-            # Now compute the integrand
-            tmp = xjac * w * integrand(x, n_dim=n_dim)
-            tmp2 = tf.square(tmp)
-
-            # Compute the final result for this sub-iteration
-            res += tf.reduce_sum(tmp)
-            res2 += tf.reduce_sum(tmp2)
-
-            # Rebin Vegas
-            for j in range(n_dim):
-                arr_res2 = consume_results(tmp2, ind[:, j : j + 1])
-                all_arr_res2[j] += arr_res2
-
-            events_to_do -= n_events
-
-        for j, arr_res2 in enumerate(all_arr_res2):
-            new_divisions = refine_grid_per_dimension(arr_res2, divisions[j, :])
-            divisions[j, :].assign(new_divisions)
+        res, res2 = run_event(total_n_events, n_dim, divisions, xjac, integrand)
 
         # Compute the error
         err_tmp2 = (total_n_events * res2 - tf.square(res)) / (total_n_events - fone)
