@@ -280,7 +280,7 @@ if __name__ == "__main__":
     except ModuleNotFoundError:
         sys.exit(0)
 
-    if len(sys.argv > 1):
+    if len(sys.argv) > 1:
         print(" > Doing also the comparison with original Vegas ")
 
         def fun(xarr):

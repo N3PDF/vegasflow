@@ -1,10 +1,23 @@
 """
     Abstract class for Monte Carlo integrators
+ 
+    Usage:
+        In order to implement a new MonteCarloFlow integrator
+        it is necessary to implement (at least) two methods:
+        - `_run_event`: integrand
+            This function defines what to do in order to run one event
+            of the Monte Carlo. It is used only for compilation, as the
+            actual integration is done by the `run_event` method.
+        - `_run_iteration`:
+            This function defines what to do in a full iteration of the
+            MonteCarlo (i.e., what to do in order to run for n_events)
 """
 
+import time
 from abc import abstractmethod, ABC
 import numpy as np
 import tensorflow as tf
+
 
 class MonteCarloFlow(ABC):
     """
@@ -31,10 +44,15 @@ class MonteCarloFlow(ABC):
     @abstractmethod
     def _run_event(self, integrand):
         """ Run one single event of the Monte Carlo integration """
-        result = None
+        result = self.event()
         return result, pow(result, 2)
 
-    def compile(self, integrand, compilable = True):
+    def run_event(self):
+        if not self.event:
+            raise RuntimeError("compile must be ran before running any iterations")
+        return self.event()
+
+    def compile(self, integrand, compilable=True):
         """ Receives an integrand, prepares it for integration
         and tries to compile unless told otherwise.
 
@@ -44,15 +62,19 @@ class MonteCarloFlow(ABC):
         """
         if compilable:
             tf_integrand = tf.function(integrand)
+
             def run_event():
                 return self._run_event(tf_integrand)
+
             self.event = tf.function(run_event)
         else:
+
             def run_event():
                 return self._run_event(integrand)
+
             self.event = run_event
 
-    def run_integration(self, n_iter):
+    def run_integration(self, n_iter, log_time = False):
         """ Runs the integrator for the chosen number of iterations
         Parameters
         ---------
@@ -62,8 +84,18 @@ class MonteCarloFlow(ABC):
             `final_result`: integral value
             `sigma`: monte carlo error
         """
-        for _ in range(n_iter):
-            self._run_iteration()
+        for i in range(n_iter):
+            if log_time:
+                start = time.time()
+            res, error = self._run_iteration()
+            self.all_results.append((res, error))
+            if log_time:
+                end = time.time()
+                time_str = f"(took {end-start} s)"
+            else:
+                time_str = ""
+            print(f"Result for iteration {i}: {res:.5f} +/- {error:.5f}" + time_str)
+
         aux_res = 0.0
         weight_sum = 0.0
         for result in self.all_results:
@@ -75,5 +107,5 @@ class MonteCarloFlow(ABC):
 
         final_result = aux_res / weight_sum
         sigma = np.sqrt(1.0 / weight_sum)
-        print(f" > Final results: {final_result.numpy()} +/- {sigma}")
+        print(f" > Final results: {final_result.numpy():.5f} +/- {sigma:.5f}")
         return final_result, sigma
