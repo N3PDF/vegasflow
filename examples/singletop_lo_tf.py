@@ -32,28 +32,29 @@ mt2 = tf.square(mt)
 s = tf.square(sqrts)
 s2 = tf.square(s)
 smin = tf.square(sqrtsmin)
-bmax = tf.sqrt(1 - smin/s)
-conv = tf.constant(0.3893793e9, dtype=DTYPE) # GeV to pb conversion
+bmax = tf.sqrt(1 - smin / s)
+conv = tf.constant(0.3893793e9, dtype=DTYPE)  # GeV to pb conversion
 gaw2 = tf.square(gaw)
 mw2 = tf.square(mw)
-gw4 = tf.square(4*np.sqrt(2)*mw2*gf)
+gw4 = tf.square(4 * np.sqrt(2) * mw2 * gf)
+
 
 @tf.function
 def get_x1x2(xarr):
     """Remapping [0,1] to tau-y"""
     # building shat
-    b = bmax*xarr[:, 0]
+    b = bmax * xarr[:, 0]
     onemb2 = 1 - tf.square(b)
     shat = smin / onemb2
     tau = shat / s
 
     # building rapidity
     ymax = -0.5 * tf.math.log(tau)
-    y = ymax * (2 * xarr[:,1] - 1)
+    y = ymax * (2 * xarr[:, 1] - 1)
 
     # building jacobian
-    jac = 2 * tau * b * bmax / onemb2 # tau
-    jac *= 2 * ymax # y
+    jac = 2 * tau * b * bmax / onemb2  # tau
+    jac *= 2 * ymax  # y
 
     # building x1 and x2
     sqrttau = tf.sqrt(tau)
@@ -69,21 +70,21 @@ def make_event(xarr):
     """Generate event kinematics"""
     shat, jac, x1, x2 = get_x1x2(xarr)
 
-    ecmo2 = tf.sqrt(shat)/2
-    cc = ecmo2 * (1 - mt2/shat)
-    cos = 1 - 2 * xarr[:,2]
-    sinxi = cc * tf.sqrt(1 - cos*cos)
+    ecmo2 = tf.sqrt(shat) / 2
+    cc = ecmo2 * (1 - mt2 / shat)
+    cos = 1 - 2 * xarr[:, 2]
+    sinxi = cc * tf.sqrt(1 - cos * cos)
     cosxi = cc * cos
     zeros = tf.zeros(ecmo2.shape, dtype=DTYPE)
 
     p0 = tf.stack([ecmo2, zeros, zeros, ecmo2])
-    p1 = tf.stack([ecmo2, zeros, zeros,-ecmo2])
-    p2 = tf.stack([cc,    sinxi, zeros, cosxi])
-    p3 = tf.stack([tf.sqrt(cc*cc+mt2),-sinxi, zeros,-cosxi])
+    p1 = tf.stack([ecmo2, zeros, zeros, -ecmo2])
+    p2 = tf.stack([cc, sinxi, zeros, cosxi])
+    p3 = tf.stack([tf.sqrt(cc * cc + mt2), -sinxi, zeros, -cosxi])
 
-    psw = (1 - mt2/shat) / (8*np.pi) # psw
-    psw *= jac # jac for tau, y
-    flux = 1 / (2 * shat) # flux
+    psw = (1 - mt2 / shat) / (8 * np.pi)  # psw
+    psw *= jac  # jac for tau, y
+    flux = 1 / (2 * shat)  # flux
 
     return psw, flux, p0, p1, p2, p3, x1, x2
 
@@ -91,10 +92,10 @@ def make_event(xarr):
 @tf.function
 def dot(p1, p2):
     """Dot product 4-momenta"""
-    e  = p1[0]*p2[0]
-    px = p1[1]*p2[1]
-    py = p1[2]*p2[2]
-    pz = p1[3]*p2[3]
+    e = p1[0] * p2[0]
+    px = p1[1] * p2[1]
+    py = p1[2] * p2[2]
+    pz = p1[3] * p2[3]
     return e - px - py - pz
 
 
@@ -107,9 +108,9 @@ def u0(p, i):
     ones = tf.ones(p[0].shape, dtype=DTYPE)
 
     # case 1) py == 0
-    rz = p[3]/p[0]
+    rz = p[3] / p[0]
     theta1 = tf.where(rz > 0, zeros, rz)
-    theta1 = tf.where(rz < 0, np.pi*ones, theta1)
+    theta1 = tf.where(rz < 0, np.pi * ones, theta1)
     phi1 = zeros
 
     # case 2) py != 0
@@ -117,29 +118,29 @@ def u0(p, i):
     rrr = tf.where(rz < -1, -ones, rz)
     rrr = tf.where(rz > 1, ones, rrr)
     theta2 = tf.acos(rrr)
-    rx = p[1]/p[0]
+    rx = p[1] / p[0]
     phi2 = zeros
-    phi2 = tf.where(rx < 0, np.pi*ones, phi2)
+    phi2 = tf.where(rx < 0, np.pi * ones, phi2)
 
     # combine
     theta = tf.where(p[1] == 0, theta1, theta2)
     phi = tf.where(p[1] == 0, phi1, phi2)
 
-    prefact = tf.complex(np.sqrt(2), zeros)*tf.sqrt(tf.complex(p[0], zeros))
+    prefact = tf.complex(np.sqrt(2), zeros) * tf.sqrt(tf.complex(p[0], zeros))
     if i == 1:
-        a = tf.complex(tf.cos(theta/2), zeros)
-        b = tf.complex(tf.sin(theta/2), zeros)
-        u0_0 = prefact*a
-        u0_1 = prefact*b*tf.complex(tf.cos(phi), tf.sin(phi))
+        a = tf.complex(tf.cos(theta / 2), zeros)
+        b = tf.complex(tf.sin(theta / 2), zeros)
+        u0_0 = prefact * a
+        u0_1 = prefact * b * tf.complex(tf.cos(phi), tf.sin(phi))
         u0_2 = czeros
         u0_3 = czeros
     else:
-        a = tf.complex(tf.sin(theta/2), zeros)
-        b = tf.complex(tf.cos(theta/2), zeros)
+        a = tf.complex(tf.sin(theta / 2), zeros)
+        b = tf.complex(tf.cos(theta / 2), zeros)
         u0_0 = czeros
         u0_1 = czeros
-        u0_2 = prefact*a*tf.complex(tf.cos(phi), -tf.sin(phi))
-        u0_3 = -prefact*b
+        u0_2 = prefact * a * tf.complex(tf.cos(phi), -tf.sin(phi))
+        u0_3 = -prefact * b
 
     return tf.stack([u0_0, u0_1, u0_2, u0_3])
 
@@ -153,9 +154,9 @@ def ubar0(p, i):
     ones = tf.ones(p[0].shape, dtype=DTYPE)
 
     # case 1) py == 0
-    rz = p[3]/p[0]
+    rz = p[3] / p[0]
     theta1 = tf.where(rz > 0, zeros, rz)
-    theta1 = tf.where(rz < 0, np.pi*ones, theta1)
+    theta1 = tf.where(rz < 0, np.pi * ones, theta1)
     phi1 = zeros
 
     # case 2) py != 0
@@ -163,32 +164,32 @@ def ubar0(p, i):
     rrr = tf.where(rz < -1, -ones, rrr)
     rrr = tf.where(rz > 1, ones, rrr)
     theta2 = tf.acos(rrr)
-    rrr = p[1]/p[0]/tf.sin(theta2)
+    rrr = p[1] / p[0] / tf.sin(theta2)
     rrr = tf.where(rrr < -1, -ones, rrr)
     rrr = tf.where(rrr > 1, ones, rrr)
     phi2 = tf.acos(rrr)
-    ry = p[2]/p[0]
+    ry = p[2] / p[0]
     phi2 = tf.where(ry < 0, -phi2, phi2)
 
     # combine
     theta = tf.where(p[1] == 0, theta1, theta2)
     phi = tf.where(p[1] == 0, phi1, phi2)
 
-    prefact = tf.complex(np.sqrt(2), zeros)*tf.sqrt(tf.complex(p[0], zeros))
+    prefact = tf.complex(np.sqrt(2), zeros) * tf.sqrt(tf.complex(p[0], zeros))
     if i == -1:
-        a = tf.complex(tf.sin(theta/2), zeros)
-        b = tf.complex(tf.abs(tf.cos(theta/2)), zeros)
-        ubar0_0 = prefact*a*tf.complex(tf.cos(phi), tf.sin(phi))
-        ubar0_1 = -prefact*b
+        a = tf.complex(tf.sin(theta / 2), zeros)
+        b = tf.complex(tf.abs(tf.cos(theta / 2)), zeros)
+        ubar0_0 = prefact * a * tf.complex(tf.cos(phi), tf.sin(phi))
+        ubar0_1 = -prefact * b
         ubar0_2 = czeros
         ubar0_3 = czeros
     else:
-        a = tf.complex(tf.cos(theta/2), zeros)
-        b = tf.complex(tf.sin(theta/2), zeros)
+        a = tf.complex(tf.cos(theta / 2), zeros)
+        b = tf.complex(tf.sin(theta / 2), zeros)
         ubar0_0 = czeros
         ubar0_1 = czeros
-        ubar0_2 = prefact*a
-        ubar0_3 = prefact*b*tf.complex(tf.cos(phi), -tf.sin(phi))
+        ubar0_2 = prefact * a
+        ubar0_3 = prefact * b * tf.complex(tf.cos(phi), -tf.sin(phi))
 
     return tf.stack([ubar0_0, ubar0_1, ubar0_2, ubar0_3])
 
@@ -197,21 +198,21 @@ def ubar0(p, i):
 def za(p1, p2):
     ket = u0(p2, 1)
     bra = ubar0(p1, -1)
-    return tf.reduce_sum(bra*ket, axis=0)
+    return tf.reduce_sum(bra * ket, axis=0)
 
 
 @tf.function
 def zb(p1, p2):
     ket = u0(p2, -1)
     bra = ubar0(p1, 1)
-    return tf.reduce_sum(bra*ket, axis=0)
+    return tf.reduce_sum(bra * ket, axis=0)
 
 
 @tf.function
 def sprod(p1, p2):
     a = za(p1, p2)
     b = zb(p2, p1)
-    return tf.math.real(a*b)
+    return tf.math.real(a * b)
 
 
 @tf.function
@@ -223,7 +224,7 @@ def qqxtbx(p0, p1, p2, p3):
     b = sprod(p0, p3)
     c = sprod(p2, p3)
     d = sprod(p3, p1)
-    return tf.abs( (a+mt2*b/c)*d ) * colf_bt / wprop * gw4 / 36
+    return tf.abs((a + mt2 * b / c) * d) * colf_bt / wprop * gw4 / 36
 
 
 @tf.function
@@ -232,11 +233,11 @@ def evaluate_matrix_element_square(p0, p1, p2, p3):
 
     # massless projection
     k = mt2 / dot(p3, p0) / 2
-    p3 -= p0*k
+    p3 -= p0 * k
 
     # channels evaluation
-    c1 = qqxtbx( p2,-p1, p3,-p0) # BBARQBARQT +2 -1 +3 -0
-    c2 = qqxtbx(-p1, p2, p3,-p0) # BBARQQBART -1 +2 +3 -0
+    c1 = qqxtbx(p2, -p1, p3, -p0)  # BBARQBARQT +2 -1 +3 -0
+    c2 = qqxtbx(-p1, p2, p3, -p0)  # BBARQQBART -1 +2 +3 -0
 
     return tf.stack([c1, c2])
 
@@ -244,14 +245,14 @@ def evaluate_matrix_element_square(p0, p1, p2, p3):
 @tf.function
 def pdf(fl1, fl2, x1, x2):
     """Dummy toy PDF"""
-    return x1*x2
+    return x1 * x2
 
 
 @tf.function
 def build_luminosity(x1, x2):
     """Single-top t-channel luminosity"""
-    lumi1 = (pdf(5, 2, x1, x2) + pdf(5, 4, x1, x2))
-    lumi2 = (pdf(5, -1, x1, x2)+ pdf(5,-3, x1, x2))
+    lumi1 = pdf(5, 2, x1, x2) + pdf(5, 4, x1, x2)
+    lumi2 = pdf(5, -1, x1, x2) + pdf(5, -3, x1, x2)
     lumis = tf.stack([lumi1, lumi2]) / x1 / x2
     return lumis
 
@@ -262,8 +263,8 @@ def singletop(xarr, n_dim=None):
     psw, flux, p0, p1, p2, p3, x1, x2 = make_event(xarr)
     wgts = evaluate_matrix_element_square(p0, p1, p2, p3)
     lumis = build_luminosity(x1, x2)
-    lumi_me2 = tf.reduce_sum(2*lumis*wgts, axis=0)
-    return lumi_me2*psw*flux*conv
+    lumi_me2 = tf.reduce_sum(2 * lumis * wgts, axis=0)
+    return lumi_me2 * psw * flux * conv
 
 
 if __name__ == "__main__":
@@ -279,15 +280,19 @@ if __name__ == "__main__":
     except ModuleNotFoundError:
         sys.exit(0)
 
-    def fun(xarr):
-        x = xarr.reshape(1, -1)
-        return singletop(x)
-    print("Comparing with Lepage's Vegas")
-    limits = dim*[[0.0, 1.0]]
-    integrator = Integrator(limits)
-    start = time.time()
-    vr = integrator(fun, neval = ncalls, nitn = n_iter)
-    end = time.time()
-    print(vr.summary())
-    print(f"time (s): {end-start}")
-    print(f"Per iteration (s): {(end-start)/n_iter}")
+    if len(sys.argv > 1):
+        print(" > Doing also the comparison with original Vegas ")
+
+        def fun(xarr):
+            x = xarr.reshape(1, -1)
+            return singletop(x)
+
+        print("Comparing with Lepage's Vegas")
+        limits = dim * [[0.0, 1.0]]
+        integrator = Integrator(limits)
+        start = time.time()
+        vr = integrator(fun, neval=ncalls, nitn=n_iter)
+        end = time.time()
+        print(vr.summary())
+        print(f"time (s): {end-start}")
+        print(f"Per iteration (s): {(end-start)/n_iter}")

@@ -4,6 +4,7 @@
 
 from abc import abstractmethod, ABC
 import numpy as np
+import tensorflow as tf
 
 class MonteCarloFlow(ABC):
     """
@@ -19,23 +20,37 @@ class MonteCarloFlow(ABC):
         self.n_events = n_events
         self.xjac = 1.0 / n_events
         self.integrand = None
-        self.compiled = False
+        self.event = None
         self.all_results = []
-
-    def compile(self, integrand):
-        """ Receives an integrand, prepares it for integration
-        and forces the compilation
-
-        Parameters
-        ----------
-            `integrand`: the output of a tf.function, must receive as input a tensor
-        """
-        self.integrand = integrand
-        self.compiled = True
 
     @abstractmethod
     def _run_iteration(self):
-        pass
+        """ Run one iteration (i.e., `self.n_events`) of the
+        Monte Carlo integration """
+
+    @abstractmethod
+    def _run_event(self, integrand):
+        """ Run one single event of the Monte Carlo integration """
+        result = None
+        return result, pow(result, 2)
+
+    def compile(self, integrand, compilable = True):
+        """ Receives an integrand, prepares it for integration
+        and tries to compile unless told otherwise.
+
+        Parameters
+        ----------
+            `integrand`: the function to integrate
+        """
+        if compilable:
+            tf_integrand = tf.function(integrand)
+            def run_event():
+                return self._run_event(tf_integrand)
+            self.event = tf.function(run_event)
+        else:
+            def run_event():
+                return self._run_event(integrand)
+            self.event = run_event
 
     def run_integration(self, n_iter):
         """ Runs the integrator for the chosen number of iterations

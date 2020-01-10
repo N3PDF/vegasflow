@@ -24,19 +24,47 @@ class VegasFlow(MonteCarloFlow):
         divisions_np = subdivision_np.repeat(n_dim).reshape(-1, n_dim).T
         self.divisions = tf.Variable(divisions_np, dtype=DTYPE)
 
+    def _run_event(self, integrand):
+        n_events = self.n_events
+        n_dim = self.n_dim
+        divisions = self.divisions
+        xjac = self.xjac
+
+        # Generate all random number for this iteration
+        rnds = tf.random.uniform((n_events, n_dim), minval=0, maxval=1, dtype=DTYPE)
+
+        # Pass them through the Vegas digestion
+        x, ind, w = generate_random_array(rnds, divisions)
+
+        # Now compute the integrand
+        tmp = xjac * w * integrand(x, n_dim=n_dim)
+        tmp2 = tf.square(tmp)
+
+        # Compute the final result for this sub-iteration
+        res = tf.reduce_sum(tmp)
+        res2 = tf.reduce_sum(tmp2)
+
+        # Initialize iteration values
+        all_arr_res2 = []
+        # Rebin Vegas
+        for j in range(n_dim):
+            arr_res2 = consume_results(tmp2, ind[:, j : j + 1])
+            new_divisions = refine_grid_per_dimension(arr_res2, divisions[j, :])
+            divisions[j, :].assign(new_divisions)
+
+        return res, res2
+
 
     def _run_iteration(self, log_time=True):
         """ Runs one iteration of the Vegas integrator """
-        if not self.compiled:
+        if not self.event:
             raise RuntimeError("compile must be ran before running any iterations")
 
         if log_time:
             start = time.time()
 
         # Compute the result
-        res, res2 = run_event(
-            self.n_events, self.n_dim, self.divisions, self.xjac, self.integrand
-        )
+        res, res2 = self.event()
         # Compute the error
         err_tmp2 = (self.n_events * res2 - tf.square(res)) / (self.n_events - fone)
         sigma = tf.sqrt(tf.maximum(err_tmp2, fzero))

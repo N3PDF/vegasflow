@@ -1,7 +1,8 @@
 # Place your function here
 import time
 import numpy as np
-from vegasflow.vegas import vegas, DTYPE, DTYPEINT
+from vegasflow.configflow import DTYPE, DTYPEINT
+from vegasflow.vflow import VegasFlow
 import tensorflow as tf
 
 from cffi import FFI
@@ -66,6 +67,8 @@ if __name__ == "__main__":
 
     print(f"VEGAS MC, ncalls={ncalls}:")
     start = time.time()
-    r = vegas(lepage, dim, n_iter, ncalls)
+    vegas_instance = VegasFlow(dim, ncalls)
+    vegas_instance.compile(lepage, compilable = False)
+    r = vegas_instance.run_integration(n_iter)
     end = time.time()
     print(f"time (s): {end-start}")
