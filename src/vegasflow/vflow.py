@@ -1,27 +1,72 @@
 #!/usr/env python
+"""
+    This module contains the VegasFlow class
+"""
 import time
 import numpy as np
 import tensorflow as tf
 
-DTYPE = tf.float64
-DTYPEINT = tf.int32
-BINS_MAX = 50
-ALPHA = 1.5
-EVENTS_LIMIT = int(1e6)
+from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me
+from vegasflow.configflow import BINS_MAX, ALPHA
+from vegasflow.monte_carlo import MonteCarloFlow
 
 
-def int_me(i):
-    return tf.constant(i, dtype=DTYPEINT)
+class VegasFlow(MonteCarloFlow):
+    """
+    Implementation of the adaptative sampling algorithm Vegas
+    """
+
+    def __init__(self, n_dim, n_events):
+        super().__init__(n_dim, n_events)
+
+        # Initialize grid
+        subdivision_np = np.linspace(1 / BINS_MAX, 1, BINS_MAX)
+        divisions_np = subdivision_np.repeat(n_dim).reshape(-1, n_dim).T
+        self.divisions = tf.Variable(divisions_np, dtype=DTYPE)
 
 
-def float_me(i):
-    return tf.constant(i, dtype=DTYPE)
+    def _run_iteration(self, log_time=True):
+        """ Runs one iteration of the Vegas integrator """
+        if not self.compiled:
+            raise RuntimeError("compile must be ran before running any iterations")
 
+        if log_time:
+            start = time.time()
 
-ione = int_me(1)
-izero = int_me(0)
-fone = float_me(1)
-fzero = float_me(0)
+        # Compute the result
+        res, res2 = run_event(
+            self.n_events, self.n_dim, self.divisions, self.xjac, self.integrand
+        )
+        # Compute the error
+        err_tmp2 = (self.n_events * res2 - tf.square(res)) / (self.n_events - fone)
+        sigma = tf.sqrt(tf.maximum(err_tmp2, fzero))
+
+        if log_time:
+            end = time.time()
+            time_str = f"(took {end-start} s)"
+        else:
+            time_str = ""
+        print(f"Result {res:.5f} +/- {sigma:.5f}" + time_str)
+        self.all_results.append((res, sigma))
+
+def vegas_wrapper(integrand, n_dim, n_iter, total_n_events):
+    """ Convenience wrapper
+
+    Parameters
+    ----------
+        `integrand`: tf.function
+        `n_dim`: number of dimensions
+        `n_iter`: number of iterations
+        `n_events`: number of events per iteration
+
+    Returns
+    -------
+        `final_result`: integral value
+        `sigma`: monte carlo error
+    """
+    vegas_instance = VegasFlow(n_dim, total_n_events)
+    vegas_instance.compile(integrand)
+    return vegas_instance.run_integration(n_iter)
 
 
 @tf.function
@@ -65,6 +110,7 @@ def generate_random_array(rnds, divisions):
     x = reg_i + rand_x * (reg_f - reg_i)
     weights = tf.reduce_prod(xdelta * BINS_MAX, axis=1)
     return x, int_xn, weights
+
 
 @tf.function
 def refine_grid_per_dimension(t_res_sq, subdivisions):
@@ -116,6 +162,7 @@ def refine_grid_per_dimension(t_res_sq, subdivisions):
         prev = cur
         cur = subdivisions[n_bin]
         return bin_weight, n_bin, cur, prev
+
     ###########################
 
     # And now resize all bins
@@ -158,7 +205,7 @@ def run_event(events_to_do, n_dim, divisions, xjac, integrand):
 
     # Generate all random number for this iteration
     rnds = tf.random.uniform((n_events, n_dim), minval=0, maxval=1, dtype=DTYPE)
-    
+
     # Pass them through the Vegas digestion
     x, ind, w = generate_random_array(rnds, divisions)
 
@@ -201,7 +248,6 @@ def vegas(integrand, n_dim, n_iter, total_n_events):
     divisions_np = subdivision_np.repeat(n_dim).reshape(-1, n_dim).T
     divisions = tf.Variable(divisions_np, dtype=DTYPE)
 
-
     # "allocate" arrays
     all_results = []
 
@@ -233,4 +279,3 @@ def vegas(integrand, n_dim, n_iter, total_n_events):
     sigma = np.sqrt(1.0 / weight_sum)
     print(f" > Final results: {final_result.numpy()} +/- {sigma}")
     return final_result, sigma
-

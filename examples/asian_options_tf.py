@@ -6,7 +6,8 @@ import time
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops.distributions.special_math import ndtri
-from vegasflow.vegas import vegas, DTYPE, DTYPEINT
+from vegasflow.configflow import DTYPE, DTYPEINT
+from vegasflow.vflow import vegas_wrapper
 
 
 # MC integration setup
@@ -40,6 +41,6 @@ if __name__ == "__main__":
     """Testing a basic integration"""
     print(f"VEGAS MC, ncalls={ncalls}:")
     start = time.time()
-    r = vegas(lepage, d, n_iter, ncalls)
+    r = vegas_wrapper(lepage, d, n_iter, ncalls)
     end = time.time()
     print(f"time (s): {end-start}")
