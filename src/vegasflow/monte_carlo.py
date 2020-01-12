@@ -1,6 +1,5 @@
 """
     Abstract class for Monte Carlo integrators
- 
     Usage:
         In order to implement a new MonteCarloFlow integrator
         it is necessary to implement (at least) two methods:
@@ -17,6 +16,16 @@ import time
 from abc import abstractmethod, ABC
 import numpy as np
 import tensorflow as tf
+
+def print_iteration(it, res, error, extra = "", threshold = 0.1):
+    """ Checks the size of the result to select between
+    scientific notation and floating point notation """
+    # note: actually, the flag 'g' does this automatically
+    # but I prefer to choose the precision myself...
+    if res < threshold:
+        print(f"Result for iteration {it}: {res:.3e} +/- {error:.3e}" + extra)
+    else:
+        print(f"Result for iteration {it}: {res:.4f} +/- {error:.4f}" + extra)
 
 
 class MonteCarloFlow(ABC):
@@ -94,7 +103,7 @@ class MonteCarloFlow(ABC):
                 time_str = f"(took {end-start} s)"
             else:
                 time_str = ""
-            print(f"Result for iteration {i}: {res:.5f} +/- {error:.5f}" + time_str)
+            print_iteration(i, res, error, extra = time_str)
 
         aux_res = 0.0
         weight_sum = 0.0

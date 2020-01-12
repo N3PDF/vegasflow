@@ -179,8 +179,6 @@ class VegasFlow(MonteCarloFlow):
         res = tf.reduce_sum(tmp)
         res2 = tf.reduce_sum(tmp2)
 
-        # Initialize iteration values
-        all_arr_res2 = []
         # Rebin Vegas
         for j in range(n_dim):
             arr_res2 = consume_results(tmp2, ind[:, j : j + 1])
