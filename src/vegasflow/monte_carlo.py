@@ -16,6 +16,7 @@ import time
 from abc import abstractmethod, ABC
 import numpy as np
 import tensorflow as tf
+from vegasflow.configflow import MAX_EVENTS_LIMIT
 
 
 def print_iteration(it, res, error, extra="", threshold=0.1):
@@ -37,14 +38,15 @@ class MonteCarloFlow(ABC):
         `n_events`: number of events per iteration
     """
 
-    def __init__(self, n_dim, n_events):
+    def __init__(self, n_dim, n_events, events_limits = MAX_EVENTS_LIMIT):
         # Save some parameters
         self.n_dim = n_dim
-        self.n_events = n_events
         self.xjac = 1.0 / n_events
         self.integrand = None
         self.event = None
         self.all_results = []
+        self.n_events = n_events
+        self.events_per_run = min(events_limits, n_events)
 
     @abstractmethod
     def _run_iteration(self):
@@ -52,15 +54,38 @@ class MonteCarloFlow(ABC):
         Monte Carlo integration """
 
     @abstractmethod
-    def _run_event(self, integrand):
+    def _run_event(self, integrand, ncalls = None):
         """ Run one single event of the Monte Carlo integration """
         result = self.event()
         return result, pow(result, 2)
 
-    def run_event(self):
+    def run_event(self, acc = None, **kwargs):
+        """
+        Runs the Monte Carlo event. This corresponds to a number of calls
+        decided by the `events_per_run` variable. The variable `acc` is exposed
+        in order to pass the tensor output back to the integrator in case it needs
+        to accumulate.
+
+        The main driver of this function is the `event` attribute which corresponds
+        to the `tensorflor` compilation of the `_run_event` method together with the
+        `integrand`.
+        """
         if not self.event:
             raise RuntimeError("compile must be ran before running any iterations")
-        return self.event()
+        events_left = self.n_events
+        if acc is None:
+            # Check whether we have something to accumulate
+            accumulate = False
+            result = acc
+        else:
+            accumulate = True
+        while events_left > 0:
+            ncalls = min(events_left, self.events_per_run)
+            result = self.event(ncalls = ncalls, acc = acc, **kwargs)
+            events_left -= self.events_per_run
+            if accumulate:
+                acc = result
+        return result
 
     def compile(self, integrand, compilable=True):
         """ Receives an integrand, prepares it for integration
@@ -73,18 +98,18 @@ class MonteCarloFlow(ABC):
         if compilable:
             tf_integrand = tf.function(integrand)
 
-            def run_event():
-                return self._run_event(tf_integrand)
+            def run_event(**kwargs):
+                return self._run_event(tf_integrand, **kwargs)
 
             self.event = tf.function(run_event)
         else:
 
-            def run_event():
-                return self._run_event(integrand)
+            def run_event(**kwargs):
+                return self._run_event(integrand, **kwargs)
 
             self.event = run_event
 
-    def run_integration(self, n_iter, log_time=False):
+    def run_integration(self, n_iter, log_time=True):
         """ Runs the integrator for the chosen number of iterations
         Parameters
         ---------

@@ -15,7 +15,7 @@ ALPHA = 1.5
 # Set up the logistics of the integration
 # Events Limit limits how many events are done in one single run of the event_loop
 # set it lower if hitting memory problems
-EVENTS_LIMIT = int(1e6)
+MAX_EVENTS_LIMIT = int(2e4)
 
 # Create wrappers in order to have numbers of the correct type
 def int_me(i):

@@ -168,9 +168,28 @@ class VegasFlow(MonteCarloFlow):
     def unfreeze_grid(self):
         self.train = True
 
-    def _run_event(self, integrand):
+    def generate_accumulators(self):
+        res = fzero
+        res2 = fzero
+        self.arr_res2 = tf.Variable(tf.zeros((self.n_dim, BINS_MAX), dtype = DTYPE))
+        return res, res2
+
+    @tf.function
+    def post_integration(self):
+        for j in range(self.n_dim):
+            new_divisions = refine_grid_per_dimension(self.arr_res2[j,:], self.divisions[j, :])
+            self.divisions[j, :].assign(new_divisions)
+
+    def _run_event(self, integrand, ncalls = None, acc = None):
         """ Runs one event of Vegas"""
-        n_events = self.n_events
+        if acc is None:
+            raise ValueError("The _run_event method of Vegas needs the result from generate_accumulators")
+
+        if ncalls is None:
+            n_events = self.n_events
+        else:
+            n_events = ncalls
+
         n_dim = self.n_dim
         divisions = self.divisions
         xjac = self.xjac
@@ -185,26 +204,30 @@ class VegasFlow(MonteCarloFlow):
         tmp = xjac * w * integrand(x, n_dim=n_dim)
         tmp2 = tf.square(tmp)
 
-        # Compute the final result for this sub-iteration
-        res = tf.reduce_sum(tmp)
-        res2 = tf.reduce_sum(tmp2)
+        # Compute the final result for this sub-iteration and accumulate it
+        res, res2 = acc
+        res += tf.reduce_sum(tmp)
+        res2 += tf.reduce_sum(tmp2)
 
         if self.train:
             # Rebin Vegas
-            for j in range(n_dim):
-                arr_res2 = consume_results(tmp2, ind[:, j : j + 1])
-                new_divisions = refine_grid_per_dimension(arr_res2, divisions[j, :])
-                divisions[j, :].assign(new_divisions)
+            for j in range(self.n_dim):
+                new_arr2 = consume_results(tmp2, ind[:, j:j+1]) # + self.arr_res2[j, :] # TODO ????????
+                self.arr_res2[j, :].assign( new_arr2 )
 
         return res, res2
 
     def _run_iteration(self):
         """ Runs one iteration of the Vegas integrator """
+        # Generate the accumulators
+        acc_res, acc_res2 = self.generate_accumulators()
         # Compute the result
-        res, res2 = self.run_event()
+        res, res2 = self.run_event(acc = (acc_res, acc_res2))
         # Compute the error
         err_tmp2 = (self.n_events * res2 - tf.square(res)) / (self.n_events - fone)
         sigma = tf.sqrt(tf.maximum(err_tmp2, fzero))
+        # Act post integration
+        self.post_integration()
         return res, sigma
 
 
