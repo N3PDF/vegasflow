@@ -59,7 +59,10 @@ class MonteCarloFlow(ABC):
         result = self.event()
         return result, pow(result, 2)
 
-    def run_event(self, acc = None, **kwargs):
+    def accumulate(self, accumulators):
+        return accumulators[0]
+
+    def run_event(self, **kwargs):
         """
         Runs the Monte Carlo event. This corresponds to a number of calls
         decided by the `events_per_run` variable. The variable `acc` is exposed
@@ -73,19 +76,16 @@ class MonteCarloFlow(ABC):
         if not self.event:
             raise RuntimeError("compile must be ran before running any iterations")
         events_left = self.n_events
-        if acc is None:
-            # Check whether we have something to accumulate
-            accumulate = False
-            result = acc
-        else:
-            accumulate = True
+        accumulators = []
         while events_left > 0:
             ncalls = min(events_left, self.events_per_run)
-            result = self.event(ncalls = ncalls, acc = acc, **kwargs)
+            result = self.event(ncalls = ncalls, **kwargs)
+            accumulators.append(result)
             events_left -= self.events_per_run
-            if accumulate:
-                acc = result
-        return result
+        if len(accumulators) > 1:
+            return self.accumulate(accumulators)
+        else:
+            accumulators[0]
 
     def compile(self, integrand, compilable=True):
         """ Receives an integrand, prepares it for integration
