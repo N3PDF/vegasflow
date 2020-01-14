@@ -17,7 +17,8 @@ from abc import abstractmethod, ABC
 import numpy as np
 import tensorflow as tf
 
-def print_iteration(it, res, error, extra = "", threshold = 0.1):
+
+def print_iteration(it, res, error, extra="", threshold=0.1):
     """ Checks the size of the result to select between
     scientific notation and floating point notation """
     # note: actually, the flag 'g' does this automatically
@@ -83,7 +84,7 @@ class MonteCarloFlow(ABC):
 
             self.event = run_event
 
-    def run_integration(self, n_iter, log_time = False):
+    def run_integration(self, n_iter, log_time=False):
         """ Runs the integrator for the chosen number of iterations
         Parameters
         ---------
@@ -94,17 +95,23 @@ class MonteCarloFlow(ABC):
             `sigma`: monte carlo error
         """
         for i in range(n_iter):
+            # Save start time
             if log_time:
                 start = time.time()
+
+            # Run one single iteration and append results
             res, error = self._run_iteration()
             self.all_results.append((res, error))
+
+            # Logs result and end time
             if log_time:
                 end = time.time()
                 time_str = f"(took {end-start} s)"
             else:
                 time_str = ""
-            print_iteration(i, res, error, extra = time_str)
+            print_iteration(i, res, error, extra=time_str)
 
+        # Once all iterations are finished, print out
         aux_res = 0.0
         weight_sum = 0.0
         for result in self.all_results:
@@ -116,5 +123,5 @@ class MonteCarloFlow(ABC):
 
         final_result = aux_res / weight_sum
         sigma = np.sqrt(1.0 / weight_sum)
-        print(f" > Final results: {final_result.numpy():.5f} +/- {sigma:.5f}")
+        print(f" > Final results: {final_result.numpy():g} +/- {sigma:g}")
         return final_result, sigma

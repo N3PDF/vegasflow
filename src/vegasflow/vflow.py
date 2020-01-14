@@ -2,7 +2,7 @@
 """
     This module contains the VegasFlow class and all its auxuliary functions
 
-    The main interfaces of this class are the class `VegasFlow` and the 
+    The main interfaces of this class are the class `VegasFlow` and the
     `vegas_wrapper`
 """
 import numpy as np
@@ -150,13 +150,23 @@ class VegasFlow(MonteCarloFlow):
     Implementation of the adaptative sampling algorithm Vegas
     """
 
-    def __init__(self, n_dim, n_events):
+    def __init__(self, n_dim, n_events, train = True):
         super().__init__(n_dim, n_events)
+
+        # If training is True, the grid will be changed after every iteration
+        # otherwise it will be frozen
+        self.train = train
 
         # Initialize grid
         subdivision_np = np.linspace(1 / BINS_MAX, 1, BINS_MAX)
         divisions_np = subdivision_np.repeat(n_dim).reshape(-1, n_dim).T
         self.divisions = tf.Variable(divisions_np, dtype=DTYPE)
+
+    def freeze_grid(self):
+        self.train = False
+
+    def unfreeze_grid(self):
+        self.train = True
 
     def _run_event(self, integrand):
         """ Runs one event of Vegas"""
@@ -179,15 +189,16 @@ class VegasFlow(MonteCarloFlow):
         res = tf.reduce_sum(tmp)
         res2 = tf.reduce_sum(tmp2)
 
-        # Rebin Vegas
-        for j in range(n_dim):
-            arr_res2 = consume_results(tmp2, ind[:, j : j + 1])
-            new_divisions = refine_grid_per_dimension(arr_res2, divisions[j, :])
-            divisions[j, :].assign(new_divisions)
+        if self.train:
+            # Rebin Vegas
+            for j in range(n_dim):
+                arr_res2 = consume_results(tmp2, ind[:, j : j + 1])
+                new_divisions = refine_grid_per_dimension(arr_res2, divisions[j, :])
+                divisions[j, :].assign(new_divisions)
 
         return res, res2
 
-    def _run_iteration(self, log_time=True):
+    def _run_iteration(self):
         """ Runs one iteration of the Vegas integrator """
         # Compute the result
         res, res2 = self.run_event()

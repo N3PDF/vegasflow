@@ -12,7 +12,9 @@ DTYPEINT = tf.int32
 BINS_MAX = 50
 ALPHA = 1.5
 
-# Limit the logistics of the itnegration
+# Set up the logistics of the integration
+# Events Limit limits how many events are done in one single run of the event_loop
+# set it lower if hitting memory problems
 EVENTS_LIMIT = int(1e6)
 
 # Create wrappers in order to have numbers of the correct type
