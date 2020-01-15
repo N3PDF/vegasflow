@@ -32,13 +32,20 @@ def print_iteration(it, res, error, extra="", threshold=0.1):
 
 class MonteCarloFlow(ABC):
     """
+    Parent class of all Monte Carlo integrators using tensorflow
+
     Parameters
     ----------
         `n_dim`: number of dimensions of the integrand
         `n_events`: number of events per iteration
+        `events_limit`: maximum number of events per step
+            if `events_limit` is below `n_events` each iteration of the MC
+            will be broken down into several steps. Do it in order to limit memory.
+            Note: for a better performance, when n_events is greater than the event limit,
+            `n_events` should be exactly divisible by `events_limit`
     """
 
-    def __init__(self, n_dim, n_events, events_limits = MAX_EVENTS_LIMIT):
+    def __init__(self, n_dim, n_events, events_limit=MAX_EVENTS_LIMIT):
         # Save some parameters
         self.n_dim = n_dim
         self.xjac = 1.0 / n_events
@@ -46,7 +53,7 @@ class MonteCarloFlow(ABC):
         self.event = None
         self.all_results = []
         self.n_events = n_events
-        self.events_per_run = min(events_limits, n_events)
+        self.events_per_run = min(events_limit, n_events)
 
     @abstractmethod
     def _run_iteration(self):
@@ -54,13 +61,26 @@ class MonteCarloFlow(ABC):
         Monte Carlo integration """
 
     @abstractmethod
-    def _run_event(self, integrand, ncalls = None):
+    def _run_event(self, integrand, ncalls=None):
         """ Run one single event of the Monte Carlo integration """
         result = self.event()
         return result, pow(result, 2)
 
     def accumulate(self, accumulators):
-        return accumulators[0]
+        """ Accumulate all the quantities in accumulators
+        The default accumulation is implemented for tensorflow tensors
+        as a sum of all partial results.
+
+        Parameters
+        ----------
+            `accumulators`: list of tensorflow tensors
+        """
+        results = []
+        len_acc = len(accumulators[0])
+        for i in range(len_acc):
+            total = tf.reduce_sum([acc[i] for acc in accumulators], axis=0)
+            results.append(total)
+        return results
 
     def run_event(self, **kwargs):
         """
@@ -74,18 +94,18 @@ class MonteCarloFlow(ABC):
         `integrand`.
         """
         if not self.event:
-            raise RuntimeError("compile must be ran before running any iterations")
-        events_left = self.n_events
+            raise RuntimeError("Compile must be ran before running any iterations")
         accumulators = []
+        # Run until there are no events left to do
+        events_left = self.n_events
         while events_left > 0:
+            # Check how many calls corresponds to this step
             ncalls = min(events_left, self.events_per_run)
-            result = self.event(ncalls = ncalls, **kwargs)
-            accumulators.append(result)
             events_left -= self.events_per_run
-        if len(accumulators) > 1:
-            return self.accumulate(accumulators)
-        else:
-            accumulators[0]
+            # Compute the integrand
+            result = self.event(ncalls=ncalls, **kwargs)
+            accumulators.append(result)
+        return self.accumulate(accumulators)
 
     def compile(self, integrand, compilable=True):
         """ Receives an integrand, prepares it for integration
@@ -94,6 +114,8 @@ class MonteCarloFlow(ABC):
         Parameters
         ----------
             `integrand`: the function to integrate
+            `compilable`: (default True) if False, the integration
+                is not passed through `tf.function`
         """
         if compilable:
             tf_integrand = tf.function(integrand)
@@ -131,7 +153,7 @@ class MonteCarloFlow(ABC):
             # Logs result and end time
             if log_time:
                 end = time.time()
-                time_str = f"(took {end-start} s)"
+                time_str = f"(took {end-start:.5f} s)"
             else:
                 time_str = ""
             print_iteration(i, res, error, extra=time_str)
