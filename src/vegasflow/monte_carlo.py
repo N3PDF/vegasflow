@@ -74,6 +74,8 @@ class MonteCarloFlow(ABC):
         Parameters
         ----------
             `accumulators`: list of tensorflow tensors
+
+        Function not compiled
         """
         results = []
         len_acc = len(accumulators[0])

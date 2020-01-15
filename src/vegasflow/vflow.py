@@ -170,9 +170,6 @@ class VegasFlow(MonteCarloFlow):
         """ Enable the refining of the grid """
         self.train = True
 
-    # TODO: study whether it makes sense to compile this function
-    # note that the internal function (`refine_grid_per_dimension` is compiled)
-    # @tf.function
     def refine_grid(self, arr_res2):
         """ Receives an array with the values of the integral squared per
         bin per dimension (`arr_res2.shape = (n_dim, BINS_MAX)`)
@@ -181,6 +178,8 @@ class VegasFlow(MonteCarloFlow):
         Parameters
         ----------
             `arr_res2`: result the integrand sq per dimension and grid bin
+
+        Function not compiled
         """
         for j in range(self.n_dim):
             new_divisions = refine_grid_per_dimension(
