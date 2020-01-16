@@ -17,6 +17,7 @@ from abc import abstractmethod, ABC
 import numpy as np
 import tensorflow as tf
 from vegasflow.configflow import MAX_EVENTS_LIMIT
+from joblib import Parallel, delayed
 
 
 def print_iteration(it, res, error, extra="", threshold=0.1):
@@ -54,6 +55,7 @@ class MonteCarloFlow(ABC):
         self.all_results = []
         self.n_events = n_events
         self.events_per_run = min(events_limit, n_events)
+        self.devices = tf.config.experimental.list_logical_devices('GPU')
 
     @abstractmethod
     def _run_iteration(self):
@@ -102,11 +104,15 @@ class MonteCarloFlow(ABC):
         events_left = self.n_events
         while events_left > 0:
             # Check how many calls corresponds to this step
-            ncalls = min(events_left, self.events_per_run)
+            ncalls = min(events_left, self.events_per_run) // len(self.devices)
             events_left -= self.events_per_run
             # Compute the integrand
-            result = self.event(ncalls=ncalls, **kwargs)
-            accumulators.append(result)
+            def run(device):
+                with tf.device(device.name):
+                    result = self.event(ncalls=ncalls, **kwargs)
+                return result
+            result = Parallel(n_jobs=len(self.devices), prefer="threads")(delayed(run)(dev) for dev in self.devices)
+            accumulators += result
         return self.accumulate(accumulators)
 
     def compile(self, integrand, compilable=True):
