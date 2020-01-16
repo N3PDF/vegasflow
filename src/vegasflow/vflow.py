@@ -1,29 +1,19 @@
 #!/usr/env python
-import time
+"""
+    This module contains the VegasFlow class and all its auxuliary functions
+
+    The main interfaces of this class are the class `VegasFlow` and the
+    `vegas_wrapper`
+"""
 import numpy as np
 import tensorflow as tf
 
-DTYPE = tf.float64
-DTYPEINT = tf.int32
-BINS_MAX = 50
-ALPHA = 1.5
-EVENTS_LIMIT = int(1e6)
+from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me
+from vegasflow.configflow import BINS_MAX, ALPHA
+from vegasflow.monte_carlo import MonteCarloFlow
 
 
-def int_me(i):
-    return tf.constant(i, dtype=DTYPEINT)
-
-
-def float_me(i):
-    return tf.constant(i, dtype=DTYPE)
-
-
-ione = int_me(1)
-izero = int_me(0)
-fone = float_me(1)
-fzero = float_me(0)
-
-
+# Auxiliary functions for Vegas
 @tf.function
 def generate_random_array(rnds, divisions):
     """
@@ -65,6 +55,7 @@ def generate_random_array(rnds, divisions):
     x = reg_i + rand_x * (reg_f - reg_i)
     weights = tf.reduce_prod(xdelta * BINS_MAX, axis=1)
     return x, int_xn, weights
+
 
 @tf.function
 def refine_grid_per_dimension(t_res_sq, subdivisions):
@@ -116,6 +107,7 @@ def refine_grid_per_dimension(t_res_sq, subdivisions):
         prev = cur
         cur = subdivisions[n_bin]
         return bin_weight, n_bin, cur, prev
+
     ###########################
 
     # And now resize all bins
@@ -152,85 +144,119 @@ def consume_results(res2, indices):
     return arr_res2
 
 
-@tf.function
-def run_event(events_to_do, n_dim, divisions, xjac, integrand):
-    n_events = events_to_do
-
-    # Generate all random number for this iteration
-    rnds = tf.random.uniform((n_events, n_dim), minval=0, maxval=1, dtype=DTYPE)
-    
-    # Pass them through the Vegas digestion
-    x, ind, w = generate_random_array(rnds, divisions)
-
-    # Now compute the integrand
-    tmp = xjac * w * integrand(x, n_dim=n_dim)
-    tmp2 = tf.square(tmp)
-
-    # Compute the final result for this sub-iteration
-    res = tf.reduce_sum(tmp)
-    res2 = tf.reduce_sum(tmp2)
-
-    # Initialize iteration values
-    all_arr_res2 = []
-    # Rebin Vegas
-    for j in range(n_dim):
-        arr_res2 = consume_results(tmp2, ind[:, j : j + 1])
-        new_divisions = refine_grid_per_dimension(arr_res2, divisions[j, :])
-        divisions[j, :].assign(new_divisions)
-
-    return res, res2
-
-
-def vegas(integrand, n_dim, n_iter, total_n_events):
+####### VegasFlow
+class VegasFlow(MonteCarloFlow):
     """
-    # Arguments in:
-        n_dim: number of dimensions
-        n_iter: number of iterations
-        n_events: number of events per iteration
-
-
-    # Returns:
-        - integral value
-        - error
+    Implementation of the important sampling algorithm from Vegas
     """
-    # Initialize constant variables, we can use python numbers here
-    xjac = 1.0 / total_n_events
 
-    # Initialize variable variables
-    subdivision_np = np.linspace(1 / BINS_MAX, 1, BINS_MAX)
-    divisions_np = subdivision_np.repeat(n_dim).reshape(-1, n_dim).T
-    divisions = tf.Variable(divisions_np, dtype=DTYPE)
+    def __init__(self, n_dim, n_events, train=True):
+        super().__init__(n_dim, n_events)
 
+        # If training is True, the grid will be changed after every iteration
+        # otherwise it will be frozen
+        self.train = train
 
-    # "allocate" arrays
-    all_results = []
+        # Initialize grid
+        subdivision_np = np.linspace(1 / BINS_MAX, 1, BINS_MAX)
+        divisions_np = subdivision_np.repeat(n_dim).reshape(-1, n_dim).T
+        self.divisions = tf.Variable(divisions_np, dtype=DTYPE)
 
-    # Loop of iterations
-    for iteration in range(n_iter):
-        start = time.time()
+    def freeze_grid(self):
+        """ Stops the grid from refining any more """
+        self.train = False
 
-        res, res2 = run_event(total_n_events, n_dim, divisions, xjac, integrand)
+    def unfreeze_grid(self):
+        """ Enable the refining of the grid """
+        self.train = True
 
+    def refine_grid(self, arr_res2):
+        """ Receives an array with the values of the integral squared per
+        bin per dimension (`arr_res2.shape = (n_dim, BINS_MAX)`)
+        and reshapes the `divisions` attribute accordingly
+
+        Parameters
+        ----------
+            `arr_res2`: result the integrand sq per dimension and grid bin
+
+        Function not compiled
+        """
+        for j in range(self.n_dim):
+            new_divisions = refine_grid_per_dimension(
+                arr_res2[j, :], self.divisions[j, :]
+            )
+            self.divisions[j, :].assign(new_divisions)
+
+    def _run_event(self, integrand, ncalls=None):
+        """ Runs one step of Vegas.
+
+        Parameters
+        ----------
+            `integrand`: function to integrate
+            `ncalls`: how many events to run in this step
+
+        Returns
+        -------
+            `res`: sum of the result of the integrand for all events
+            `res2`: sum of the result squared of the integrand for all events
+            `arr_res2`: result of the integrand squared per dimension and grid bin
+        """
+        if ncalls is None:
+            n_events = self.n_events
+        else:
+            n_events = ncalls
+
+        # Generate all random number for this iteration
+        rnds = tf.random.uniform((n_events, self.n_dim), minval=0, maxval=1, dtype=DTYPE)
+
+        # Pass them through the Vegas digestion
+        x, ind, w = generate_random_array(rnds, self.divisions)
+
+        # Now compute the integrand
+        tmp = self.xjac * w * integrand(x, n_dim=self.n_dim)
+        tmp2 = tf.square(tmp)
+
+        # Compute the final result for this step
+        res = tf.reduce_sum(tmp)
+        res2 = tf.reduce_sum(tmp2)
+
+        arr_res2 = []
+        if self.train:
+            # If the training is active, save the result of the integral sq
+            for j in range(self.n_dim):
+                arr_res2.append(consume_results(tmp2, ind[:, j : j + 1]))
+            arr_res2 = tf.reshape(arr_res2, (self.n_dim, -1))
+
+        return res, res2, arr_res2
+
+    def _run_iteration(self):
+        """ Runs one iteration of the Vegas integrator """
+        # Compute the result
+        res, res2, arr_res2 = self.run_event()
         # Compute the error
-        err_tmp2 = (total_n_events * res2 - tf.square(res)) / (total_n_events - fone)
+        err_tmp2 = (self.n_events * res2 - tf.square(res)) / (self.n_events - fone)
         sigma = tf.sqrt(tf.maximum(err_tmp2, fzero))
-        # Print the results
-        end = time.time()
-        print(f"Results for {iteration} {res:.5f} +/- {sigma:.5f} (took {end-start} s)")
-        all_results.append((res, sigma))
+        # If training is active, act post integration
+        if self.train:
+            self.refine_grid(arr_res2)
+        return res, sigma
 
-    # Compute the final results
-    aux_res = 0.0
-    weight_sum = 0.0
-    for result in all_results:
-        res = result[0]
-        sigma = result[1]
-        wgt_tmp = 1.0 / pow(sigma, 2)
-        aux_res += res * wgt_tmp
-        weight_sum += wgt_tmp
 
-    final_result = aux_res / weight_sum
-    sigma = np.sqrt(1.0 / weight_sum)
-    print(f" > Final results: {final_result.numpy()} +/- {sigma}")
-    return final_result, sigma
+def vegas_wrapper(integrand, n_dim, n_iter, total_n_events):
+    """ Convenience wrapper
 
+    Parameters
+    ----------
+        `integrand`: tf.function
+        `n_dim`: number of dimensions
+        `n_iter`: number of iterations
+        `n_events`: number of events per iteration
+
+    Returns
+    -------
+        `final_result`: integral value
+        `sigma`: monte carlo error
+    """
+    vegas_instance = VegasFlow(n_dim, total_n_events)
+    vegas_instance.compile(integrand)
+    return vegas_instance.run_integration(n_iter)

@@ -1,11 +1,12 @@
 import time
 import numpy as np
 import tensorflow as tf
-from vegasflow.vegas import vegas, DTYPE, DTYPEINT
+from vegasflow.configflow import DTYPE, DTYPEINT
+from vegasflow.vflow import vegas_wrapper
 
 # MC integration setup
 dim = 4
-ncalls = np.int32(1e5)
+ncalls = np.int32(1e6)
 n_iter = 5
 
 # Physics setup
@@ -250,6 +251,6 @@ if __name__ == "__main__":
     """Testing a basic integration"""
     print(f"VEGAS MC, ncalls={ncalls}:")
     start = time.time()
-    r = vegas(drellyan, dim, n_iter, ncalls)
+    r = vegas_wrapper(drellyan, dim, n_iter, ncalls)
     end = time.time()
     print(f"time (s): {end-start}")
