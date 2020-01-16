@@ -66,7 +66,7 @@ class MonteCarloFlow(ABC):
             self.pool = joblib.Parallel(n_jobs = len(devices), prefer = "threads")
         else:
             self.devices = None
-    
+
     def get_device(self):
         use_dev = None
         self.lock.acquire()
@@ -157,27 +157,6 @@ class MonteCarloFlow(ABC):
             accumulators = self.pool(joblib.delayed(self.device_run)(ncalls, **kwargs) for ncalls in events_to_do)
         else:
             accumulators = [self.device_run(ncalls, **kwargs) for ncalls in events_to_do]
-        return self.accumulate(accumulators)
-            
-
-        # If using multiple devices, decide the policy for job sharing
-        # at the moment, each device gets the same number of events == self.events_per_run
-        while events_left > 0:
-            # Fill the number of calls per device
-            events_to_do = []
-            for _ in self.devices:
-                if events_left < 0:
-                    break
-                events_to_do.append( min(events_left, self.events_per_run) )
-                events_left -= self.events_per_run
-            # Use parallel to send a different run to each device
-            if self.devices:
-                result = self.pool(
-                        joblib.delayed(self.device_run)(ncalls, **kwargs) for ncalls in events_to_do
-                        )
-            else:
-                result = [self.event(ncalls=events_to_do, **kwargs)]
-            accumulators += result
         return self.accumulate(accumulators)
 
     def compile(self, integrand, compilable=True):
