@@ -14,11 +14,10 @@
 
 import time
 from abc import abstractmethod, ABC
+import joblib, threading
 import numpy as np
 import tensorflow as tf
 from vegasflow.configflow import MAX_EVENTS_LIMIT
-from joblib import Parallel, delayed
-
 
 def print_iteration(it, res, error, extra="", threshold=0.1):
     """ Checks the size of the result to select between
@@ -29,7 +28,6 @@ def print_iteration(it, res, error, extra="", threshold=0.1):
         print(f"Result for iteration {it}: {res:.3e} +/- {error:.3e}" + extra)
     else:
         print(f"Result for iteration {it}: {res:.4f} +/- {error:.4f}" + extra)
-
 
 class MonteCarloFlow(ABC):
     """
@@ -44,9 +42,10 @@ class MonteCarloFlow(ABC):
             will be broken down into several steps. Do it in order to limit memory.
             Note: for a better performance, when n_events is greater than the event limit,
             `n_events` should be exactly divisible by `events_limit`
+        `use_multiple_devices`: if active, it will try to run on all devices found
     """
 
-    def __init__(self, n_dim, n_events, events_limit=MAX_EVENTS_LIMIT):
+    def __init__(self, n_dim, n_events, events_limit=MAX_EVENTS_LIMIT, use_multiple_devices = True):
         # Save some parameters
         self.n_dim = n_dim
         self.xjac = 1.0 / n_events
@@ -55,7 +54,39 @@ class MonteCarloFlow(ABC):
         self.all_results = []
         self.n_events = n_events
         self.events_per_run = min(events_limit, n_events)
-        self.devices = tf.config.experimental.list_logical_devices('GPU')
+        self.lock = threading.Lock()
+        if use_multiple_devices:
+            devices = tf.config.experimental.list_logical_devices('GPU')
+            # Generate the set of devices and set them all to active
+            # TODO the order of devices can be given by some algorithm
+            self.devices = {}
+            for dev in devices:
+                self.devices[dev.name] = True
+            # Generate the pool of workers
+            self.pool = joblib.Parallel(n_jobs = len(devices), prefer = "threads")
+        else:
+            self.devices = None
+    
+    def get_device(self):
+        use_dev = None
+        self.lock.acquire()
+        try:
+            for device, available in self.devices.items():
+                # Get the first available device (which will be the fastest one)
+                if available:
+                    use_dev = device
+                    self.devices[device] = False
+                    break
+        finally:
+            self.lock.release()
+        return use_dev
+
+    def release_device(self, device):
+        self.lock.acquire()
+        try:
+            self.devices[device] = True
+        finally:
+            self.lock.release()
 
     @abstractmethod
     def _run_iteration(self):
@@ -86,6 +117,19 @@ class MonteCarloFlow(ABC):
             results.append(total)
         return results
 
+    def device_run(self, ncalls, **kwargs):
+        """ Wrapper function to select a specific device when running the event """
+        if not self.event:
+            raise RuntimeError("Compile must be ran before running any iterations")
+        if self.devices:
+            device = self.get_device()
+            with tf.device(device):
+                result = self.event(ncalls=ncalls, **kwargs)
+            self.release_device(device)
+        else:
+            result = self.event(ncalls=ncalls, **kwargs)
+        return result
+
     def run_event(self, **kwargs):
         """
         Runs the Monte Carlo event. This corresponds to a number of calls
@@ -99,19 +143,40 @@ class MonteCarloFlow(ABC):
         """
         if not self.event:
             raise RuntimeError("Compile must be ran before running any iterations")
-        accumulators = []
         # Run until there are no events left to do
         events_left = self.n_events
+        events_to_do = []
+        # Fill the array of event distribution
+        # If using multiple devices, decide the policy for job sharing
         while events_left > 0:
-            # Check how many calls corresponds to this step
-            ncalls = min(events_left, self.events_per_run) // len(self.devices)
+            ncalls = min(events_left, self.events_per_run)
+            events_to_do.append(ncalls)
             events_left -= self.events_per_run
-            # Compute the integrand
-            def run(device):
-                with tf.device(device.name):
-                    result = self.event(ncalls=ncalls, **kwargs)
-                return result
-            result = Parallel(n_jobs=len(self.devices), prefer="threads")(delayed(run)(dev) for dev in self.devices)
+
+        if self.devices:
+            accumulators = self.pool(joblib.delayed(self.device_run)(ncalls, **kwargs) for ncalls in events_to_do)
+        else:
+            accumulators = [self.device_run(ncalls, **kwargs) for ncalls in events_to_do]
+        return self.accumulate(accumulators)
+            
+
+        # If using multiple devices, decide the policy for job sharing
+        # at the moment, each device gets the same number of events == self.events_per_run
+        while events_left > 0:
+            # Fill the number of calls per device
+            events_to_do = []
+            for _ in self.devices:
+                if events_left < 0:
+                    break
+                events_to_do.append( min(events_left, self.events_per_run) )
+                events_left -= self.events_per_run
+            # Use parallel to send a different run to each device
+            if self.devices:
+                result = self.pool(
+                        joblib.delayed(self.device_run)(ncalls, **kwargs) for ncalls in events_to_do
+                        )
+            else:
+                result = [self.event(ncalls=events_to_do, **kwargs)]
             accumulators += result
         return self.accumulate(accumulators)
 
