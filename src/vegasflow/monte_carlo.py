@@ -57,6 +57,7 @@ class MonteCarloFlow(ABC):
         self.lock = threading.Lock()
         if use_multiple_devices:
             devices = tf.config.experimental.list_logical_devices('GPU')
+            devices += tf.config.experimental.list_logical_devices('CPU')
             # Generate the set of devices and set them all to active
             # TODO the order of devices can be given by some algorithm
             self.devices = {}
