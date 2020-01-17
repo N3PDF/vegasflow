@@ -15,7 +15,9 @@ ALPHA = 1.5
 # Set up the logistics of the integration
 # Events Limit limits how many events are done in one single run of the event_loop
 # set it lower if hitting memory problems
-MAX_EVENTS_LIMIT = int(1e6)
+MAX_EVENTS_LIMIT = int(1e5)
+# Select the list of devices to look for
+DEFAULT_ACTIVE_DEVICES = ['GPU', 'CPU']
 
 # Create wrappers in order to have numbers of the correct type
 def int_me(i):
