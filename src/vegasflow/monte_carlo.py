@@ -17,7 +17,7 @@ from abc import abstractmethod, ABC
 import joblib, threading
 import numpy as np
 import tensorflow as tf
-from vegasflow.configflow import MAX_EVENTS_LIMIT
+from vegasflow.configflow import MAX_EVENTS_LIMIT, DEFAULT_ACTIVE_DEVICES
 
 def print_iteration(it, res, error, extra="", threshold=0.1):
     """ Checks the size of the result to select between
@@ -45,7 +45,9 @@ class MonteCarloFlow(ABC):
         `use_multiple_devices`: if active, it will try to run on all devices found
     """
 
-    def __init__(self, n_dim, n_events, events_limit=MAX_EVENTS_LIMIT, use_multiple_devices = True):
+    def __init__(self, n_dim, n_events, events_limit=MAX_EVENTS_LIMIT, list_devices = 'default'):
+        if list_devices == 'default':
+            list_devices = DEFAULT_ACTIVE_DEVICES
         # Save some parameters
         self.n_dim = n_dim
         self.xjac = 1.0 / n_events
@@ -55,11 +57,13 @@ class MonteCarloFlow(ABC):
         self.n_events = n_events
         self.events_per_run = min(events_limit, n_events)
         self.lock = threading.Lock()
-        if use_multiple_devices:
-            devices = tf.config.experimental.list_logical_devices('GPU')
-            devices += tf.config.experimental.list_logical_devices('CPU')
-            # Generate the set of devices and set them all to active
-            # TODO the order of devices can be given by some algorithm
+        if list_devices:
+            # List all devices from the list that can be found by tensorflow
+            devices = []
+            for device_type in list_devices:
+                devices += tf.config.experimental.list_logical_devices(device_type)
+            # For the moment we assume they are ordered by preference
+            # Make all devices available
             self.devices = {}
             for dev in devices:
                 self.devices[dev.name] = True
@@ -69,11 +73,13 @@ class MonteCarloFlow(ABC):
             self.devices = None
 
     def get_device(self):
+        """ Looks in the list of devices until it finds a device available, once found
+        makes the device unavailable and returns it """
         use_dev = None
         self.lock.acquire()
         try:
             for device, available in self.devices.items():
-                # Get the first available device (which will be the fastest one)
+                # Get the first available device (which will be the fastest one hopefully)
                 if available:
                     use_dev = device
                     self.devices[device] = False
