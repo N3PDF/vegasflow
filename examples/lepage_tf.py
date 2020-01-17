@@ -8,7 +8,7 @@ from vegasflow.vflow import vegas_wrapper
 
 # MC integration setup
 dim = 4
-ncalls = np.int32(1e5)
+ncalls = np.int32(1e6)
 n_iter = 5
 
 
