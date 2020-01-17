@@ -1,5 +1,7 @@
 """
     Abstract class for Monte Carlo integrators
+    implements a distribution of events across multiple devices and tensorflow graph technology
+
     Usage:
         In order to implement a new MonteCarloFlow integrator
         it is necessary to implement (at least) two methods:
@@ -10,14 +12,26 @@
         - `_run_iteration`:
             This function defines what to do in a full iteration of the
             MonteCarlo (i.e., what to do in order to run for n_events)
+
+    Device distribution:
+        The default behaviour is defined in the `configflow.py` file.
+    This class will go through the devices given in the `list_devices` argument and consider
+    them all active and enabled. Then the integration will be broken in batches of `events_limit`
+    which will be given to the first idle device found.
+    This means if device A is two times faster than device B, it will be expected to get two times
+    as many events.
+    Equally so, if `events_limit` is greater than `n_events`, all events will be given to device A
+    as it is the first one found idle.
 """
 
 import time
+import threading
 from abc import abstractmethod, ABC
-import joblib, threading
+import joblib
 import numpy as np
 import tensorflow as tf
 from vegasflow.configflow import MAX_EVENTS_LIMIT, DEFAULT_ACTIVE_DEVICES
+
 
 def print_iteration(it, res, error, extra="", threshold=0.1):
     """ Checks the size of the result to select between
@@ -28,6 +42,7 @@ def print_iteration(it, res, error, extra="", threshold=0.1):
         print(f"Result for iteration {it}: {res:.3e} +/- {error:.3e}" + extra)
     else:
         print(f"Result for iteration {it}: {res:.4f} +/- {error:.4f}" + extra)
+
 
 class MonteCarloFlow(ABC):
     """
@@ -42,12 +57,16 @@ class MonteCarloFlow(ABC):
             will be broken down into several steps. Do it in order to limit memory.
             Note: for a better performance, when n_events is greater than the event limit,
             `n_events` should be exactly divisible by `events_limit`
-        `use_multiple_devices`: if active, it will try to run on all devices found
+        `list_devices`: list of device type to use (use `None` to do the tensorflow default)
     """
 
-    def __init__(self, n_dim, n_events, events_limit=MAX_EVENTS_LIMIT, list_devices = 'default'):
-        if list_devices == 'default':
-            list_devices = DEFAULT_ACTIVE_DEVICES
+    def __init__(
+        self,
+        n_dim,
+        n_events,
+        events_limit=MAX_EVENTS_LIMIT,
+        list_devices=DEFAULT_ACTIVE_DEVICES,
+    ):
         # Save some parameters
         self.n_dim = n_dim
         self.xjac = 1.0 / n_events
@@ -68,10 +87,23 @@ class MonteCarloFlow(ABC):
             for dev in devices:
                 self.devices[dev.name] = True
             # Generate the pool of workers
-            self.pool = joblib.Parallel(n_jobs = len(devices), prefer = "threads")
+            self.pool = joblib.Parallel(n_jobs=len(devices), prefer="threads")
         else:
             self.devices = None
 
+    #### Abstract methods
+    @abstractmethod
+    def _run_iteration(self):
+        """ Run one iteration (i.e., `self.n_events`) of the
+        Monte Carlo integration """
+
+    @abstractmethod
+    def _run_event(self, integrand, ncalls=None):
+        """ Run one single event of the Monte Carlo integration """
+        result = self.event()
+        return result, pow(result, 2)
+
+    #### Device management methods
     def get_device(self):
         """ Looks in the list of devices until it finds a device available, once found
         makes the device unavailable and returns it """
@@ -89,22 +121,12 @@ class MonteCarloFlow(ABC):
         return use_dev
 
     def release_device(self, device):
+        """ Makes `device` available again """
         self.lock.acquire()
         try:
             self.devices[device] = True
         finally:
             self.lock.release()
-
-    @abstractmethod
-    def _run_iteration(self):
-        """ Run one iteration (i.e., `self.n_events`) of the
-        Monte Carlo integration """
-
-    @abstractmethod
-    def _run_event(self, integrand, ncalls=None):
-        """ Run one single event of the Monte Carlo integration """
-        result = self.event()
-        return result, pow(result, 2)
 
     def accumulate(self, accumulators):
         """ Accumulate all the quantities in accumulators
@@ -114,6 +136,10 @@ class MonteCarloFlow(ABC):
         Parameters
         ----------
             `accumulators`: list of tensorflow tensors
+
+        Returns
+        -------
+            `results`: `sum` for each element of the accumulators
 
         Function not compiled
         """
@@ -125,7 +151,17 @@ class MonteCarloFlow(ABC):
         return results
 
     def device_run(self, ncalls, **kwargs):
-        """ Wrapper function to select a specific device when running the event """
+        """ Wrapper function to select a specific device when running the event
+        If the devices were not set, tensorflow default will be used
+
+        Parameters
+        ----------
+            `ncalls`: number of calls to pass to the integrand
+
+        Returns
+        -------
+            `result`: raw result from the integrator
+        """
         if not self.event:
             raise RuntimeError("Compile must be ran before running any iterations")
         if self.devices:
@@ -147,6 +183,10 @@ class MonteCarloFlow(ABC):
         The main driver of this function is the `event` attribute which corresponds
         to the `tensorflor` compilation of the `_run_event` method together with the
         `integrand`.
+
+        Returns
+        -------
+            The accumulated result of running all steps
         """
         if not self.event:
             raise RuntimeError("Compile must be ran before running any iterations")
@@ -161,9 +201,14 @@ class MonteCarloFlow(ABC):
             events_left -= self.events_per_run
 
         if self.devices:
-            accumulators = self.pool(joblib.delayed(self.device_run)(ncalls, **kwargs) for ncalls in events_to_do)
+            accumulators = self.pool(
+                joblib.delayed(self.device_run)(ncalls, **kwargs)
+                for ncalls in events_to_do
+            )
         else:
-            accumulators = [self.device_run(ncalls, **kwargs) for ncalls in events_to_do]
+            accumulators = [
+                self.device_run(ncalls, **kwargs) for ncalls in events_to_do
+            ]
         return self.accumulate(accumulators)
 
     def compile(self, integrand, compilable=True):
