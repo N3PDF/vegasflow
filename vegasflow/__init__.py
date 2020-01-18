@@ -1,3 +1,3 @@
-"""vegasflow monte-carlo integration"""
+"""Monte Carlo integration with Tensorflow"""
 
 __version__ = '0.1'
