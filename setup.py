@@ -2,7 +2,7 @@
 from setuptools import setup, find_packages
 
 setup(name='vegasflow',
-      version='0.0.1',
+      version='0.1',
       description='Monte Carlo integration with Tensorflow',
       author = 'S.Carrazza, J.Cruz-Martinez',
       author_email='stefano.carrazza@cern.ch',
