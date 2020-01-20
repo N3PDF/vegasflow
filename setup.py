@@ -44,5 +44,6 @@ setup(name='vegasflow',
       setup_requires=[
           "cffi>1.0.0"
           ],
-      python_requires='>=3.6'
+      python_requires='>=3.6',
+      long_description='See readthedocs webpage with the documentation'
 )
