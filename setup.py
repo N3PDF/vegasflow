@@ -22,7 +22,6 @@ setup(name='vegasflow',
       author = 'S.Carrazza, J.Cruz-Martinez',
       author_email='stefano.carrazza@cern.ch, juan.cruz@mi.infn.it',
       url='https://github.com/N3PDF/VegasFlow',
-      package_dir={'': 'vegasflow'},
       packages=find_packages(PACKAGE),
       zip_safe=False,
       classifiers=[
@@ -44,6 +43,6 @@ setup(name='vegasflow',
       setup_requires=[
           "cffi>1.0.0"
           ],
-      python_requires='>=3.6',
+      python_requires='>=3.6,<3.8',
       long_description='See readthedocs webpage with the documentation'
 )
