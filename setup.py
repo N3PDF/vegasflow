@@ -33,6 +33,7 @@ setup(name='vegasflow',
       ],
       install_requires=[
           'numpy',
+          'joblib',
           'tensorflow',
           'cffi',
           'sphinx_rtd_theme',
