@@ -27,14 +27,8 @@ jobs:
         # Error out only in actual errors
         pylint vegasflow/*.py -E
         pylint vegasflow/*.py --exit-zero
-    - name: Create and publish python package
-      env:
-          TWINE_USERNAME: ${{ secrets.TWINE_USER }}
-          TWINE_PASSWORD: ${{ secrets.TWINE_PASS }}
+    - name: Test with pytest
       run: |
-        pip install setuptools wheel twine
-        rm -rf dist
-        rm -rf build
-        python setup.py sdist bdist_wheel
-        twine check dist/*
-        # twine upload dist/*
+        pip install pytest
+        pip install tensorflow # Keras does not install any backend by default?
+        pytest
