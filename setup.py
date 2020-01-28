@@ -8,7 +8,7 @@ PACKAGE = 'vegasflow'
 def get_version():
     """ Gets the version from the package's __init__ file
     if there is some problem, let it happily fail """
-    VERSIONFILE = os.path.join(PACKAGE, '__init__.py')
+    VERSIONFILE = os.path.join('src', PACKAGE, '__init__.py')
     initfile_lines = open(VERSIONFILE, 'rt').readlines()
     VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
     for line in initfile_lines:
@@ -22,7 +22,8 @@ setup(name='vegasflow',
       author = 'S.Carrazza, J.Cruz-Martinez',
       author_email='stefano.carrazza@cern.ch, juan.cruz@mi.infn.it',
       url='https://github.com/N3PDF/VegasFlow',
-      packages=find_packages(PACKAGE),
+      package_dir={'':'src'},
+      packages=find_packages('src'),
       zip_safe=False,
       classifiers=[
           'Operating System :: Unix',
@@ -33,6 +34,7 @@ setup(name='vegasflow',
       ],
       install_requires=[
           'numpy',
+          'joblib',
           'tensorflow',
           'cffi',
           'sphinx_rtd_theme',
