@@ -6,7 +6,7 @@ from vegasflow.vflow import vegas_wrapper
 
 # MC integration setup
 dim = 4
-ncalls = np.int32(1e8)
+ncalls = np.int64(1e10)
 n_iter = 5
 
 # Physics setup
