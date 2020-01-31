@@ -1,15 +1,27 @@
-Welcome to vegasflow's documentation!
-====================================
-
+vegasflow's documentation!
+=====================================
 
 vegasflow is a library that performs Vegas integration...
 
+FAQ
+===
+
+Why ``vegasflow``?
+------------------
+
+It is a combination of the names `Vegas` and `Tensorflow`.
+
+
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Contents:
 
-   apisrc/modules
+   how_to
+   intalg
 
+.. automodule:: vegasflow
+    :members:
+    :noindex:
 
 
 
