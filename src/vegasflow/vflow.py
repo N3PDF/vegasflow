@@ -10,7 +10,7 @@ import tensorflow as tf
 
 from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me
 from vegasflow.configflow import BINS_MAX, ALPHA
-from vegasflow.monte_carlo import MonteCarloFlow
+from vegasflow.monte_carlo import MonteCarloFlow, wrapper
 
 
 # Auxiliary functions for Vegas
@@ -257,6 +257,4 @@ def vegas_wrapper(integrand, n_dim, n_iter, total_n_events):
         `final_result`: integral value
         `sigma`: monte carlo error
     """
-    vegas_instance = VegasFlow(n_dim, total_n_events)
-    vegas_instance.compile(integrand)
-    return vegas_instance.run_integration(n_iter)
+    return wrapper(VegasFlow, integrand, n_dim, n_iter, total_n_events)

@@ -9,6 +9,11 @@
             This function defines what to do in order to run one event
             of the Monte Carlo. It is used only for compilation, as the
             actual integration is done by the `run_event` method.
+            In order to use the full capabilities of this library, `_run_event`
+            can take a number of events as its input so it can run more than one
+            event at the same time.
+            All results from `_run_event` will be accumulated before being passed
+            to `_run_iteration`.
         - `_run_iteration`:
             This function defines what to do in a full iteration of the
             MonteCarlo (i.e., what to do in order to run for n_events)
@@ -99,7 +104,8 @@ class MonteCarloFlow(ABC):
 
     @abstractmethod
     def _run_event(self, integrand, ncalls=None):
-        """ Run one single event of the Monte Carlo integration """
+        """ Run one single event of the Monte Carlo integration
+        the output must be a tuple """
         result = self.event()
         return result, pow(result, 2)
 
@@ -276,3 +282,24 @@ class MonteCarloFlow(ABC):
         sigma = np.sqrt(1.0 / weight_sum)
         print(f" > Final results: {final_result.numpy():g} +/- {sigma:g}")
         return final_result, sigma
+
+
+def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events):
+    """ Convenience wrapper
+
+    Parameters
+    ----------
+        `integrator_class`: MonteCarloFlow inherited class
+        `integrand`: tf.function
+        `n_dim`: number of dimensions
+        `n_iter`: number of iterations
+        `n_events`: number of events per iteration
+
+    Returns
+    -------
+        `final_result`: integral value
+        `sigma`: monte carlo error
+    """
+    mc_instance = integrator_class(n_dim, total_n_events)
+    mc_instance.compile(integrand)
+    return mc_instance.run_integration(n_iter)
