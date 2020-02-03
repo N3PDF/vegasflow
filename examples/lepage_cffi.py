@@ -49,7 +49,7 @@ ffibuilder.compile(verbose=True)
 
 from _lepage_cffi import ffi, lib
 
-def lepage(xarr, n_dim=None):
+def lepage(xarr, n_dim=None, **kwargs):
     if n_dim is None:
         n_dim = xarr.shape[-1]
     n_events = xarr.shape[0]

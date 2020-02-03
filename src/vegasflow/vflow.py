@@ -11,6 +11,7 @@ import tensorflow as tf
 from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me
 from vegasflow.configflow import BINS_MAX, ALPHA
 from vegasflow.monte_carlo import MonteCarloFlow, wrapper
+from vegasflow.utils import consume_array_into_indices
 
 
 # Auxiliary functions for Vegas
@@ -133,17 +134,6 @@ def refine_grid_per_dimension(t_res_sq, subdivisions):
     return new_divisions
 
 
-@tf.function
-def consume_results(res2, indices):
-    """ Consumes the results squared to
-    generate the array-per-bin of results """
-    all_bins = tf.range(BINS_MAX, dtype=DTYPEINT)
-    eq = tf.transpose(tf.equal(indices, all_bins))
-    res_tmp = tf.where(eq, res2, fzero)
-    arr_res2 = tf.reduce_sum(res_tmp, axis=1)
-    return arr_res2
-
-
 ####### VegasFlow
 class VegasFlow(MonteCarloFlow):
     """
@@ -213,7 +203,8 @@ class VegasFlow(MonteCarloFlow):
         x, ind, w = generate_random_array(rnds, self.divisions)
 
         # Now compute the integrand
-        tmp = self.xjac * w * integrand(x, n_dim=self.n_dim)
+        xjac = self.xjac * w
+        tmp = xjac*integrand(x, n_dim=self.n_dim, weight=xjac)
         tmp2 = tf.square(tmp)
 
         # Compute the final result for this step
@@ -224,7 +215,7 @@ class VegasFlow(MonteCarloFlow):
         if self.train:
             # If the training is active, save the result of the integral sq
             for j in range(self.n_dim):
-                arr_res2.append(consume_results(tmp2, ind[:, j : j + 1]))
+                arr_res2.append(consume_array_into_indices(tmp2, ind[:, j : j + 1], BINS_MAX))
             arr_res2 = tf.reshape(arr_res2, (self.n_dim, -1))
 
         return res, res2, arr_res2
