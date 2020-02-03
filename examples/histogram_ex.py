@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from vegasflow.configflow import DTYPE, DTYPEINT, fzero, fone
 from vegasflow.plain import PlainFlow
+from vegasflow.vflow import VegasFlow
 from vegasflow.utils import consume_array_into_indices
 
 # MC integration setup
@@ -63,7 +64,7 @@ if __name__ == "__main__":
     start = time.time()
     current_histograms = tf.Variable(tf.zeros(HISTO_BINS, dtype=DTYPE))
     integrand_example = generate_integrand(current_histograms)
-    mc_instance = PlainFlow(dim, ncalls)
+    mc_instance = VegasFlow(dim, ncalls)
     mc_instance.compile(integrand_example, compilable = True)
     # Pass the histogram variables to the integration
     # so it can be filled only once per iteration
