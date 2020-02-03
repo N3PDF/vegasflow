@@ -197,14 +197,16 @@ class VegasFlow(MonteCarloFlow):
             n_events = ncalls
 
         # Generate all random number for this iteration
-        rnds = tf.random.uniform((n_events, self.n_dim), minval=0, maxval=1, dtype=DTYPE)
+        rnds = tf.random.uniform(
+            (n_events, self.n_dim), minval=0, maxval=1, dtype=DTYPE
+        )
 
         # Pass them through the Vegas digestion
         x, ind, w = generate_random_array(rnds, self.divisions)
 
         # Now compute the integrand
         xjac = self.xjac * w
-        tmp = xjac*integrand(x, n_dim=self.n_dim, weight=xjac)
+        tmp = xjac * integrand(x, n_dim=self.n_dim, weight=xjac)
         tmp2 = tf.square(tmp)
 
         # Compute the final result for this step
@@ -215,7 +217,9 @@ class VegasFlow(MonteCarloFlow):
         if self.train:
             # If the training is active, save the result of the integral sq
             for j in range(self.n_dim):
-                arr_res2.append(consume_array_into_indices(tmp2, ind[:, j : j + 1], BINS_MAX))
+                arr_res2.append(
+                    consume_array_into_indices(tmp2, ind[:, j : j + 1], BINS_MAX)
+                )
             arr_res2 = tf.reshape(arr_res2, (self.n_dim, -1))
 
         return res, res2, arr_res2

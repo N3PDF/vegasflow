@@ -264,7 +264,7 @@ class MonteCarloFlow(ABC):
         else:
             self.event = run_event
 
-    def run_integration(self, n_iter, log_time=True, histograms = None):
+    def run_integration(self, n_iter, log_time=True, histograms=None):
         """ Runs the integrator for the chosen number of iterations.
 
         `histograms` must be a tuple of tf.Variables.
@@ -313,7 +313,7 @@ class MonteCarloFlow(ABC):
                 histo_results.append(hist_copy)
                 for histo_tensor in histograms:
                     histo_tensor.assign(tf.zeros_like(histo_tensor, dtype=DTYPE))
-            self._history.append( (res, error, hist_copy) )
+            self._history.append((res, error, hist_copy))
 
             # Logs result and end time
             if log_time:
@@ -336,11 +336,11 @@ class MonteCarloFlow(ABC):
             if histograms:
                 current = histo_results[i]
                 for aux_h, curr_h in zip(histograms, current):
-                    aux_h.assign(aux_h + curr_h*wgt_tmp)
+                    aux_h.assign(aux_h + curr_h * wgt_tmp)
 
         if histograms:
             for histogram in histograms:
-                histogram.assign(histogram/weight_sum)
+                histogram.assign(histogram / weight_sum)
 
         final_result = aux_res / weight_sum
         sigma = np.sqrt(1.0 / weight_sum)
@@ -365,5 +365,5 @@ def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events):
         `sigma`: monte carlo error
     """
     mc_instance = integrator_class(n_dim, total_n_events)
-    mc_instance.compile(integrand, compilable = True)
+    mc_instance.compile(integrand, compilable=True)
     return mc_instance.run_integration(n_iter)
