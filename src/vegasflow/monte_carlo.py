@@ -79,7 +79,7 @@ class MonteCarloFlow(ABC):
         self.xjac = 1.0 / n_events
         self.integrand = None
         self.event = None
-        self.all_results = []
+        self._history = []
         self.n_events = n_events
         self.events_per_run = min(events_limit, n_events)
         self.lock = threading.Lock()
@@ -97,6 +97,19 @@ class MonteCarloFlow(ABC):
             self.pool = joblib.Parallel(n_jobs=len(devices), prefer="threads")
         else:
             self.devices = None
+
+    @property
+    def history(self):
+        """ Returns a list with a tuple of results per iteration
+        This tuple contains:
+            `result`
+                result of each iteration
+            `error`
+                error of the corresponding iteration
+            `histograms`
+                list of histograms for the corresponding iteration
+        """
+        return self._history
 
     #### Abstract methods
     @abstractmethod
@@ -228,7 +241,9 @@ class MonteCarloFlow(ABC):
             `n_dim`: number of dimensions
             `weight`: weight of each event
         so that the most general signature for the integrand is:
-            integrand(array_random, n_dim = None, weight = None)
+            `integrand(array_random, n_dim = None, weight = None)`
+        the minimal working signature fo the integrand will be
+            `integrand(array_random, **kwargs)`
 
         Parameters
         ----------
@@ -250,15 +265,37 @@ class MonteCarloFlow(ABC):
             self.event = run_event
 
     def run_integration(self, n_iter, log_time=True, histograms = None):
-        """ Runs the integrator for the chosen number of iterations
+        """ Runs the integrator for the chosen number of iterations.
+
+        `histograms` must be a tuple of tf.Variables.
+        At the end of all iterations the histograms per iteration will
+        be output.
+        The variable `histograms` instead will contain the weighted
+        accumulation of all histograms
+
         Parameters
         ---------
-            `n_iter`: number of iterations
+            `n_iter`: int
+                number of iterations
+            `log_time`: bool
+                flag to decide whether to log the time each iteration takes
+            `histograms`: tuple of tf.Variable
+                tuple containing the histogram variables so they can be emptied
+                each each iteration
+
         Returns
         -------
-            `final_result`: integral value
-            `sigma`: monte carlo error
+            `final_result`: float
+                integral value
+            `sigma`: float
+                monte carlo error
+
+        Note: it is possible not to pass any histogram variable and still fill
+        some histogram variable at integration time, but then it is the responsability
+        of the integrand to empty the histograms each iteration and accumulate them.
+
         """
+        all_results = []
         histo_results = []
 
         for i in range(n_iter):
@@ -268,13 +305,15 @@ class MonteCarloFlow(ABC):
 
             # Run one single iteration and append results
             res, error = self._run_iteration()
-            self.all_results.append((res, error))
+            all_results.append((res, error))
 
             # If there is a histogram variable, store it and empty it
+            hist_copy = copy.deepcopy(histograms)
             if histograms:
-                histo_results.append(copy.deepcopy(histograms))
+                histo_results.append(hist_copy)
                 for histo_tensor in histograms:
                     histo_tensor.assign(tf.zeros_like(histo_tensor, dtype=DTYPE))
+            self._history.append( (res, error, hist_copy) )
 
             # Logs result and end time
             if log_time:
@@ -287,17 +326,26 @@ class MonteCarloFlow(ABC):
         # Once all iterations are finished, print out
         aux_res = 0.0
         weight_sum = 0.0
-        for i, result in enumerate(self.all_results):
+        for i, result in enumerate(all_results):
             res = result[0]
             sigma = result[1]
             wgt_tmp = 1.0 / pow(sigma, 2)
             aux_res += res * wgt_tmp
             weight_sum += wgt_tmp
+            # Accumulate the histograms
+            if histograms:
+                current = histo_results[i]
+                for aux_h, curr_h in zip(histograms, current):
+                    aux_h.assign(aux_h + curr_h*wgt_tmp)
+
+        if histograms:
+            for histogram in histograms:
+                histogram.assign(histogram/weight_sum)
 
         final_result = aux_res / weight_sum
         sigma = np.sqrt(1.0 / weight_sum)
         print(f" > Final results: {final_result.numpy():g} +/- {sigma:g}")
-        return final_result, sigma, histo_results
+        return final_result, sigma
 
 
 def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events):

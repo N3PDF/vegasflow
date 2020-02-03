@@ -1,4 +1,8 @@
-# Place your function here
+"""
+    Example of integration of a simple function
+    With the filling of a histogram
+"""
+
 import time
 import numpy as np
 import tensorflow as tf
@@ -62,14 +66,26 @@ if __name__ == "__main__":
     """Testing histogram generation"""
     print(f"Plain MC, ncalls={ncalls}:")
     start = time.time()
+    # First we create the tensor in which to accumulate the histogra
+    # This part is completely free
     current_histograms = tf.Variable(tf.zeros(HISTO_BINS, dtype=DTYPE))
     integrand_example = generate_integrand(current_histograms)
-    mc_instance = VegasFlow(dim, ncalls)
+    mc_instance = PlainFlow(dim, ncalls)
     mc_instance.compile(integrand_example, compilable = True)
     # Pass the histogram variables to the integration
     # so it can be filled only once per iteration
-    # In the form of a tuple
+    # This needs to be a tuple/list of tensor variables
+    # as they will be emptied at the end of each iteration
     histogram_tuple = (current_histograms, )
-    r = mc_instance.run_integration(n_iter, histograms = histogram_tuple)
+    results = mc_instance.run_integration(n_iter, histograms = histogram_tuple)
+    r = results[0]
+    s = results[1]
+    # At the end of the integration the variable `current_histograms` is filled
+    # with the weighted accumulation of the histograms per iteration
+    # while the result of the histogram each iteration can be accessed through
+    # the history of the integrator
+    results_per_iteration = mc_instance.history
     end = time.time()
     print(f"Plain took: time (s): {end-start}")
+    print(f"Final result: {r} +/- {s}")
+    print(f"Final histogram: {current_histograms}")
