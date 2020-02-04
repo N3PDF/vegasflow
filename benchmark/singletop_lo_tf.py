@@ -258,7 +258,7 @@ def build_luminosity(x1, x2):
 
 
 @tf.function
-def singletop(xarr, n_dim=None):
+def singletop(xarr, n_dim=None, **kwargs):
     """Single-top (t-channel) at LO"""
     psw, flux, p0, p1, p2, p3, x1, x2 = make_event(xarr)
     wgts = evaluate_matrix_element_square(p0, p1, p2, p3)
