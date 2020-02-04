@@ -29,7 +29,7 @@ zero = tf.constant(0.0, dtype=DTYPE)
 
 
 @tf.function
-def lepage(xarr, n_dim=None):
+def asian_options(xarr, n_dim=None, **kwargs):
     """Asian options test function"""
     sum1 = tf.reduce_sum(ndtri(xarr), axis=1)
     a = S0 * tf.exp((r-sigma2/2) + sigma*sqrtdt*sum1)
@@ -41,6 +41,6 @@ if __name__ == "__main__":
     """Testing a basic integration"""
     print(f"VEGAS MC, ncalls={ncalls}:")
     start = time.time()
-    r = vegas_wrapper(lepage, d, n_iter, ncalls)
+    r = vegas_wrapper(asian_options, d, n_iter, ncalls)
     end = time.time()
     print(f"time (s): {end-start}")

@@ -140,8 +140,8 @@ class VegasFlow(MonteCarloFlow):
     Implementation of the important sampling algorithm from Vegas
     """
 
-    def __init__(self, n_dim, n_events, train=True):
-        super().__init__(n_dim, n_events)
+    def __init__(self, n_dim, n_events, train=True, **kwargs):
+        super().__init__(n_dim, n_events, **kwargs)
 
         # If training is True, the grid will be changed after every iteration
         # otherwise it will be frozen

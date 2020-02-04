@@ -1,19 +1,33 @@
 # Place your function here
 import time
+from argparse import ArgumentParser
 import numpy as np
 import tensorflow as tf
 from vegasflow.configflow import DTYPE, DTYPEINT
-from vegasflow.vflow import vegas_wrapper
+from vegasflow.vflow import VegasFlow
 
 
-# MC integration setup
-dim = 4
-ncalls = np.int32(1e8)
-n_iter = 5
+def parse_setup():
+    DIM = 4
+    NCALLS = np.int32(1e5)
+    N_ITER = 3
+    args = ArgumentParser()
+    args.add_argument("-d", "--dimensions", default=DIM, type=int)
+    args.add_argument("-n", "--ncalls", default=NCALLS, type=int)
+    args.add_argument("-i", "--iter", default=N_ITER, type=int)
+    args.add_argument(
+        "-l",
+        "--limit",
+        help="Max number of events per runstep (1e6 is usually a good limit)",
+        default=int(1e6),
+        type=int,
+    )
+    args.add_argument("-q", "--quiet", action = "store_true", help = "Printout only results and times")
+    return args.parse_args()
 
 
 @tf.function
-def lepage(xarr, n_dim=None):
+def lepage(xarr, n_dim=None, **kwargs):
     """Lepage test function"""
     if n_dim is None:
         n_dim = xarr.shape[-1]
@@ -27,9 +41,29 @@ def lepage(xarr, n_dim=None):
 
 
 if __name__ == "__main__":
-    """Testing a basic integration"""
-    print(f"VEGAS MC, ncalls={ncalls}:")
+    # Load the setup
+    args = parse_setup()
+    ncalls = args.ncalls
+    n_iter = args.iter
+    dim = args.dimensions
+    quiet = args.quiet
+    limit = args.limit
+
+    if not quiet:
+        print("Testing a basic integration")
+        print(f"VEGAS MC, {ncalls=}, {dim=}, {n_iter=}, {limit=}")
     start = time.time()
-    r = vegas_wrapper(lepage, dim, n_iter, ncalls)
+
+    # Create the instance of Vegasflow
+    mc_instance = VegasFlow(dim, ncalls, events_limit=limit)
+    mc_instance.compile(lepage)
+    # Train the grid for {n_iter} iterations
+    result_1 = mc_instance.run_integration(n_iter)
+    print(f"Result after the training: {result_1[0]} +/- {result_1[1]}")
+
+    # Now freeze the grid and get a new result
+    mc_instance.freeze_grid()
+    result_2 = mc_instance.run_integration(n_iter)
+    print(f"Final result: {result_1[0]} +/- {result_1[1]}")
     end = time.time()
     print(f"time (s): {end-start}")
