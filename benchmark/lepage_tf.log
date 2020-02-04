@@ -1,0 +1,508 @@
+Tue 04 Feb 2020 12:34:01 PM CET
+### CPU benchmark ###
+> > Running for 1 cores
+Result for iteration 0: 1.0014 +/- 0.0016(took 183.68281 s)
+Result for iteration 1: 1.0000 +/- 0.0001(took 181.56815 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 181.75752 s)
+ > Final results: 1.00004 +/- 4.09205e-05
+Result after the training: 1.000036309236986 +/- 4.0920529150672973e-05
+Result for iteration 0: 1.0002 +/- 0.0000(took 181.74201 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 181.73911 s)
+Result for iteration 2: 0.9999 +/- 0.0000(took 181.71546 s)
+ > Final results: 1.00002 +/- 2.64719e-05
+Final result: 1.000036309236986 +/- 4.0920529150672973e-05
+time (s): 1092.2071869373322
+
+> > Running for 2 cores
+Result for iteration 0: 0.9979 +/- 0.0016(took 98.94125 s)
+Result for iteration 1: 0.9999 +/- 0.0001(took 96.96926 s)
+Result for iteration 2: 1.0001 +/- 0.0000(took 96.85795 s)
+ > Final results: 1.00002 +/- 4.09437e-05
+Result after the training: 1.000024589801687 +/- 4.0943722312818984e-05
+Result for iteration 0: 1.0001 +/- 0.0000(took 96.63863 s)
+Result for iteration 1: 1.0001 +/- 0.0000(took 96.99642 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 97.17100 s)
+ > Final results: 1.00007 +/- 2.64725e-05
+Final result: 1.000024589801687 +/- 4.0943722312818984e-05
+time (s): 583.5780053138733
+
+> > Running for 3 cores
+Result for iteration 0: 0.9996 +/- 0.0016(took 72.42123 s)
+Result for iteration 1: 1.0000 +/- 0.0001(took 69.51844 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 69.24631 s)
+ > Final results: 0.999983 +/- 4.09311e-05
+Result after the training: 0.9999832478869837 +/- 4.0931103024731987e-05
+Result for iteration 0: 0.9999 +/- 0.0000(took 69.95920 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 69.77684 s)
+Result for iteration 2: 0.9999 +/- 0.0000(took 69.19861 s)
+ > Final results: 0.999952 +/- 2.64619e-05
+Final result: 0.9999832478869837 +/- 4.0931103024731987e-05
+time (s): 420.1237769126892
+
+> > Running for 4 cores
+Result for iteration 0: 0.9994 +/- 0.0016(took 56.23250 s)
+Result for iteration 1: 0.9998 +/- 0.0001(took 55.40881 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 54.59155 s)
+ > Final results: 0.999978 +/- 4.09335e-05
+Result after the training: 0.9999779450042575 +/- 4.093350729476174e-05
+Result for iteration 0: 1.0001 +/- 0.0000(took 54.88336 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 54.15917 s)
+Result for iteration 2: 0.9999 +/- 0.0000(took 54.86021 s)
+ > Final results: 0.999976 +/- 2.64659e-05
+Final result: 0.9999779450042575 +/- 4.093350729476174e-05
+time (s): 330.13867950439453
+
+> > Running for 5 cores
+Result for iteration 0: 0.9984 +/- 0.0016(took 47.15183 s)
+Result for iteration 1: 0.9999 +/- 0.0001(took 45.12737 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 45.58466 s)
+ > Final results: 0.999976 +/- 4.09379e-05
+Result after the training: 0.9999761694422175 +/- 4.093785846628529e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 45.85540 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 45.79416 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 46.11343 s)
+ > Final results: 0.999989 +/- 2.64683e-05
+Final result: 0.9999761694422175 +/- 4.093785846628529e-05
+time (s): 275.6300368309021
+
+> > Running for 6 cores
+Result for iteration 0: 0.9993 +/- 0.0016(took 41.97983 s)
+Result for iteration 1: 1.0002 +/- 0.0001(took 39.75717 s)
+Result for iteration 2: 1.0001 +/- 0.0000(took 39.97976 s)
+ > Final results: 1.0001 +/- 4.09312e-05
+Result after the training: 1.0001017023921448 +/- 4.0931150979446615e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 41.40298 s)
+Result for iteration 1: 1.0001 +/- 0.0000(took 39.87009 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 39.59301 s)
+ > Final results: 1.00004 +/- 2.64663e-05
+Final result: 1.0001017023921448 +/- 4.0931150979446615e-05
+time (s): 242.58655095100403
+
+> > Running for 7 cores
+Result for iteration 0: 1.0000 +/- 0.0016(took 37.82173 s)
+Result for iteration 1: 0.9999 +/- 0.0001(took 36.21716 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 36.22524 s)
+ > Final results: 1.00002 +/- 4.09275e-05
+Result after the training: 1.0000223109343118 +/- 4.0927513484647126e-05
+Result for iteration 0: 0.9999 +/- 0.0000(took 36.33075 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 36.01103 s)
+Result for iteration 2: 1.0001 +/- 0.0000(took 35.93419 s)
+ > Final results: 1 +/- 2.64642e-05
+Final result: 1.0000223109343118 +/- 4.0927513484647126e-05
+time (s): 218.54400992393494
+
+> > Running for 8 cores
+Result for iteration 0: 0.9996 +/- 0.0016(took 34.38815 s)
+Result for iteration 1: 1.0000 +/- 0.0001(took 33.01979 s)
+Result for iteration 2: 0.9999 +/- 0.0000(took 32.63516 s)
+ > Final results: 0.999937 +/- 4.09361e-05
+Result after the training: 0.9999367396836425 +/- 4.0936057724810564e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 32.92230 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 33.36373 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 32.68570 s)
+ > Final results: 0.999996 +/- 2.64676e-05
+Final result: 0.9999367396836425 +/- 4.0936057724810564e-05
+time (s): 199.0186004638672
+
+> > Running for 9 cores
+Result for iteration 0: 0.9989 +/- 0.0016(took 32.66406 s)
+Result for iteration 1: 1.0000 +/- 0.0001(took 30.96940 s)
+Result for iteration 2: 0.9999 +/- 0.0000(took 30.84182 s)
+ > Final results: 0.999949 +/- 4.09463e-05
+Result after the training: 0.999948847726124 +/- 4.094628213887026e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 30.65355 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 30.91233 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 30.90533 s)
+ > Final results: 1.00003 +/- 2.64633e-05
+Final result: 0.999948847726124 +/- 4.094628213887026e-05
+time (s): 186.950528383255
+
+> > Running for 10 cores
+Result for iteration 0: 0.9974 +/- 0.0016(took 31.11787 s)
+Result for iteration 1: 1.0000 +/- 0.0001(took 29.23209 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 29.25024 s)
+ > Final results: 0.99998 +/- 4.09229e-05
+Result after the training: 0.9999797223520693 +/- 4.092286120061225e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 29.05587 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 28.98308 s)
+Result for iteration 2: 1.0001 +/- 0.0000(took 29.37021 s)
+ > Final results: 1.00002 +/- 2.64642e-05
+Final result: 0.9999797223520693 +/- 4.092286120061225e-05
+time (s): 177.0130488872528
+
+> > Running for 11 cores
+Result for iteration 0: 1.0004 +/- 0.0016(took 30.20934 s)
+Result for iteration 1: 1.0000 +/- 0.0001(took 28.21880 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 28.29861 s)
+ > Final results: 0.999975 +/- 4.09292e-05
+Result after the training: 0.9999753322558051 +/- 4.09292058783842e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 28.17328 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 27.78263 s)
+Result for iteration 2: 1.0001 +/- 0.0000(took 28.13650 s)
+ > Final results: 1.00002 +/- 2.64732e-05
+Final result: 0.9999753322558051 +/- 4.09292058783842e-05
+time (s): 170.82295274734497
+
+> > Running for 12 cores
+Result for iteration 0: 1.0008 +/- 0.0016(took 29.27635 s)
+Result for iteration 1: 0.9999 +/- 0.0001(took 27.26284 s)
+Result for iteration 2: 1.0001 +/- 0.0000(took 27.07769 s)
+ > Final results: 1.00003 +/- 4.09193e-05
+Result after the training: 1.0000345628933962 +/- 4.0919268011437044e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 27.53075 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 26.91380 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 27.13146 s)
+ > Final results: 0.999988 +/- 2.64675e-05
+Final result: 1.0000345628933962 +/- 4.0919268011437044e-05
+time (s): 165.19673585891724
+
+> > Running for 13 cores
+Result for iteration 0: 1.0013 +/- 0.0016(took 28.57893 s)
+Result for iteration 1: 1.0000 +/- 0.0001(took 26.73647 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 26.74502 s)
+ > Final results: 0.999986 +/- 4.09201e-05
+Result after the training: 0.9999857283039327 +/- 4.0920066771270995e-05
+Result for iteration 0: 0.9999 +/- 0.0000(took 26.18008 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 26.38773 s)
+Result for iteration 2: 1.0001 +/- 0.0000(took 26.32072 s)
+ > Final results: 0.999993 +/- 2.64685e-05
+Final result: 0.9999857283039327 +/- 4.0920066771270995e-05
+time (s): 160.9528889656067
+
+> > Running for 14 cores
+Result for iteration 0: 0.9993 +/- 0.0016(took 27.89361 s)
+Result for iteration 1: 0.9999 +/- 0.0001(took 25.71640 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 25.87305 s)
+ > Final results: 0.999993 +/- 4.09198e-05
+Result after the training: 0.9999932427400379 +/- 4.091977798365512e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 25.52710 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 25.84500 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 25.64777 s)
+ > Final results: 0.99998 +/- 2.64729e-05
+Final result: 0.9999932427400379 +/- 4.091977798365512e-05
+time (s): 156.50677585601807
+
+> > Running for 15 cores
+Result for iteration 0: 0.9979 +/- 0.0016(took 27.32516 s)
+Result for iteration 1: 1.0001 +/- 0.0001(took 25.24123 s)
+Result for iteration 2: 0.9999 +/- 0.0000(took 25.13057 s)
+ > Final results: 0.999935 +/- 4.09442e-05
+Result after the training: 0.9999354727207763 +/- 4.094424413206501e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 25.06115 s)
+Result for iteration 1: 1.0001 +/- 0.0000(took 25.05445 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 24.85581 s)
+ > Final results: 1.00001 +/- 2.6473e-05
+Final result: 0.9999354727207763 +/- 4.094424413206501e-05
+time (s): 152.67171382904053
+
+> > Running for 16 cores
+Result for iteration 0: 0.9978 +/- 0.0016(took 26.74998 s)
+Result for iteration 1: 1.0002 +/- 0.0001(took 24.65163 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 24.68234 s)
+ > Final results: 1.00003 +/- 4.09313e-05
+Result after the training: 1.0000305502484168 +/- 4.093131793375688e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 24.54325 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 24.58723 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 24.69707 s)
+ > Final results: 1.00001 +/- 2.64701e-05
+Final result: 1.0000305502484168 +/- 4.093131793375688e-05
+time (s): 149.91493320465088
+
+> > Running for 17 cores
+Result for iteration 0: 0.9982 +/- 0.0016(took 26.26697 s)
+Result for iteration 1: 0.9999 +/- 0.0001(took 24.14123 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 24.10696 s)
+ > Final results: 1.00002 +/- 4.09289e-05
+Result after the training: 1.0000188656912479 +/- 4.0928930301971605e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 24.20488 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 23.98336 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 24.25756 s)
+ > Final results: 1.00001 +/- 2.64714e-05
+Final result: 1.0000188656912479 +/- 4.0928930301971605e-05
+time (s): 146.96429562568665
+
+> > Running for 18 cores
+Result for iteration 0: 0.9996 +/- 0.0016(took 25.91300 s)
+Result for iteration 1: 0.9999 +/- 0.0001(took 23.89571 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 23.84980 s)
+ > Final results: 0.999943 +/- 4.09371e-05
+Result after the training: 0.9999433395438558 +/- 4.093711807105088e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 23.84255 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 23.83018 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 23.71980 s)
+ > Final results: 1 +/- 2.64763e-05
+Final result: 0.9999433395438558 +/- 4.093711807105088e-05
+time (s): 145.05357885360718
+
+> > Running for 19 cores
+Result for iteration 0: 1.0005 +/- 0.0016(took 25.66970 s)
+Result for iteration 1: 1.0000 +/- 0.0001(took 23.58053 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 23.96057 s)
+ > Final results: 0.999986 +/- 4.09283e-05
+Result after the training: 0.9999861966781375 +/- 4.092827512457944e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 23.65021 s)
+Result for iteration 1: 0.9999 +/- 0.0000(took 23.54332 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 23.63540 s)
+ > Final results: 0.999969 +/- 2.64645e-05
+Final result: 0.9999861966781375 +/- 4.092827512457944e-05
+time (s): 144.0437171459198
+
+> > Running for 20 cores
+Result for iteration 0: 1.0018 +/- 0.0016(took 25.53964 s)
+Result for iteration 1: 0.9999 +/- 0.0001(took 23.52676 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 23.43344 s)
+ > Final results: 0.99996 +/- 4.09099e-05
+Result after the training: 0.9999601424823443 +/- 4.090985291166278e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 23.65087 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 23.53562 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 23.45775 s)
+ > Final results: 0.999984 +/- 2.64682e-05
+Final result: 0.9999601424823443 +/- 4.090985291166278e-05
+time (s): 143.14718079566956
+
+> > Running for 21 cores
+Result for iteration 0: 1.0016 +/- 0.0016(took 25.17562 s)
+Result for iteration 1: 1.0000 +/- 0.0001(took 23.22031 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 23.39965 s)
+ > Final results: 0.999965 +/- 4.09223e-05
+Result after the training: 0.9999654732162365 +/- 4.092232951293927e-05
+Result for iteration 0: 1.0001 +/- 0.0000(took 23.30109 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 23.28436 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 23.42102 s)
+ > Final results: 1.00002 +/- 2.64636e-05
+Final result: 0.9999654732162365 +/- 4.092232951293927e-05
+time (s): 141.8057837486267
+
+> > Running for 22 cores
+Result for iteration 0: 1.0036 +/- 0.0016(took 25.05875 s)
+Result for iteration 1: 0.9999 +/- 0.0001(took 23.36631 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 23.33710 s)
+ > Final results: 0.999962 +/- 4.09228e-05
+Result after the training: 0.9999617984514512 +/- 4.092278552441294e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 23.30032 s)
+Result for iteration 1: 0.9999 +/- 0.0000(took 23.42984 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 23.33649 s)
+ > Final results: 0.999979 +/- 2.64683e-05
+Final result: 0.9999617984514512 +/- 4.092278552441294e-05
+time (s): 141.83217692375183
+
+> > Running for 23 cores
+Result for iteration 0: 1.0002 +/- 0.0016(took 25.01442 s)
+Result for iteration 1: 1.0001 +/- 0.0001(took 23.16299 s)
+Result for iteration 2: 0.9999 +/- 0.0000(took 23.01615 s)
+ > Final results: 0.999953 +/- 4.09263e-05
+Result after the training: 0.9999530332037015 +/- 4.09262635623138e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 23.08015 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 23.07517 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 23.29262 s)
+ > Final results: 1.00001 +/- 2.6467e-05
+Final result: 0.9999530332037015 +/- 4.09262635623138e-05
+time (s): 140.6454827785492
+
+> > Running for 24 cores
+Result for iteration 0: 1.0005 +/- 0.0016(took 24.96978 s)
+Result for iteration 1: 1.0000 +/- 0.0001(took 23.13226 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 23.07040 s)
+ > Final results: 0.999993 +/- 4.09267e-05
+Result after the training: 0.9999933864036947 +/- 4.0926712041490406e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 23.08831 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 22.83657 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.93187 s)
+ > Final results: 0.999992 +/- 2.64633e-05
+Final result: 0.9999933864036947 +/- 4.0926712041490406e-05
+time (s): 140.03294920921326
+
+> > Running for 25 cores
+Result for iteration 0: 0.9983 +/- 0.0016(took 24.80170 s)
+Result for iteration 1: 1.0001 +/- 0.0001(took 22.84185 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.90902 s)
+ > Final results: 1.00001 +/- 4.0917e-05
+Result after the training: 1.0000085498116917 +/- 4.0916971411962106e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 22.79254 s)
+Result for iteration 1: 1.0001 +/- 0.0000(took 22.73156 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.90176 s)
+ > Final results: 1 +/- 2.64599e-05
+Final result: 1.0000085498116917 +/- 4.0916971411962106e-05
+time (s): 138.98111009597778
+
+> > Running for 26 cores
+Result for iteration 0: 1.0022 +/- 0.0016(took 24.79829 s)
+Result for iteration 1: 0.9999 +/- 0.0001(took 22.65999 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.75234 s)
+ > Final results: 0.999996 +/- 4.09154e-05
+Result after the training: 0.9999956194538789 +/- 4.091537039012765e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 22.74535 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 22.55731 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.69583 s)
+ > Final results: 0.999996 +/- 2.64669e-05
+Final result: 0.9999956194538789 +/- 4.091537039012765e-05
+time (s): 138.21236538887024
+
+> > Running for 27 cores
+Result for iteration 0: 1.0018 +/- 0.0016(took 24.74242 s)
+Result for iteration 1: 0.9999 +/- 0.0001(took 22.54071 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.63573 s)
+ > Final results: 0.999947 +/- 4.09276e-05
+Result after the training: 0.9999467634356337 +/- 4.0927559985198426e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 22.49702 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 22.66942 s)
+Result for iteration 2: 0.9999 +/- 0.0000(took 22.52688 s)
+ > Final results: 0.999974 +/- 2.64694e-05
+Final result: 0.9999467634356337 +/- 4.0927559985198426e-05
+time (s): 137.6155390739441
+
+> > Running for 28 cores
+Result for iteration 0: 0.9990 +/- 0.0016(took 24.43808 s)
+Result for iteration 1: 1.0000 +/- 0.0001(took 22.72737 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.50926 s)
+ > Final results: 0.999977 +/- 4.09292e-05
+Result after the training: 0.9999766131332678 +/- 4.092919625416387e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 22.64347 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 22.55146 s)
+Result for iteration 2: 0.9999 +/- 0.0000(took 22.53369 s)
+ > Final results: 0.999987 +/- 2.64618e-05
+Final result: 0.9999766131332678 +/- 4.092919625416387e-05
+time (s): 137.40726017951965
+
+> > Running for 29 cores
+Result for iteration 0: 0.9993 +/- 0.0016(took 24.33431 s)
+Result for iteration 1: 0.9999 +/- 0.0001(took 22.56267 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.43290 s)
+ > Final results: 0.999991 +/- 4.09363e-05
+Result after the training: 0.9999906901122884 +/- 4.0936297909900723e-05
+Result for iteration 0: 0.9999 +/- 0.0000(took 22.41528 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 22.52583 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.51822 s)
+ > Final results: 1 +/- 2.64664e-05
+Final result: 0.9999906901122884 +/- 4.0936297909900723e-05
+time (s): 136.79250478744507
+
+> > Running for 30 cores
+Result for iteration 0: 0.9998 +/- 0.0016(took 24.66423 s)
+Result for iteration 1: 1.0000 +/- 0.0001(took 22.48629 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.32911 s)
+ > Final results: 0.999995 +/- 4.09271e-05
+Result after the training: 0.9999951596758273 +/- 4.092712356676295e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 22.64748 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 22.49099 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.44191 s)
+ > Final results: 0.999995 +/- 2.64702e-05
+Final result: 0.9999951596758273 +/- 4.092712356676295e-05
+time (s): 137.06308221817017
+
+> > Running for 31 cores
+Result for iteration 0: 0.9977 +/- 0.0016(took 24.23172 s)
+Result for iteration 1: 1.0001 +/- 0.0001(took 22.35444 s)
+Result for iteration 2: 1.0001 +/- 0.0000(took 22.29540 s)
+ > Final results: 1.00007 +/- 4.09233e-05
+Result after the training: 1.000074752209162 +/- 4.092328667545642e-05
+Result for iteration 0: 1.0001 +/- 0.0000(took 22.34819 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 22.46522 s)
+Result for iteration 2: 1.0001 +/- 0.0000(took 22.30877 s)
+ > Final results: 1.00005 +/- 2.64694e-05
+Final result: 1.000074752209162 +/- 4.092328667545642e-05
+time (s): 136.00638103485107
+
+> > Running for 32 cores
+Result for iteration 0: 0.9985 +/- 0.0016(took 24.21383 s)
+Result for iteration 1: 0.9999 +/- 0.0001(took 22.23550 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.24529 s)
+ > Final results: 0.999994 +/- 4.09304e-05
+Result after the training: 0.9999937924903479 +/- 4.093043783332107e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 22.12824 s)
+Result for iteration 1: 0.9999 +/- 0.0000(took 22.18752 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.29205 s)
+ > Final results: 1 +/- 2.64712e-05
+Final result: 0.9999937924903479 +/- 4.093043783332107e-05
+time (s): 135.30548191070557
+
+> > Running for 33 cores
+Result for iteration 0: 1.0015 +/- 0.0016(took 24.17828 s)
+Result for iteration 1: 1.0002 +/- 0.0001(took 22.18404 s)
+Result for iteration 2: 1.0001 +/- 0.0000(took 22.34456 s)
+ > Final results: 1.00011 +/- 4.09221e-05
+Result after the training: 1.0001101896268993 +/- 4.092211180681745e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 22.12929 s)
+Result for iteration 1: 1.0001 +/- 0.0000(took 22.20099 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.23001 s)
+ > Final results: 1.00003 +/- 2.64683e-05
+Final result: 1.0001101896268993 +/- 4.092211180681745e-05
+time (s): 135.270348072052
+
+> > Running for 34 cores
+Result for iteration 0: 0.9990 +/- 0.0016(took 24.04107 s)
+Result for iteration 1: 0.9998 +/- 0.0001(took 22.05884 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.17754 s)
+ > Final results: 0.999923 +/- 4.0942e-05
+Result after the training: 0.9999227651577277 +/- 4.094195916408435e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 22.19675 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 22.07113 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.23201 s)
+ > Final results: 0.999983 +/- 2.64736e-05
+Final result: 0.9999227651577277 +/- 4.094195916408435e-05
+time (s): 134.78087091445923
+
+> > Running for 35 cores
+Result for iteration 0: 0.9989 +/- 0.0016(took 24.29493 s)
+Result for iteration 1: 0.9998 +/- 0.0001(took 21.96048 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.06125 s)
+ > Final results: 1 +/- 4.09331e-05
+Result after the training: 1.0000026607318477 +/- 4.093314521027003e-05
+Result for iteration 0: 0.9999 +/- 0.0000(took 21.89829 s)
+Result for iteration 1: 0.9999 +/- 0.0000(took 21.95420 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 21.99432 s)
+ > Final results: 0.999951 +/- 2.64649e-05
+Final result: 1.0000026607318477 +/- 4.093314521027003e-05
+time (s): 134.16692852973938
+
+> > Running for 36 cores
+Result for iteration 0: 1.0014 +/- 0.0016(took 24.05363 s)
+Result for iteration 1: 1.0000 +/- 0.0001(took 22.18675 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.22529 s)
+ > Final results: 1 +/- 4.09231e-05
+Result after the training: 1.0000046792106188 +/- 4.092311285268401e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 22.14942 s)
+Result for iteration 1: 0.9999 +/- 0.0000(took 22.08438 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 22.03904 s)
+ > Final results: 0.999975 +/- 2.6469e-05
+Final result: 1.0000046792106188 +/- 4.092311285268401e-05
+time (s): 134.74234175682068
+
+### GPU benchmark ###
+ CPU limited to 0-4 
+ > > Running on Titan V
+Result for iteration 0: 1.0027 +/- 0.0016(took 15.81032 s)
+Result for iteration 1: 0.9999 +/- 0.0001(took 10.23507 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 10.59707 s)
+ > Final results: 0.99997 +/- 4.09141e-05
+Result after the training: 0.9999703810597138 +/- 4.091406948079411e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 10.39442 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 10.29546 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 10.33521 s)
+ > Final results: 0.999992 +/- 2.6461e-05
+Final result: 0.9999703810597138 +/- 4.091406948079411e-05
+time (s): 68.48294496536255
+ > > Running on RTX 2080 Ti
+Result for iteration 0: 1.0001 +/- 0.0016(took 16.64689 s)
+Result for iteration 1: 1.0000 +/- 0.0001(took 10.68212 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 10.30052 s)
+ > Final results: 1.00003 +/- 4.09235e-05
+Result after the training: 1.0000259533151736 +/- 4.092351664592039e-05
+Result for iteration 0: 1.0000 +/- 0.0000(took 10.28032 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 10.32225 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 10.25934 s)
+ > Final results: 1.00001 +/- 2.64638e-05
+Final result: 1.0000259533151736 +/- 4.092351664592039e-05
+time (s): 68.6015989780426
+ > > Running on Titan V and RTX 2080 Ti
+Result for iteration 0: 0.9994 +/- 0.0016(took 11.65226 s)
+Result for iteration 1: 1.0000 +/- 0.0001(took 7.90674 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 7.93276 s)
+ > Final results: 1.00004 +/- 4.09244e-05
+Result after the training: 1.0000406036707077 +/- 4.092441511772266e-05
+Result for iteration 0: 0.9999 +/- 0.0000(took 7.74855 s)
+Result for iteration 1: 1.0000 +/- 0.0000(took 7.31331 s)
+Result for iteration 2: 1.0000 +/- 0.0000(took 7.80735 s)
+ > Final results: 0.999993 +/- 2.64742e-05
+Final result: 1.0000406036707077 +/- 4.092441511772266e-05
+time (s): 50.47959899902344
