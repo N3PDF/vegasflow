@@ -13,7 +13,7 @@ n_iter = 3
 
 def test_run():
     @tf.function
-    def lepage(xarr, n_dim=None):
+    def test_integrand(xarr, n_dim=None, **kwargs):
         """Lepage test function"""
         if n_dim is None:
             n_dim = xarr.shape[-1]
@@ -26,7 +26,7 @@ def test_run():
         return pref * tf.exp(-coef)
 
     vegas_instance = VegasFlow(dim, ncalls)
-    vegas_instance.compile(lepage)
+    vegas_instance.compile(test_integrand)
     result = vegas_instance.run_integration(n_iter)
     res = result[0]
     np.testing.assert_almost_equal(res, 1.000, decimal=2)

@@ -9,6 +9,11 @@
             This function defines what to do in order to run one event
             of the Monte Carlo. It is used only for compilation, as the
             actual integration is done by the `run_event` method.
+            In order to use the full capabilities of this library, `_run_event`
+            can take a number of events as its input so it can run more than one
+            event at the same time.
+            All results from `_run_event` will be accumulated before being passed
+            to `_run_iteration`.
         - `_run_iteration`:
             This function defines what to do in a full iteration of the
             MonteCarlo (i.e., what to do in order to run for n_events)
@@ -25,12 +30,14 @@
 """
 
 import time
+import copy
+import inspect
 import threading
 from abc import abstractmethod, ABC
 import joblib
 import numpy as np
 import tensorflow as tf
-from vegasflow.configflow import MAX_EVENTS_LIMIT, DEFAULT_ACTIVE_DEVICES
+from vegasflow.configflow import MAX_EVENTS_LIMIT, DEFAULT_ACTIVE_DEVICES, DTYPE
 
 
 def print_iteration(it, res, error, extra="", threshold=0.1):
@@ -72,7 +79,7 @@ class MonteCarloFlow(ABC):
         self.xjac = 1.0 / n_events
         self.integrand = None
         self.event = None
-        self.all_results = []
+        self._history = []
         self.n_events = n_events
         self.events_per_run = min(events_limit, n_events)
         self.lock = threading.Lock()
@@ -91,6 +98,19 @@ class MonteCarloFlow(ABC):
         else:
             self.devices = None
 
+    @property
+    def history(self):
+        """ Returns a list with a tuple of results per iteration
+        This tuple contains:
+            `result`
+                result of each iteration
+            `error`
+                error of the corresponding iteration
+            `histograms`
+                list of histograms for the corresponding iteration
+        """
+        return self._history
+
     #### Abstract methods
     @abstractmethod
     def _run_iteration(self):
@@ -99,7 +119,8 @@ class MonteCarloFlow(ABC):
 
     @abstractmethod
     def _run_event(self, integrand, ncalls=None):
-        """ Run one single event of the Monte Carlo integration """
+        """ Run one single event of the Monte Carlo integration
+        the output must be a tuple """
         result = self.event()
         return result, pow(result, 2)
 
@@ -215,6 +236,15 @@ class MonteCarloFlow(ABC):
         """ Receives an integrand, prepares it for integration
         and tries to compile unless told otherwise.
 
+        The input integrand must receive, as an input, an array of random numbers.
+        There are also two optional arguments that will be passed to the function:
+            `n_dim`: number of dimensions
+            `weight`: weight of each event
+        so that the most general signature for the integrand is:
+            `integrand(array_random, n_dim = None, weight = None)`
+        the minimal working signature fo the integrand will be
+            `integrand(array_random, **kwargs)`
+
         Parameters
         ----------
             `integrand`: the function to integrate
@@ -223,28 +253,51 @@ class MonteCarloFlow(ABC):
         """
         if compilable:
             tf_integrand = tf.function(integrand)
+        else:
+            tf_integrand = integrand
 
-            def run_event(**kwargs):
-                return self._run_event(tf_integrand, **kwargs)
+        def run_event(**kwargs):
+            return self._run_event(tf_integrand, **kwargs)
 
+        if compilable:
             self.event = tf.function(run_event)
         else:
-
-            def run_event(**kwargs):
-                return self._run_event(integrand, **kwargs)
-
             self.event = run_event
 
-    def run_integration(self, n_iter, log_time=True):
-        """ Runs the integrator for the chosen number of iterations
+    def run_integration(self, n_iter, log_time=True, histograms=None):
+        """ Runs the integrator for the chosen number of iterations.
+
+        `histograms` must be a tuple of tf.Variables.
+        At the end of all iterations the histograms per iteration will
+        be output.
+        The variable `histograms` instead will contain the weighted
+        accumulation of all histograms
+
         Parameters
         ---------
-            `n_iter`: number of iterations
+            `n_iter`: int
+                number of iterations
+            `log_time`: bool
+                flag to decide whether to log the time each iteration takes
+            `histograms`: tuple of tf.Variable
+                tuple containing the histogram variables so they can be emptied
+                each each iteration
+
         Returns
         -------
-            `final_result`: integral value
-            `sigma`: monte carlo error
+            `final_result`: float
+                integral value
+            `sigma`: float
+                monte carlo error
+
+        Note: it is possible not to pass any histogram variable and still fill
+        some histogram variable at integration time, but then it is the responsability
+        of the integrand to empty the histograms each iteration and accumulate them.
+
         """
+        all_results = []
+        histo_results = []
+
         for i in range(n_iter):
             # Save start time
             if log_time:
@@ -252,7 +305,15 @@ class MonteCarloFlow(ABC):
 
             # Run one single iteration and append results
             res, error = self._run_iteration()
-            self.all_results.append((res, error))
+            all_results.append((res, error))
+
+            # If there is a histogram variable, store it and empty it
+            hist_copy = copy.deepcopy(histograms)
+            if histograms:
+                histo_results.append(hist_copy)
+                for histo_tensor in histograms:
+                    histo_tensor.assign(tf.zeros_like(histo_tensor, dtype=DTYPE))
+            self._history.append((res, error, hist_copy))
 
             # Logs result and end time
             if log_time:
@@ -265,14 +326,44 @@ class MonteCarloFlow(ABC):
         # Once all iterations are finished, print out
         aux_res = 0.0
         weight_sum = 0.0
-        for result in self.all_results:
+        for i, result in enumerate(all_results):
             res = result[0]
             sigma = result[1]
             wgt_tmp = 1.0 / pow(sigma, 2)
             aux_res += res * wgt_tmp
             weight_sum += wgt_tmp
+            # Accumulate the histograms
+            if histograms:
+                current = histo_results[i]
+                for aux_h, curr_h in zip(histograms, current):
+                    aux_h.assign(aux_h + curr_h * wgt_tmp)
+
+        if histograms:
+            for histogram in histograms:
+                histogram.assign(histogram / weight_sum)
 
         final_result = aux_res / weight_sum
         sigma = np.sqrt(1.0 / weight_sum)
         print(f" > Final results: {final_result.numpy():g} +/- {sigma:g}")
         return final_result, sigma
+
+
+def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events):
+    """ Convenience wrapper
+
+    Parameters
+    ----------
+        `integrator_class`: MonteCarloFlow inherited class
+        `integrand`: tf.function
+        `n_dim`: number of dimensions
+        `n_iter`: number of iterations
+        `n_events`: number of events per iteration
+
+    Returns
+    -------
+        `final_result`: integral value
+        `sigma`: monte carlo error
+    """
+    mc_instance = integrator_class(n_dim, total_n_events)
+    mc_instance.compile(integrand, compilable=True)
+    return mc_instance.run_integration(n_iter)
