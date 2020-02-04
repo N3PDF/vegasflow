@@ -1,8 +1,8 @@
 #!/bin/bash
 
-example=lepage_tf.py
+example=drellyan_lo_tf.py
 nevents=$(( 10**8 ))
-limit=$(( 10**7 ))
+limit=$(( 10**6 ))
 
 
 # Run CPU times:
