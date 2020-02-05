@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     if not quiet:
         print("Testing a basic integration")
-        print(f"VEGAS MC, {ncalls=}, {dim=}, {n_iter=}, {limit=}")
+        print(f"VEGAS MC, ncalls={ncalls}, dim={dim}, niter={n_iter}, limit={limit}")
     start = time.time()
 
     # Create the instance of Vegasflow
