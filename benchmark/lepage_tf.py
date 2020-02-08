@@ -63,6 +63,7 @@ if __name__ == "__main__":
 
     # Now freeze the grid and get a new result
     mc_instance.freeze_grid()
+    mc_instance.compile(lepage)
     result_2 = mc_instance.run_integration(n_iter)
     print(f"Final result: {result_1[0]} +/- {result_1[1]}")
     end = time.time()

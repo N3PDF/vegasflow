@@ -16,9 +16,8 @@ from vegasflow.utils import consume_array_into_indices
 
 FBINS = float_me(BINS_MAX)
 
-
 # Auxiliary functions for Vegas
-@tf.function
+#@tf.function
 def generate_random_array(rnds, divisions):
     """
         Generates the Vegas random array for any number of events
@@ -39,11 +38,10 @@ def generate_random_array(rnds, divisions):
 #     reg_f = fone
     # Get the index of the division we are interested in
     xn = FBINS*(fone - rnds) # t
-    int_xn = tf.cast(xn, DTYPEINT) # t
+    ind_i = tf.cast(xn, DTYPEINT) # t
     # Now get the remainder
-    aux_rand = xn - tf.cast(int_xn, dtype=DTYPE) # t
+    aux_rand = tf.math.floormod(xn, fone)
     # Get the value of the left and right sides of the bins
-    ind_i = int_xn
     ind_f = ind_i + ione
     x_ini = tf.gather(divisions, ind_i, batch_dims=1)
     x_fin = tf.gather(divisions, ind_f, batch_dims=1)
@@ -56,8 +54,8 @@ def generate_random_array(rnds, divisions):
     # and the weight
     weights = tf.reduce_prod(xdelta * FBINS, axis = 0)
     x_t = tf.transpose(x)
-    int_xn_t = tf.transpose(int_xn)
-    return x_t, int_xn_t, weights
+    int_xn = tf.transpose(ind_i)
+    return x_t, int_xn, weights
 
 
 @tf.function
@@ -148,11 +146,13 @@ class VegasFlow(MonteCarloFlow):
         # If training is True, the grid will be changed after every iteration
         # otherwise it will be frozen
         self.train = train
+        self.iteration_content = None
 
         # Initialize grid
         subdivision_np = np.linspace(0, 1, BINS_MAX+1)
         divisions_np = subdivision_np.repeat(n_dim).reshape(-1, n_dim).T
         self.divisions = tf.Variable(divisions_np, dtype=DTYPE)
+
 
     def freeze_grid(self):
         """ Stops the grid from refining any more """
@@ -300,8 +300,7 @@ class VegasFlow(MonteCarloFlow):
 
         return res, res2, arr_res2
 
-    @tf.function
-    def iteration_content(self):
+    def _iteration_content(self):
         # Compute the result
         res, res2, arr_res2 = self.run_event()
         # Compute the error
@@ -310,7 +309,14 @@ class VegasFlow(MonteCarloFlow):
         # If training is active, act post integration
         if self.train:
             self.refine_grid(arr_res2)
-        return res, sigma, arr_res2
+        return res, sigma
+
+    def compile(self, integrand, compilable = True, **kwargs):
+        super().compile(integrand, compilable=compilable, **kwargs)
+        if compilable and False:
+            self.iteration_content = tf.function(self._iteration_content)
+        else:
+            self.iteration_content = self._iteration_content
 
     def _run_iteration(self):
         """ Runs one iteration of the Vegas integrator """
