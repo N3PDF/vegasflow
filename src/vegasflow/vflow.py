@@ -9,10 +9,12 @@ import json
 import numpy as np
 import tensorflow as tf
 
-from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me
+from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me, ione, izero
 from vegasflow.configflow import BINS_MAX, ALPHA
 from vegasflow.monte_carlo import MonteCarloFlow, wrapper
 from vegasflow.utils import consume_array_into_indices
+
+FBINS = float_me(BINS_MAX)
 
 
 # Auxiliary functions for Vegas
@@ -32,31 +34,35 @@ def generate_random_array(rnds, divisions):
             div_index: array (None, n_dim)
             w: array (None,)
     """
-    reg_i = fzero
-    reg_f = fone
-    # Get the corresponding random number
-    xn = BINS_MAX * (fone - rnds)
-    int_xn = tf.maximum(
-        tf.cast(0, DTYPEINT), tf.minimum(tf.cast(xn, DTYPEINT), BINS_MAX)
-    )
-    # In practice int_xn = int(xn)-1 unless xn < 1
-    aux_rand = xn - tf.cast(int_xn, dtype=DTYPE)
-    # Now get the indices that will be used with this subdivision
-    # If the index is 0, we cannot get the index-1 so...
-    ind_f = tf.transpose(int_xn)
-    ind_i = tf.maximum(ind_f - 1, 0)
-    gather_f = tf.gather(divisions, ind_f, batch_dims=1)
-    gather_i_tmp = tf.gather(divisions, ind_i, batch_dims=1)
-    # Now the ones that had a "fake 0" need to be set to 0
-    ind_is_0 = tf.equal(ind_f, 0)
-    gather_i = tf.where(ind_is_0, fzero, gather_i_tmp)
-    # Now compute the random number for this dimension
-    x_ini = tf.transpose(gather_i)
-    xdelta = tf.transpose(gather_f) - x_ini
-    rand_x = x_ini + xdelta * aux_rand
-    x = reg_i + rand_x * (reg_f - reg_i)
-    weights = tf.reduce_prod(xdelta * BINS_MAX, axis=1)
-    return x, int_xn, weights
+    # Get the boundaries of the random numbers
+#     reg_i = fzero
+#     reg_f = fone
+    # Get the index of the division we are interested in
+    # TODO this can be dangerous, specially on float32
+    # as rnds can be extremely close to 0 or 1
+    # and so int_xn can take values beyond BINS_MAX or below 0
+    # before they were guarded with max/min but it is better to guard them
+    # at the level of the random generation
+    xn = FBINS*(fone - rnds) # t
+    int_xn = tf.cast(xn, DTYPEINT) # t
+    # Now get the remainder
+    aux_rand = xn - tf.cast(int_xn, dtype=DTYPE) # t
+    # Get the value of the left and right sides of the bins
+    ind_i = int_xn
+    ind_f = ind_i + ione
+    x_ini = tf.gather(divisions, ind_i, batch_dims=1)
+    x_fin = tf.gather(divisions, ind_f, batch_dims=1)
+    # Compute the width of the bins
+    xdelta = x_fin - x_ini
+    # Compute the random number between 0 and 1
+    x = x_ini + xdelta*aux_rand
+    # Compute the random number between the limits
+#     x = reg_i + rand_x * (reg_f - reg_i)
+    # and the weight
+    weights = tf.reduce_prod(xdelta * FBINS, axis = 0)
+    x_t = tf.transpose(x)
+    int_xn_t = tf.transpose(int_xn)
+    return x_t, int_xn_t, weights
 
 
 @tf.function
@@ -107,13 +113,13 @@ def refine_grid_per_dimension(t_res_sq, subdivisions):
         n_bin += 1
         bin_weight += wei_t[n_bin]
         prev = cur
-        cur = subdivisions[n_bin]
+        cur = subdivisions[n_bin+1]
         return bin_weight, n_bin, cur, prev
 
     ###########################
 
     # And now resize all bins
-    new_bins = []
+    new_bins = [fzero]
     # Auxiliary variables
     bin_weight = fzero
     n_bin = -1
@@ -149,7 +155,7 @@ class VegasFlow(MonteCarloFlow):
         self.train = train
 
         # Initialize grid
-        subdivision_np = np.linspace(1 / BINS_MAX, 1, BINS_MAX)
+        subdivision_np = np.linspace(0, 1, BINS_MAX+1)
         divisions_np = subdivision_np.repeat(n_dim).reshape(-1, n_dim).T
         self.divisions = tf.Variable(divisions_np, dtype=DTYPE)
 
@@ -270,9 +276,10 @@ class VegasFlow(MonteCarloFlow):
         else:
             n_events = ncalls
 
+        tech_cut = 1e-7
         # Generate all random number for this iteration
         rnds = tf.random.uniform(
-            (n_events, self.n_dim), minval=0, maxval=1, dtype=DTYPE
+            (self.n_dim, n_events), minval=tech_cut, maxval=1.0-tech_cut, dtype=DTYPE
         )
 
         # Pass them through the Vegas digestion
