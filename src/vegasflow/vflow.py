@@ -153,7 +153,7 @@ class VegasFlow(MonteCarloFlow):
 
         # If training is True, the grid will be changed after every iteration
         # otherwise it will be frozen
-        self.train = False
+        self.train = train
         self.iteration_content = None
 
         # Initialize grid
