@@ -349,7 +349,7 @@ class MonteCarloFlow(ABC):
         return final_result, sigma
 
 
-def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events):
+def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events, compilable = True):
     """ Convenience wrapper
 
     Parameters
@@ -366,5 +366,5 @@ def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events):
         `sigma`: monte carlo error
     """
     mc_instance = integrator_class(n_dim, total_n_events)
-    mc_instance.compile(integrand, compilable=True)
+    mc_instance.compile(integrand, compilable=compilable)
     return mc_instance.run_integration(n_iter)

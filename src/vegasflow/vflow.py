@@ -38,11 +38,6 @@ def generate_random_array(rnds, divisions):
 #     reg_i = fzero
 #     reg_f = fone
     # Get the index of the division we are interested in
-    # TODO this can be dangerous, specially on float32
-    # as rnds can be extremely close to 0 or 1
-    # and so int_xn can take values beyond BINS_MAX or below 0
-    # before they were guarded with max/min but it is better to guard them
-    # at the level of the random generation
     xn = FBINS*(fone - rnds) # t
     int_xn = tf.cast(xn, DTYPEINT) # t
     # Now get the remainder
@@ -276,7 +271,7 @@ class VegasFlow(MonteCarloFlow):
         else:
             n_events = ncalls
 
-        tech_cut = 1e-7
+        tech_cut = 1e-8
         # Generate all random number for this iteration
         rnds = tf.random.uniform(
             (self.n_dim, n_events), minval=tech_cut, maxval=1.0-tech_cut, dtype=DTYPE
@@ -305,8 +300,8 @@ class VegasFlow(MonteCarloFlow):
 
         return res, res2, arr_res2
 
-    def _run_iteration(self):
-        """ Runs one iteration of the Vegas integrator """
+    @tf.function
+    def iteration_content(self):
         # Compute the result
         res, res2, arr_res2 = self.run_event()
         # Compute the error
@@ -315,10 +310,15 @@ class VegasFlow(MonteCarloFlow):
         # If training is active, act post integration
         if self.train:
             self.refine_grid(arr_res2)
+        return res, sigma, arr_res2
+
+    def _run_iteration(self):
+        """ Runs one iteration of the Vegas integrator """
+        res, sigma = self.iteration_content()
         return res, sigma
 
 
-def vegas_wrapper(integrand, n_dim, n_iter, total_n_events):
+def vegas_wrapper(integrand, n_dim, n_iter, total_n_events, **kwargs):
     """ Convenience wrapper
 
     Parameters
@@ -333,4 +333,4 @@ def vegas_wrapper(integrand, n_dim, n_iter, total_n_events):
         `final_result`: integral value
         `sigma`: monte carlo error
     """
-    return wrapper(VegasFlow, integrand, n_dim, n_iter, total_n_events)
+    return wrapper(VegasFlow, integrand, n_dim, n_iter, total_n_events, **kwargs)
