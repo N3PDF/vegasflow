@@ -17,7 +17,7 @@ from vegasflow.utils import consume_array_into_indices
 FBINS = float_me(BINS_MAX)
 
 # Auxiliary functions for Vegas
-#@tf.function
+@tf.function
 def generate_random_array(rnds, divisions):
     """
         Generates the Vegas random array for any number of events
@@ -313,7 +313,7 @@ class VegasFlow(MonteCarloFlow):
 
     def compile(self, integrand, compilable = True, **kwargs):
         super().compile(integrand, compilable=compilable, **kwargs)
-        if compilable and False:
+        if compilable:
             self.iteration_content = tf.function(self._iteration_content)
         else:
             self.iteration_content = self._iteration_content
