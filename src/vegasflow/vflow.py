@@ -37,18 +37,26 @@ def generate_random_array(rnds, divisions):
 #     reg_i = fzero
 #     reg_f = fone
     # Get the index of the division we are interested in
-    xn = FBINS*(fone - rnds) # t
-    ind_i = tf.cast(xn, DTYPEINT) # t
-    # Now get the remainder
-    aux_rand = tf.math.floormod(xn, fone)
-    # Get the value of the left and right sides of the bins
-    ind_f = ind_i + ione
-    x_ini = tf.gather(divisions, ind_i, batch_dims=1)
-    x_fin = tf.gather(divisions, ind_f, batch_dims=1)
-    # Compute the width of the bins
-    xdelta = x_fin - x_ini
+    xn = FBINS*(fone - rnds)
+
+    @tf.function
+    def digest(xn):
+        ind_i = tf.cast(xn, DTYPEINT)
+        # Get the value of the left and right sides of the bins
+        ind_f = ind_i + ione
+        x_ini = tf.gather(divisions, ind_i, batch_dims=1)
+        x_fin = tf.gather(divisions, ind_f, batch_dims=1)
+        # Compute the width of the bins
+        xdelta = x_fin - x_ini
+        return ind_i, x_ini, xdelta
+    ind_i, x_ini, xdelta = digest(xn)
     # Compute the random number between 0 and 1
-    x = x_ini + xdelta*aux_rand
+    # This is the heavy part of the calc
+    @tf.function
+    def compute_x(x_ini, xn, xdelta):
+        aux_rand = xn - tf.math.floor(xn)
+        return x_ini + xdelta*aux_rand
+    x = compute_x(x_ini, xn, xdelta)
     # Compute the random number between the limits
 #     x = reg_i + rand_x * (reg_f - reg_i)
     # and the weight
@@ -145,7 +153,7 @@ class VegasFlow(MonteCarloFlow):
 
         # If training is True, the grid will be changed after every iteration
         # otherwise it will be frozen
-        self.train = train
+        self.train = False
         self.iteration_content = None
 
         # Initialize grid
@@ -157,10 +165,12 @@ class VegasFlow(MonteCarloFlow):
     def freeze_grid(self):
         """ Stops the grid from refining any more """
         self.train = False
+        self.recompile()
 
     def unfreeze_grid(self):
         """ Enable the refining of the grid """
         self.train = True
+        self.recompile()
 
     def save_grid(self, file_name):
         """ Save the `divisions` array in a json file
@@ -312,11 +322,16 @@ class VegasFlow(MonteCarloFlow):
         return res, sigma
 
     def compile(self, integrand, compilable = True, **kwargs):
+        self.compile_args = (integrand, compilable, kwargs)
         super().compile(integrand, compilable=compilable, **kwargs)
-        if compilable:
+        if compilable and False:
             self.iteration_content = tf.function(self._iteration_content)
         else:
             self.iteration_content = self._iteration_content
+
+    def recompile(self):
+        a = self.compile_args
+        self.compile(a[0], a[1], **a[2])
 
     def _run_iteration(self):
         """ Runs one iteration of the Vegas integrator """
