@@ -64,6 +64,6 @@ if __name__ == "__main__":
     # Now freeze the grid and get a new result
     mc_instance.freeze_grid()
     result_2 = mc_instance.run_integration(n_iter)
-    print(f"Final result: {result_1[0]} +/- {result_1[1]}")
+    print(f"Final result: {result_2[0]} +/- {result_2[1]}")
     end = time.time()
     print(f"time (s): {end-start}")
