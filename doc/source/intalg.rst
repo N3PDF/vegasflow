@@ -17,10 +17,11 @@ An integration with the Vegas algorithm can be performed using the ``VegasFlow``
 Initializing the integrator requires to provide a number of dimensions with which initialize the grid and a target number of calls per iterations.
 
 .. code-block:: python
+
     from vegasflow.vflow import VegasFlow
     vegas_instance = VegasFlow(dimensions, ncalls)
 
-Once that is generated it is possible to register an integrand by calling the compile method.
+Once that is generated it is possible to register an integrand by calling the ``compile`` method.
 
 .. code-block:: python
 
@@ -29,19 +30,24 @@ Once that is generated it is possible to register an integrand by calling the co
 
     vegas_instance.compile(example_integrand)
 
-Once this process has been performed we can start computing the result by simply calling the run_integration method to which we need to provided a number of iterations.
+Once this process has been performed we can start computing the result by simply calling the ``run_integration`` method to which we need to provided a number of iterations.
 After each iteration the grid will be refined, producing more points (and hence reducing the error) in the regions where the integrand is larger.
 
 .. code-block:: python
+
     result = vegas_instance.run_integration(n_iter)
 
-It is often useful to freeze the grid to compute the integration several times with a frozen grid, in order to do that we provide the freeze_grid method. Note that freezing the grid forces a recompilation of the integrand which means the first iteration after freezing can potentially be slow, after which it will become much faster as before as the part of the graph dedicated to the adjusting of the grid is dropped.
+The output variable, in this example named ``result``, is a tuple variable where the first element is the result of the integration while the second element is the error of the integration.
+
+It is often useful to freeze the grid to compute the integration several times with a frozen grid, in order to do that we provide the ``freeze_grid`` method. Note that freezing the grid forces a recompilation of the integrand which means the first iteration after freezing can potentially be slow, after which it will become much faster as before as the part of the graph dedicated to the adjusting of the grid is dropped.
 
 .. code-block:: python
+
     vegas_instance.freeze_grid()
 
 
 .. autoclass:: vegasflow.vflow.VegasFlow
+    :show-inheritance:
     :members: freeze_grid, unfreeze_grid, refine_grid, run_event
 
  
@@ -51,4 +57,15 @@ PlainFlow
 We provide a very rudimentary Monte Carlo integrator which we name PlainFlow.
 This provides a easy example on how to implement a new integration algorithm.
 
-.. autoclass:: vegasflow.vflow.PlainFlow
+The usage pattern is similar to :ref:`vegas-label`.
+
+.. code-block:: python
+
+    from vegasflow.plain import PlainFlow
+    plain_instance = PlainFlow(dimensions, ncalls)
+    plain_instance.compile(example_integrand)
+    plain_instance.run_integration(n_iter)
+
+
+.. autoclass:: vegasflow.plain.PlainFlow
+    :show-inheritance:

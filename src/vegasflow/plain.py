@@ -8,6 +8,10 @@ import tensorflow as tf
 
 
 class PlainFlow(MonteCarloFlow):
+    """
+        Simple Monte Carlo integrator.
+    """
+
     def _run_event(self, integrand, ncalls=None):
         if ncalls is None:
             n_events = self.n_events
