@@ -8,8 +8,8 @@ This page lists the integration algorithms currently implemented.
 
 .. _vegas-label:
 
-Vegas
-=====
+VegasFlow
+=========
 
 This implementation of the Vegas algorithm closely follow the description of the importance sampling in the original `Vegas <https://doi.org/10.1016/0021-9991(78)90004-9>`_ paper.
 
@@ -44,3 +44,11 @@ It is often useful to freeze the grid to compute the integration several times w
 .. autoclass:: vegasflow.vflow.VegasFlow
     :members: freeze_grid, unfreeze_grid, refine_grid, run_event
 
+ 
+PlainFlow
+=========
+
+We provide a very rudimentary Monte Carlo integrator which we name PlainFlow.
+This provides a easy example on how to implement a new integration algorithm.
+
+.. autoclass:: vegasflow.vflow.PlainFlow
