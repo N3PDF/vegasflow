@@ -5,14 +5,14 @@
 VegasFlow: Gotta go fast
 ========================
 
-VegasFlow is a MonteCarlo integration library written in Python and based on the `TensorFlow <https://www.tensorflow.org/>`_ framework.
-It is developed with a focus on speed and efficiency, enabling researchers to perform very expensive calculation as quick as possible, as easy as possible.
+VegasFlow is a `Monte Carlo integration <https://en.wikipedia.org/wiki/Monte_Carlo_integration>`_ library written in Python and based on the `TensorFlow <https://www.tensorflow.org/>`_ framework.
+It is developed with a focus on speed and efficiency, enabling researchers to perform very expensive calculation as quick and easy as possible.
 
 Some of the key features of VegasFlow are:
 
-    - Runs efficiently on CPU, GPU, many GPUs or clusters.
+    - Integrates efficiently high dimensional functions on single (multi-threading) and multi CPU, single and multi GPU, many GPUs or clusters.
     - Compatible with Python, C, C++ or Fortran.
-    - Implementation of several MonteCarlo algorithms.
+    - Implementation of different Monte Carlo algorithms.
 
 Motivation
 ==========

@@ -5,6 +5,7 @@
     Usage:
         In order to implement a new MonteCarloFlow integrator
         it is necessary to implement (at least) two methods:
+
         - `_run_event`: integrand
             This function defines what to do in order to run one event
             of the Monte Carlo. It is used only for compilation, as the
@@ -14,12 +15,14 @@
             event at the same time.
             All results from `_run_event` will be accumulated before being passed
             to `_run_iteration`.
+
         - `_run_iteration`:
             This function defines what to do in a full iteration of the
             MonteCarlo (i.e., what to do in order to run for n_events)
 
     Device distribution:
         The default behaviour is defined in the `configflow.py` file.
+
     This class will go through the devices given in the `list_devices` argument and consider
     them all active and enabled. Then the integration will be broken in batches of `events_limit`
     which will be given to the first idle device found.
@@ -102,12 +105,12 @@ class MonteCarloFlow(ABC):
     def history(self):
         """ Returns a list with a tuple of results per iteration
         This tuple contains:
-            `result`
-                result of each iteration
-            `error`
-                error of the corresponding iteration
-            `histograms`
-                list of histograms for the corresponding iteration
+
+        - `result`: result of each iteration
+
+        - `error`: error of the corresponding iteration
+
+        - `histograms`: list of histograms for the corresponding iteration
         """
         return self._history
 
@@ -238,12 +241,18 @@ class MonteCarloFlow(ABC):
 
         The input integrand must receive, as an input, an array of random numbers.
         There are also two optional arguments that will be passed to the function:
-            `n_dim`: number of dimensions
-            `weight`: weight of each event
+
+        - `n_dim`: number of dimensions,
+
+        - `weight`: weight of each event,
+
         so that the most general signature for the integrand is:
-            `integrand(array_random, n_dim = None, weight = None)`
+
+        - `integrand(array_random, n_dim = None, weight = None)`,
+
         the minimal working signature fo the integrand will be
-            `integrand(array_random, **kwargs)`
+
+        - `integrand(array_random, **kwargs)`.
 
         Parameters
         ----------
