@@ -50,7 +50,7 @@ if __name__ == "__main__":
     import time
 
     @tf.function
-    def lepage(xarr, n_dim=None):
+    def lepage(xarr, n_dim=None, **kwargs):
         """Lepage test function"""
         if n_dim is None:
             n_dim = xarr.shape[-1]
