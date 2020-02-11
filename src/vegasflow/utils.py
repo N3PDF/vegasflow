@@ -12,7 +12,7 @@ def consume_array_into_indices(input_arr, indices, result_size):
     size `result_size`. The accumulation occurs according to the array
     of `indices`.
 
-    For instance, `input_array` = (a,b,c,d) and `indices` = (0,1,0,0)
+    For instance, `input_array` = [a,b,c,d] and vector column `indices` = [[0,1,0,0]].T
     (with `result_size` = 2) will result in a final_result;
         (a+c+d, b)
 
