@@ -37,7 +37,7 @@ setup(name='vegasflow',
           'joblib',
           'tensorflow',
           ],
-      extra_requires={
+      extras_require={
           'docs' : [
             'sphinx_rtd_theme',
             'recommonmark',
@@ -46,7 +46,7 @@ setup(name='vegasflow',
           'examples' : [
             'cffi',
             ],
-          'behcmark' : [
+          'benchmark' : [
             'vegas', # Lepage's Vegas for benchmarking
             ],
           },
