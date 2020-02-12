@@ -81,8 +81,13 @@ def test_VegasFlow_load_grid():
     with open(tmp_filename, "w") as f:
         json.dump(jdict, f)
     # Try to load it
-    vegas_instance.load_grid(tmp_filename)
+    vegas_instance.load_grid(file_name=tmp_filename)
     # Check that the loading did work
+    loaded_grid = vegas_instance.divisions.numpy()
+    np.testing.assert_equal(loaded_grid, tmp_grid)
+    # Now try to load a numpy array directly instead
+    tmp_grid = np.random.rand(*grid_shape)
+    vegas_instance.load_grid(numpy_grid=tmp_grid)
     loaded_grid = vegas_instance.divisions.numpy()
     np.testing.assert_equal(loaded_grid, tmp_grid)
     # Now check that the errors also work
@@ -91,13 +96,13 @@ def test_VegasFlow_load_grid():
         json.dump(jdict, f)
     # Check that it fails if the number of bins is different
     with pytest.raises(ValueError):
-        vegas_instance.load_grid(tmp_filename)
+        vegas_instance.load_grid(file_name=tmp_filename)
     # Check that it fails if the number of dimensons is different
     jdict["dimensions"] = -4
     with open(tmp_filename, "w") as f:
         json.dump(jdict, f)
     with pytest.raises(ValueError):
-        vegas_instance.load_grid(tmp_filename)
+        vegas_instance.load_grid(file_name=tmp_filename)
 
 
 def test_PlainFlow():

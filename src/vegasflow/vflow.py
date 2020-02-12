@@ -184,19 +184,44 @@ class VegasFlow(MonteCarloFlow):
         with open(file_name, "w") as f:
             json.dump(json_dict, f, indent=True)
 
-    def load_grid(self, file_name):
+    def load_grid(self, file_name=None, numpy_grid=None):
         """ Load the `divisions` array from a json file
+        or from a numpy_array
 
         Parameters
         ----------
             `file_name`: str
             Filename in which the grid json is stored
+            `numpy_grid`: np.array
+            Numpy array to substitute divisions with
         """
-        with open(file_name, "r") as f:
-            json_dict = json.load(f)
-        # First check the parameters of the grid are unchanged
-        grid_dim = json_dict.get("dimensions")
-        grid_bins = json_dict.get("BINS")
+        if file_name is not None and numpy_grid is not None:
+            raise ValueError(
+                "Received both a numpy grid and a file_name to load the grid from. Ambiguous call to `load_grid`"
+            )
+        # If it received a file, loads up the grid
+        elif file_name:
+            with open(file_name, "r") as f:
+                json_dict = json.load(f)
+            # First check the parameters of the grid are unchanged
+            grid_dim = json_dict.get("dimensions")
+            grid_bins = json_dict.get("BINS")
+            # Check that the integrand is the same one
+            if self.integrand:
+                integrand_name = self.integrand.__name__
+                integrand_grid = json_dict.get("integrand")
+                if integrand_name != integrand_grid:
+                    print(
+                        f"WARNING: The grid was written for the integrand: {integrand_grid} which is different from {integrand_name}"
+                    )
+            # Now that everything is clear, let's load up the grid
+            numpy_grid = np.array(json_dict["grid"])
+        elif numpy_grid is not None:
+            grid_dim = numpy_grid.shape[0]
+            grid_bins = numpy_grid.shape[1]
+        else:
+            raise ValueError("load_grid was called but no grid was provided!")
+        # Check that the grid has the right dimensions
         if grid_dim is not None and self.n_dim != grid_dim:
             raise ValueError(
                 f"Received a {grid_dim}-dimensional grid while VegasFlow was instantiated with {self.n_dim} dimensions"
@@ -205,17 +230,8 @@ class VegasFlow(MonteCarloFlow):
             raise ValueError(
                 f"The received grid contains {grid_bins} bins while the current settings is of {BINS_MAX} bins"
             )
-        # Check that the integrand is the same one
-        if self.integrand:
-            integrand_name = self.integrand.__name__
-            integrand_grid = json_dict.get("integrand")
-            if integrand_name != integrand_grid:
-                print(
-                    f"WARNING: The grid was written for the integrand: {integrand_grid} which is different from {integrand_name}"
-                )
-        # Now that everything is clear, let's load up the grid
-        numpy_grid = np.array(json_dict["grid"])
-        print(f" > SUCCESS: Loaded grid from {file_name}")
+        if file_name:
+            print(f" > SUCCESS: Loaded grid from {file_name}")
         self.divisions.assign(numpy_grid)
 
     def refine_grid(self, arr_res2):
