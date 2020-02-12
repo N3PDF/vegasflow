@@ -5,6 +5,7 @@
     The main interfaces of this class are the class `VegasFlow` and the
     `vegas_wrapper`
 """
+import json
 import numpy as np
 import tensorflow as tf
 
@@ -159,6 +160,63 @@ class VegasFlow(MonteCarloFlow):
     def unfreeze_grid(self):
         """ Enable the refining of the grid """
         self.train = True
+
+    def save_grid(self, file_name):
+        """ Save the `divisions` array in a json file
+
+        Parameters
+        ----------
+            `file_name`: str
+            Filename in which to save the checkpoint
+        """
+        div_np = self.divisions.numpy()
+        if self.integrand:
+            int_name = self.integrand.__name__
+        else:
+            int_name = ""
+        json_dict = {
+            "dimensions": self.n_dim,
+            "ALPHA": ALPHA,
+            "BINS": BINS_MAX,
+            "integrand": int_name,
+            "grid": div_np.tolist(),
+        }
+        with open(file_name, "w") as f:
+            json.dump(json_dict, f, indent=True)
+
+    def load_grid(self, file_name):
+        """ Load the `divisions` array from a json file
+
+        Parameters
+        ----------
+            `file_name`: str
+            Filename in which the grid json is stored
+        """
+        with open(file_name, "r") as f:
+            json_dict = json.load(f)
+        # First check the parameters of the grid are unchanged
+        grid_dim = json_dict.get("dimensions")
+        grid_bins = json_dict.get("BINS")
+        if grid_dim is not None and self.n_dim != grid_dim:
+            raise ValueError(
+                f"Received a {grid_dim}-dimensional grid while VegasFlow was instantiated with {self.n_dim} dimensions"
+            )
+        if grid_bins is not None and BINS_MAX != grid_bins:
+            raise ValueError(
+                f"The received grid contains {grid_bins} bins while the current settings is of {BINS_MAX} bins"
+            )
+        # Check that the integrand is the same one
+        if self.integrand:
+            integrand_name = self.integrand.__name__
+            integrand_grid = json_dict.get("integrand")
+            if integrand_name != integrand_grid:
+                print(
+                    f"WARNING: The grid was written for the integrand: {integrand_grid} which is different from {integrand_name}"
+                )
+        # Now that everything is clear, let's load up the grid
+        numpy_grid = np.array(json_dict["grid"])
+        print(f" > SUCCESS: Loaded grid from {file_name}")
+        self.divisions.assign(numpy_grid)
 
     def refine_grid(self, arr_res2):
         """ Receives an array with the values of the integral squared per

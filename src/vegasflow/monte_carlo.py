@@ -251,6 +251,7 @@ class MonteCarloFlow(ABC):
             `compilable`: (default True) if False, the integration
                 is not passed through `tf.function`
         """
+        self.integrand = integrand
         if compilable:
             tf_integrand = tf.function(integrand)
         else:
