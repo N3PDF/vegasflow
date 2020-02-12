@@ -43,13 +43,6 @@ It is a combination of the names `Vegas` and `Tensorflow`.
 
 
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
 .. toctree::
     :maxdepth: 3
     :caption: Contents:
