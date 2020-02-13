@@ -81,7 +81,7 @@ class MonteCarloFlow(ABC):
         self.event = None
         self._history = []
         self.n_events = n_events
-        self.events_per_run = min(events_limit, n_events)
+        self._events_per_run = min(events_limit, n_events)
         self.lock = threading.Lock()
         if list_devices:
             # List all devices from the list that can be found by tensorflow
@@ -97,6 +97,21 @@ class MonteCarloFlow(ABC):
             self.pool = joblib.Parallel(n_jobs=len(devices), prefer="threads")
         else:
             self.devices = None
+
+    @property
+    def events_per_run(self):
+        """ Number of events to run in a single step.
+        Use this variable to control how much the memory will be loaded"""
+        return self._events_per_run
+
+    @events_per_run.setter
+    def events_per_run(self, val):
+        """ Set the number of events per single step """
+        self._events_per_run = min(val, self.n_events)
+        if self.n_events % self._events_per_run != 0:
+            print(
+                f"Warning, the number of events per run step {self._events_per_run} doesn't perfectly divide the number of events {self.n_events}, which can harm performance"
+            )
 
     @property
     def history(self):
@@ -349,7 +364,9 @@ class MonteCarloFlow(ABC):
         return final_result, sigma
 
 
-def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events, compilable = True):
+def wrapper(
+    integrator_class, integrand, n_dim, n_iter, total_n_events, compilable=True
+):
     """ Convenience wrapper
 
     Parameters

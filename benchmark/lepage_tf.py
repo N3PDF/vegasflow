@@ -55,7 +55,9 @@ if __name__ == "__main__":
     start = time.time()
 
     # Create the instance of Vegasflow
-    mc_instance = VegasFlow(dim, ncalls, events_limit=limit)
+    # For training use 1/10 as many events per run
+    training_limit = int(limit/10)
+    mc_instance = VegasFlow(dim, ncalls, events_limit=training_limit)
     mc_instance.compile(lepage)
     # Train the grid for {n_iter} iterations
     result_1 = mc_instance.run_integration(n_iter)
@@ -63,6 +65,8 @@ if __name__ == "__main__":
 
     # Now freeze the grid and get a new result
     mc_instance.freeze_grid()
+    # After freezing the grid change the number of events per run
+    mc_instance.events_per_run = limit
     result_2 = mc_instance.run_integration(n_iter)
     print(f"Final result: {result_2[0]} +/- {result_2[1]}")
     end = time.time()

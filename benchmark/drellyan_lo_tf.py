@@ -274,7 +274,8 @@ if __name__ == "__main__":
     start = time.time()
 
     # Create the instance of Vegasflow
-    mc_instance = VegasFlow(dim, ncalls, events_limit=limit)
+    training_limit = int(limit/10)
+    mc_instance = VegasFlow(dim, ncalls, events_limit=training_limit)
     mc_instance.compile(drellyan)
     # Train the grid for {n_iter} iterations
     result_1 = mc_instance.run_integration(n_iter)
@@ -282,6 +283,7 @@ if __name__ == "__main__":
 
     # Now freeze the grid and get a new result
     mc_instance.freeze_grid()
+    mc_instance.events_per_run = limit
     result_2 = mc_instance.run_integration(n_iter)
     print(f"Final result: {result_2[0]} +/- {result_2[1]}")
     end = time.time()
