@@ -6,6 +6,9 @@ nevents=$(( 4*10**8 ))
 limit=$(( 10**8 ))
 
 
+cpu_events=$(( ${nevents}/10 ))
+cpu_limit=$(( ${limit}/10 ))
+
 # Run CPU times:
 echo "### CPU benchmark ###"
 export CUDA_VISIBLE_DEVICES=""
