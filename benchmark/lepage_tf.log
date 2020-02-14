@@ -506,3 +506,7 @@ Result for iteration 2: 1.0000 +/- 0.0000(took 7.80735 s)
  > Final results: 0.999993 +/- 2.64742e-05
 Final result: 1.0000406036707077 +/- 4.092441511772266e-05
 time (s): 50.47959899902344
+### CPU benchmark ###
+> > Running for 35 cores
+Result for iteration 0: 1.0003 +/- 0.0008(took 89.23133 s)
+Result for iteration 1: 0.9999 +/- 0.0000(took 87.11689 s)

@@ -2,8 +2,8 @@
 
 # example=drellyan_lo_tf.py
 example=lepage_tf.py
-nevents=$(( 4*10**8 ))
-limit=$(( 10**8 ))
+nevents=$(( 10**8 ))
+limit=$(( 10**7 ))
 
 
 cpu_events=$(( ${nevents}/10 ))
@@ -12,10 +12,10 @@ cpu_limit=$(( ${limit}/10 ))
 # Run CPU times:
 echo "### CPU benchmark ###"
 export CUDA_VISIBLE_DEVICES=""
-for i in {0..35}
+for i in {34..35}
 do
     echo  "> > Running for $(( i+1 )) cores"
-    taskset -c 0-${i} python ${example} -n ${nevents} -l ${limit} -q 2>/dev/null
+    taskset -c 0-${i} python ${example} -n ${cpu_nevents} -l ${cpu_limit} -q 2>/dev/null
     echo ""
 done
 
