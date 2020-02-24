@@ -66,8 +66,6 @@ def make_event(xarr):
 
     psw = 1 / (8*np.pi)* kallenF # psw
     psw *= jac # jac for tau, y
-    psw /= conv
-    psw *= 36*np.pi
     flux = 1 / (2 * mV2) # flux
 
     return psw, flux, p0, p1, p2, p3, x1, x2
