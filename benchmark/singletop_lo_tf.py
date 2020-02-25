@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 import sys
 import time
+from argparse import ArgumentParser
 import numpy as np
 import tensorflow as tf
-from vegasflow.configflow import DTYPE
-from vegasflow.vflow import vegas_wrapper
-
-# MC integration setup
-dim = 3
-ncalls = np.int32(1e8)
-n_iter = 5
+from vegasflow.configflow import DTYPE, DTYPEINT
+from vegasflow.vflow import VegasFlow
 
 # Physics setup
 # top mass
@@ -267,33 +263,52 @@ def singletop(xarr, n_dim=None, **kwargs):
     lumi_me2 = tf.reduce_sum(2 * lumis * wgts, axis=0)
     return lumi_me2 * psw * flux * conv
 
+def parse_setup():
+    NCALLS = np.int32(1e5)
+    N_ITER = 3
+    args = ArgumentParser()
+    args.add_argument("-n", "--ncalls", default=NCALLS, type=int)
+    args.add_argument("-i", "--iter", default=N_ITER, type=int)
+    args.add_argument(
+        "-l",
+        "--limit",
+        help="Max number of events per runstep (1e6 is usually a good limit)",
+        default=int(1e6),
+        type=int,
+    )
+    args.add_argument("-q", "--quiet", action = "store_true", help = "Printout only results and times")
+    return args.parse_args()
+
 
 if __name__ == "__main__":
     """Testing a basic integration"""
-    print(f"VEGAS MC, ncalls={ncalls}:")
+
+    args = parse_setup()
+    ncalls = args.ncalls
+    n_iter = args.iter
+    dim = 3
+    quiet = args.quiet
+    limit = args.limit
+
+    if not quiet:
+        print("Testing a basic integration")
+        print(f"VEGAS MC, ncalls={ncalls}, dim={dim}, niter={n_iter}, limit={limit}")
     start = time.time()
-    r = vegas_wrapper(singletop, dim, n_iter, ncalls)
+
+    # Create the instance of Vegasflow
+    # For training use 1/10 as many events per run
+    training_limit = int(limit/10)
+    mc_instance = VegasFlow(dim, ncalls, events_limit=training_limit)
+    mc_instance.compile(singletop)
+    # Train the grid for {n_iter} iterations
+    result_1 = mc_instance.run_integration(n_iter)
+    print(f"Result after the training: {result_1[0]} +/- {result_1[1]}")
+
+    # Now freeze the grid and get a new result
+    mc_instance.freeze_grid()
+    # After freezing the grid change the number of events per run
+    mc_instance.events_per_run = limit
+    result_2 = mc_instance.run_integration(n_iter)
+    print(f"Final result: {result_2[0]} +/- {result_2[1]}")
     end = time.time()
     print(f"time (s): {end-start}")
-
-    try:
-        from vegas import Integrator
-    except ModuleNotFoundError:
-        sys.exit(0)
-
-    if len(sys.argv) > 1:
-        print(" > Doing also the comparison with original Vegas ")
-
-        def fun(xarr):
-            x = xarr.reshape(1, -1)
-            return singletop(x)
-
-        print("Comparing with Lepage's Vegas")
-        limits = dim * [[0.0, 1.0]]
-        integrator = Integrator(limits)
-        start = time.time()
-        vr = integrator(fun, neval=ncalls, nitn=n_iter)
-        end = time.time()
-        print(vr.summary())
-        print(f"time (s): {end-start}")
-        print(f"Per iteration (s): {(end-start)/n_iter}")
