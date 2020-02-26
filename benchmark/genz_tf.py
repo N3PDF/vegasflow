@@ -15,6 +15,7 @@ def parse_setup():
     args.add_argument("-d", "--dimensions", default=DIM, type=int)
     args.add_argument("-n", "--ncalls", default=NCALLS, type=int)
     args.add_argument("-D", "--difficulty", default=10.0, type=float)
+    args.add_argument("-f", "--input_file")
     args.add_argument("-i", "--iter", default=N_ITER, type=int)
     args.add_argument("-g", "--genz", default="product_peak")
     args.add_argument(
@@ -27,6 +28,11 @@ def parse_setup():
     args.add_argument("-q", "--quiet", action = "store_true", help = "Printout only results and times")
     return args.parse_args()
 
+def get_num(input_file):
+    a = np.loadtxt(input_file)
+    w = a[1]
+    c = a[0]
+    return w, c
 
 if __name__ == "__main__":
     # Load the setup
@@ -36,11 +42,17 @@ if __name__ == "__main__":
     dim = args.dimensions
     quiet = args.quiet
     limit = args.limit
-    diff = args.difficulty
 
-    npcvec=np.random.rand(dim)*diff
+
+    if args.input_file:
+        print(f"Using numbers from {args.input_file}")
+        npwvec, npcvec = get_num(args.input_file)
+    else:
+        diff = args.difficulty
+        npcvec=np.random.rand(dim)*diff
+        npwvec = np.random.rand(dim)
+
     cvec = tf.constant(npcvec, dtype=DTYPE)
-    npwvec = np.random.rand(dim)
     wvec = tf.constant(npwvec, dtype=DTYPE)
 
     if args.genz == "product_peak":
@@ -70,10 +82,11 @@ if __name__ == "__main__":
             res = tf.cos(u1 + internal)
             return res/norm
     else:
-        raise NotImplemented("This genz function is not implemented")
+        raise NotImplementedError("This genz function is not implemented")
 
-    savevals = np.concatenate([npcvec.reshape(1,-1), npwvec.reshape(1,-1)], axis=0)
-    np.savetxt("numbers.txt", savevals)
+    if args.input_file is None:
+        savevals = np.concatenate([npcvec.reshape(1,-1), npwvec.reshape(1,-1)], axis=0)
+        np.savetxt("numbers.txt", savevals)
 
     if not quiet:
         print("Testing a basic integration")
@@ -97,3 +110,4 @@ if __name__ == "__main__":
     print(f"Final result: {result_2[0]} +/- {result_2[1]}")
     end = time.time()
     print(f"time (s): {end-start}")
+    print(f"Normalization factor: {norm}")
