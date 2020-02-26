@@ -67,8 +67,8 @@ def reminder():
 
 def get_num(input_file):
     a = np.loadtxt(input_file)
-    w = a[0]
-    c = a[1]
+    w = a[1]
+    c = a[0]
     return w, c
     
 
@@ -79,38 +79,36 @@ if __name__ == "__main__":
     niter = args.iter
     if RANK == 0:
         print(f" > > > Running for ncalls:{ncalls}, dims:{dim}, niter:{niter}")
-        print(" > Testing {args.genz} ")
+        print(f" > Testing {args.genz} ")
 
     if args.genz == "lepage":
         integrand = symgauss
+        normfac = 1.0
     elif args.genz == "product_peak":
         reminder()
         npwvec, npcvec = get_num(args.input_file)
         tan1 = np.arctan( (1-npwvec)*npcvec )
         tan2 = np.arctan( npwvec*npcvec )
-        res = np.prod((tan1+tan2)*npcvec)
+        normfac = np.prod((tan1+tan2)*npcvec)
         def integrand(xarr):
             ci = pow(npcvec, -2)
             den = ci + pow(xarr - npwvec, 2)
             result = pow(den, -1)
-            return np.product(result)/res
+            return np.product(result)/normfac
     elif args.genz == "oscillatory":
         reminder()
         npwvec, npcvec = get_num(args.input_file)
         npu1 = np.pi*2*npwvec[0]
-        u1 = tf.constant(npu1, dtype=DTYPE)
         # normalize
         num = pow(2,dim)*np.cos(npu1+np.sum(npcvec)/2)*np.prod(np.sin(npcvec/2))
-        den = np.prod(cvec)
-        result = num/den
+        den = np.prod(npcvec)
+        normfac = num/den
         def integrand(xarr):
             internal = np.sum(npcvec*xarr)
             res = np.cos(npu1 + internal)
-            return res/result
+            return res/normfac
     else:
-        raise NotImplemented("This genz function is not implemented")
-
-
-
+        raise NotImplementedError("This genz function is not implemented")
+    print(f"Normalization factor: {normfac}")
 
     lepage_vegas_integrate(symgauss, dim, ncalls, niter)
