@@ -73,12 +73,14 @@ class MonteCarloFlow(ABC):
         n_events,
         events_limit=MAX_EVENTS_LIMIT,
         list_devices=DEFAULT_ACTIVE_DEVICES,
+        verbose=True,
     ):
         # Save some parameters
         self.n_dim = n_dim
         self.xjac = 1.0 / n_events
         self.integrand = None
         self.event = None
+        self._verbose = verbose
         self._history = []
         self.n_events = n_events
         self._events_per_run = min(events_limit, n_events)
@@ -237,14 +239,16 @@ class MonteCarloFlow(ABC):
             events_left -= self.events_per_run
 
         if self.devices:
-            accumulators = self.pool(
-                joblib.delayed(self.device_run)(ncalls, **kwargs)
-                for ncalls in events_to_do
-            )
+            running_pool = []
+            for i, ncalls in enumerate(events_to_do):
+                delay_job = joblib.delayed(self.device_run)(ncalls, **kwargs)
+                running_pool.append(delay_job)
+            accumulators = self.pool(running_pool)
         else:
-            accumulators = [
-                self.device_run(ncalls, **kwargs) for ncalls in events_to_do
-            ]
+            accumulators = []
+            for i, ncalls in enumerate(events_to_do):
+                res = self.device_run(ncalls, **kwargs)
+                accumulators.append(res)
         return self.accumulate(accumulators)
 
     def compile(self, integrand, compilable=True):
