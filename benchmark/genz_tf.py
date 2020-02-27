@@ -67,20 +67,25 @@ if __name__ == "__main__":
             den = ci + tf.pow(xarr-wvec, 2)
             result = tf.pow(den, -1)
             return tf.reduce_prod(result, axis=1)/norm
-    elif args.genz == "oscillatory":
-        npu1 = np.pi*2*wvec[0]
-        u1 = tf.constant(npu1, dtype=DTYPE)
-        # normalize
-        num = pow(2,dim)*np.cos(npu1+np.sum(npcvec)/2)*np.prod(np.sin(npcvec/2))
-        den = np.prod(cvec)
-        result = num/den
-        norm = tf.constant(result, dtype=DTYPE)
+    elif args.genz == "discontinuous":
+        ar = (np.exp(npcvec*npwvec) - 1.0)/npcvec
+        res = np.prod(ar)
+        norm = tf.constant(res, dtype=DTYPE)
+
+        i = 1
+        st = ""
+        for x,y in zip(npcvec, npwvec):
+            st += f" /.a[[{i}]]->{x} /.u[[{i}]]->{y}"
+            i+=1
+        print(st)
+
 
         @tf.function
-        def genz(xarr, n_dim=None, **kwargs):
-            internal = tf.reduce_sum(cvec*xarr, axis=1)
-            res = tf.cos(u1 + internal)
-            return res/norm
+        def genz(xarr, **kwargs):
+            check = tf.greater(xarr, wvec)
+            flag = tf.reduce_any(check, axis=1)
+            res = tf.exp(tf.reduce_sum(xarr*cvec, axis=1))
+            return tf.where(flag, fzero, res)/norm
     else:
         raise NotImplementedError("This genz function is not implemented")
 

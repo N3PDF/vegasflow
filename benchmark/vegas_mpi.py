@@ -46,6 +46,8 @@ def lepage_vegas_integrate(fun, dim, ncalls, n_iter):
     integrator = LepageIntegrator(limits) #,maxinc_axis = bins )
     start = time.time()
     _ = integrator(fun, neval = ncalls, nitn = n_iter, alpha = damping_alpha)
+    if RANK == 0:
+        print(_.summary())
     result = integrator(fun, neval = ncalls, nitn = n_iter, adapt = False)
     end = time.time()
     if RANK == 0:
@@ -63,7 +65,8 @@ def symgauss(xarr):
     return pref*np.exp(-coef)
 
 def reminder():
-    print("Remember to always run first genz_tf to generate the numbers.txt file")
+    if RANK == 0:
+        print("Remember to always run first genz_tf to generate the numbers.txt file")
 
 def get_num(input_file):
     a = np.loadtxt(input_file)
@@ -95,20 +98,20 @@ if __name__ == "__main__":
             den = ci + pow(xarr - npwvec, 2)
             result = pow(den, -1)
             return np.product(result)/normfac
-    elif args.genz == "oscillatory":
+    elif args.genz == "discontinuous":
         reminder()
         npwvec, npcvec = get_num(args.input_file)
-        npu1 = np.pi*2*npwvec[0]
-        # normalize
-        num = pow(2,dim)*np.cos(npu1+np.sum(npcvec)/2)*np.prod(np.sin(npcvec/2))
-        den = np.prod(npcvec)
-        normfac = num/den
+        ar = (np.exp(npcvec*npwvec) - 1.0)/npcvec
+        normfac = np.prod(ar)
+
         def integrand(xarr):
-            internal = np.sum(npcvec*xarr)
-            res = np.cos(npu1 + internal)
-            return res/normfac
+            flag = np.any(xarr <= npwvec, axis=1)
+            res = np.exp(np.sum(xarr*npcvec))
+            return res*flag/normfac
+
     else:
         raise NotImplementedError("This genz function is not implemented")
-    print(f"Normalization factor: {normfac}")
 
     lepage_vegas_integrate(symgauss, dim, ncalls, niter)
+    if RANK == 0:
+        print(f"Normalization factor: {normfac}")
