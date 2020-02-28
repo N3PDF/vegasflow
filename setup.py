@@ -6,7 +6,7 @@ import re
 requirements=[
     'numpy',
     'joblib',
-    ],
+    ]
 
 try:
     # This is a hack for read_the_docs
