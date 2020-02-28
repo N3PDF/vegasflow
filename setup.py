@@ -3,6 +3,10 @@ from setuptools import setup, find_packages
 import os
 import re
 
+requirements = ['joblib, numpy']
+if os.environ.get('READTHEDOCS') == 'True':
+    requirements.append('tensorflow')
+
 PACKAGE = 'vegasflow'
 
 def get_version():
