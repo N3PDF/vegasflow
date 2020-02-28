@@ -31,12 +31,13 @@ if __name__ == "__main__":
     """Testing several different integrations"""
     print(f"VEGAS MC, ncalls={ncalls}:")
     start = time.time()
-    r = vegas_wrapper(lepage, dim, n_iter, ncalls)
+    ncalls = 10*ncalls
+    r = vegas_wrapper(lepage, dim, n_iter, ncalls, compilable=True)
     end = time.time()
     print(f"Vegas took: time (s): {end-start}")
 
-    print(f"Plain MC, ncalls={ncalls}:")
-    start = time.time()
-    r = plain_wrapper(lepage, dim, n_iter, ncalls)
-    end = time.time()
-    print(f"Plain took: time (s): {end-start}")
+#     print(f"Plain MC, ncalls={ncalls}:")
+#     start = time.time()
+#     r = plain_wrapper(lepage, dim, n_iter, ncalls)
+#     end = time.time()
+#     print(f"Plain took: time (s): {end-start}")
