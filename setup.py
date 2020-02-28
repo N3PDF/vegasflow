@@ -3,8 +3,9 @@ from setuptools import setup, find_packages
 import os
 import re
 
-requirements = ['joblib, numpy']
-if os.environ.get('READTHEDOCS') == 'True':
+
+requirements = ['joblib', 'numpy']
+if os.environ.get('READTHEDOCS') != 'True':
     requirements.append('tensorflow')
 
 PACKAGE = 'vegasflow'
@@ -19,6 +20,10 @@ def get_version():
         mo = re.search(VSRE, line, re.M)
         if mo:
             return mo.group(1)
+
+this_directory = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
+    long_description = f.read()
 
 setup(name='vegasflow',
       version=get_version(),
@@ -36,11 +41,7 @@ setup(name='vegasflow',
           'Topic :: Scientific/Engineering',
           'Topic :: Scientific/Engineering :: Physics',
       ],
-      install_requires=[
-          'numpy',
-          'joblib',
-          'tensorflow',
-          ],
+      install_requires=requirements,
       extras_require={
           'docs' : [
             'sphinx_rtd_theme',
@@ -55,5 +56,6 @@ setup(name='vegasflow',
             ],
           },
       python_requires='>=3.6,<3.8',
-      long_description='See readthedocs webpage with the documentation'
+      long_description=long_description,
+      long_description_content_type="text/markdown",
 )

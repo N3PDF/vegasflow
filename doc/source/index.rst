@@ -27,7 +27,6 @@ With VegasFlow we aim to fill this gap between theoretical calculations and tech
 To that end VegasFlow is based on two technologies that together will enable a new age of research.
 
     - `TensorFlow <https://www.tensorflow.org/>`_: the framework developed by Google and made public in November of 2015 is a perfect combination between performance and usability. With a focus on Deep Learning, TensorFlow provides an algebra library able to easily run operations in many different devices: CPUs, GPUs, TPUs with little input by the developer. Write your code once.
-    - `Ray <https://ray.readthedocs.io/en/latest/>`_: also with a focus on Deep Learning, the Ray framework allows building distributed applications in a robust way, so that the burden of using several different machines is lifted away from the developer, that can instead focus in their own applications.
 
 
 FAQ

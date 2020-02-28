@@ -255,8 +255,8 @@ class MonteCarloFlow(ABC):
             accumulators = self.pool(running_pool)
         else:
             accumulators = []
-            for i, ncalls in enumerate(events_to_do):
-                res = self.device_run(ncalls, sent_pc=i, **kwargs)
+            for ncalls, pc in zip(events_to_do, percentages):
+                res = self.device_run(ncalls, sent_pc=pc, **kwargs)
                 accumulators.append(res)
         return self.accumulate(accumulators)
 

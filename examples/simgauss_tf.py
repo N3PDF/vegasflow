@@ -14,8 +14,8 @@ n_iter = 5
 
 
 @tf.function
-def lepage(xarr, n_dim=None, **kwargs):
-    """Lepage test function"""
+def symgauss(xarr, n_dim=None, **kwargs):
+    """symgauss test function"""
     if n_dim is None:
         n_dim = xarr.shape[-1]
     a = tf.constant(0.1, dtype=DTYPE)
@@ -32,12 +32,12 @@ if __name__ == "__main__":
     print(f"VEGAS MC, ncalls={ncalls}:")
     start = time.time()
     ncalls = 10*ncalls
-    r = vegas_wrapper(lepage, dim, n_iter, ncalls, compilable=True)
+    r = vegas_wrapper(symgauss, dim, n_iter, ncalls, compilable=True)
     end = time.time()
     print(f"Vegas took: time (s): {end-start}")
 
 #     print(f"Plain MC, ncalls={ncalls}:")
 #     start = time.time()
-#     r = plain_wrapper(lepage, dim, n_iter, ncalls)
+#     r = plain_wrapper(symgauss, dim, n_iter, ncalls)
 #     end = time.time()
 #     print(f"Plain took: time (s): {end-start}")
