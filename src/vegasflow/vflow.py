@@ -326,10 +326,7 @@ class VegasFlow(MonteCarloFlow):
     def compile(self, integrand, compilable=True, **kwargs):
         self.compile_args = (integrand, compilable, kwargs)
         super().compile(integrand, compilable=compilable, **kwargs)
-        if compilable and False:
-            self.iteration_content = tf.function(self._iteration_content)
-        else:
-            self.iteration_content = self._iteration_content
+        self.iteration_content = self._iteration_content
 
     def recompile(self):
         a = self.compile_args

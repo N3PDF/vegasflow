@@ -43,31 +43,3 @@ class PlainFlow(MonteCarloFlow):
 
 def plain_wrapper(*args):
     return wrapper(PlainFlow, *args)
-
-
-if __name__ == "__main__":
-    import numpy as np
-    import time
-
-    @tf.function
-    def lepage(xarr, n_dim=None, **kwargs):
-        """Lepage test function"""
-        if n_dim is None:
-            n_dim = xarr.shape[-1]
-        a = tf.constant(0.1, dtype=DTYPE)
-        n100 = tf.cast(100 * n_dim, dtype=DTYPE)
-        pref = tf.pow(1.0 / a / np.sqrt(np.pi), n_dim)
-        coef = tf.reduce_sum(tf.range(n100 + 1))
-        coef += tf.reduce_sum(tf.square((xarr - 1.0 / 2.0) / a), axis=1)
-        coef -= (n100 + 1) * n100 / 2.0
-        return pref * tf.exp(-coef)
-
-    """Testing a basic integration"""
-    ncalls = int(1e5)
-    dim = 4
-    n_iter = 4
-    print(f"Plain MC, ncalls={ncalls}:")
-    start = time.time()
-    r = plain_wrapper(lepage, dim, n_iter, ncalls)
-    end = time.time()
-    print(f"time (s): {end-start}")
