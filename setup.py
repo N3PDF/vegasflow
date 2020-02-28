@@ -3,9 +3,9 @@ from setuptools import setup, find_packages
 import os
 import re
 
-requirements = ['joblib', 'numpy']
-if os.environ.get('READTHEDOCS') == 'True':
-    requirements.append('tensorflow')
+# requirements = ['joblib', 'numpy']
+# if os.environ.get('READTHEDOCS') == 'True':
+#     requirements.append('tensorflow')
 
 PACKAGE = 'vegasflow'
 
@@ -36,7 +36,7 @@ setup(name='vegasflow',
           'Topic :: Scientific/Engineering',
           'Topic :: Scientific/Engineering :: Physics',
       ],
-      install_requires= requirements,
+      install_requires= ['joblib', 'tensorflow'],
       extras_require={
           'docs' : [
             'sphinx_rtd_theme',

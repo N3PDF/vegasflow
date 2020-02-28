@@ -23,11 +23,11 @@ else:
 
 
 ffibuilder.cdef(f"""
-    void lepage({C_type}*, int, int, {C_type}*);
+    void symgauss({C_type}*, int, int, {C_type}*);
 """)
 
-ffibuilder.set_source("_lepage_cffi", f"""
-    void lepage({C_type} *x, int n, int evts, {C_type}* out)
+ffibuilder.set_source("_symgauss_cffi", f"""
+    void symgauss({C_type} *x, int n, int evts, {C_type}* out)
     {{
         for (int e = 0; e < evts; e++)
         {{
@@ -47,9 +47,9 @@ ffibuilder.set_source("_lepage_cffi", f"""
 """)
 ffibuilder.compile(verbose=True)
 
-from _lepage_cffi import ffi, lib
+from _symgauss_cffi import ffi, lib
 
-def lepage(xarr, n_dim=None, **kwargs):
+def symgauss(xarr, n_dim=None, **kwargs):
     if n_dim is None:
         n_dim = xarr.shape[-1]
     n_events = xarr.shape[0]
@@ -59,7 +59,7 @@ def lepage(xarr, n_dim=None, **kwargs):
 
     pinput = ffi.cast(f'{C_type}*', ffi.from_buffer(x_flat))
     pres = ffi.cast(f'{C_type}*', ffi.from_buffer(res))
-    lib.lepage(pinput, n_dim, n_events, pres)
+    lib.symgauss(pinput, n_dim, n_events, pres)
     return res
 
 if __name__ == "__main__":
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     print(f"VEGAS MC, ncalls={ncalls}:")
     start = time.time()
     vegas_instance = VegasFlow(dim, ncalls)
-    vegas_instance.compile(lepage, compilable = False)
+    vegas_instance.compile(symgauss, compilable = False)
     r = vegas_instance.run_integration(n_iter)
     end = time.time()
     print(f"time (s): {end-start}")
