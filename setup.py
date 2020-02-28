@@ -36,15 +36,20 @@ setup(name='vegasflow',
           'numpy',
           'joblib',
           'tensorflow',
-          'cffi',
-          'sphinx_rtd_theme',
-          'recommonmark',
-          'sphinxcontrib-bibtex',
-          'vegas', # Lepage's Vegas for benchmarking
-      ],
-      setup_requires=[
-          "cffi>1.0.0"
           ],
+      extras_require={
+          'docs' : [
+            'sphinx_rtd_theme',
+            'recommonmark',
+            'sphinxcontrib-bibtex',
+            ],
+          'examples' : [
+            'cffi',
+            ],
+          'benchmark' : [
+            'vegas', # Lepage's Vegas for benchmarking
+            ],
+          },
       python_requires='>=3.6,<3.8',
       long_description='See readthedocs webpage with the documentation'
 )
