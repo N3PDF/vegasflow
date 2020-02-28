@@ -6,7 +6,7 @@ Monte Carlo integration using TensorFlow
 
 ## Installation
 ```
-python setup.py install
+pip install vegasflow
 ```
 
 ## Examples
