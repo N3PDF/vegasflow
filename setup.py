@@ -3,6 +3,17 @@ from setuptools import setup, find_packages
 import os
 import re
 
+requirements=[
+    'numpy',
+    'joblib',
+    ],
+
+try:
+    # This is a hack for read_the_docs
+    import tensorflow
+except ImportError:
+    requirements.append('tensorflow')
+
 PACKAGE = 'vegasflow'
 
 def get_version():
@@ -32,11 +43,7 @@ setup(name='vegasflow',
           'Topic :: Scientific/Engineering',
           'Topic :: Scientific/Engineering :: Physics',
       ],
-      install_requires=[
-          'numpy',
-          'joblib',
-          # 'tensorflow',
-          ],
+      install_requires= requirements,
       extras_require={
           'docs' : [
             'sphinx_rtd_theme',
