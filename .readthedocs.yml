@@ -1,15 +1,8 @@
-version: 2
-
-sphinx:
-    builder: html
-    configuration: doc/source/conf.py
+requirements_file: doc/requirements.txt
 
 python:
-    version: 3.7
-    install:
-        - requirements: doc/requirements.txt 
-        - method: pip
-          path: .
-          extra_requirements:
-              - docs
+    version: 3
     system_packages: true
+
+formats:
+    - none
