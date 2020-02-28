@@ -73,15 +73,17 @@ class MonteCarloFlow(ABC):
         n_events,
         events_limit=MAX_EVENTS_LIMIT,
         list_devices=DEFAULT_ACTIVE_DEVICES,
+        verbose=True,
     ):
         # Save some parameters
         self.n_dim = n_dim
         self.xjac = 1.0 / n_events
         self.integrand = None
         self.event = None
+        self._verbose = verbose
         self._history = []
         self.n_events = n_events
-        self.events_per_run = min(events_limit, n_events)
+        self._events_per_run = min(events_limit, n_events)
         self.lock = threading.Lock()
         if list_devices:
             # List all devices from the list that can be found by tensorflow
@@ -97,6 +99,21 @@ class MonteCarloFlow(ABC):
             self.pool = joblib.Parallel(n_jobs=len(devices), prefer="threads")
         else:
             self.devices = None
+
+    @property
+    def events_per_run(self):
+        """ Number of events to run in a single step.
+        Use this variable to control how much the memory will be loaded"""
+        return self._events_per_run
+
+    @events_per_run.setter
+    def events_per_run(self, val):
+        """ Set the number of events per single step """
+        self._events_per_run = min(val, self.n_events)
+        if self.n_events % self._events_per_run != 0:
+            print(
+                f"Warning, the number of events per run step {self._events_per_run} doesn't perfectly divide the number of events {self.n_events}, which can harm performance"
+            )
 
     @property
     def history(self):
@@ -171,7 +188,7 @@ class MonteCarloFlow(ABC):
             results.append(total)
         return results
 
-    def device_run(self, ncalls, **kwargs):
+    def device_run(self, ncalls, sent_pc = 100.0, **kwargs):
         """ Wrapper function to select a specific device when running the event
         If the devices were not set, tensorflow default will be used
 
@@ -183,6 +200,8 @@ class MonteCarloFlow(ABC):
         -------
             `result`: raw result from the integrator
         """
+        if self._verbose:
+            print(f"Events sent to the computing device: {sent_pc:.1f} %", end='\r')
         if not self.event:
             raise RuntimeError("Compile must be ran before running any iterations")
         if self.devices:
@@ -214,22 +233,28 @@ class MonteCarloFlow(ABC):
         # Run until there are no events left to do
         events_left = self.n_events
         events_to_do = []
+        percentages = []
         # Fill the array of event distribution
         # If using multiple devices, decide the policy for job sharing
+        pc = 0.0
         while events_left > 0:
             ncalls = min(events_left, self.events_per_run)
+            pc += ncalls/self.n_events*100
+            percentages.append(pc)
             events_to_do.append(ncalls)
             events_left -= self.events_per_run
 
         if self.devices:
-            accumulators = self.pool(
-                joblib.delayed(self.device_run)(ncalls, **kwargs)
-                for ncalls in events_to_do
-            )
+            running_pool = []
+            for ncalls, pc in zip(events_to_do, percentages):
+                delay_job = joblib.delayed(self.device_run)(ncalls, sent_pc = pc,**kwargs)
+                running_pool.append(delay_job)
+            accumulators = self.pool(running_pool)
         else:
-            accumulators = [
-                self.device_run(ncalls, **kwargs) for ncalls in events_to_do
-            ]
+            accumulators = []
+            for i, ncalls in enumerate(events_to_do):
+                res = self.device_run(ncalls, sent_pc=i, **kwargs)
+                accumulators.append(res)
         return self.accumulate(accumulators)
 
     def compile(self, integrand, compilable=True):
@@ -349,7 +374,9 @@ class MonteCarloFlow(ABC):
         return final_result, sigma
 
 
-def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events):
+def wrapper(
+    integrator_class, integrand, n_dim, n_iter, total_n_events, compilable=True
+):
     """ Convenience wrapper
 
     Parameters
@@ -366,5 +393,5 @@ def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events):
         `sigma`: monte carlo error
     """
     mc_instance = integrator_class(n_dim, total_n_events)
-    mc_instance.compile(integrand, compilable=True)
+    mc_instance.compile(integrand, compilable=compilable)
     return mc_instance.run_integration(n_iter)

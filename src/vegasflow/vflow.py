@@ -9,11 +9,12 @@ import json
 import numpy as np
 import tensorflow as tf
 
-from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me
+from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me, ione, izero
 from vegasflow.configflow import BINS_MAX, ALPHA
 from vegasflow.monte_carlo import MonteCarloFlow, wrapper
 from vegasflow.utils import consume_array_into_indices
 
+FBINS = float_me(BINS_MAX)
 
 # Auxiliary functions for Vegas
 @tf.function
@@ -32,31 +33,39 @@ def generate_random_array(rnds, divisions):
             div_index: array (None, n_dim)
             w: array (None,)
     """
-    reg_i = fzero
-    reg_f = fone
-    # Get the corresponding random number
-    xn = BINS_MAX * (fone - rnds)
-    int_xn = tf.maximum(
-        tf.cast(0, DTYPEINT), tf.minimum(tf.cast(xn, DTYPEINT), BINS_MAX)
-    )
-    # In practice int_xn = int(xn)-1 unless xn < 1
-    aux_rand = xn - tf.cast(int_xn, dtype=DTYPE)
-    # Now get the indices that will be used with this subdivision
-    # If the index is 0, we cannot get the index-1 so...
-    ind_f = tf.transpose(int_xn)
-    ind_i = tf.maximum(ind_f - 1, 0)
-    gather_f = tf.gather(divisions, ind_f, batch_dims=1)
-    gather_i_tmp = tf.gather(divisions, ind_i, batch_dims=1)
-    # Now the ones that had a "fake 0" need to be set to 0
-    ind_is_0 = tf.equal(ind_f, 0)
-    gather_i = tf.where(ind_is_0, fzero, gather_i_tmp)
-    # Now compute the random number for this dimension
-    x_ini = tf.transpose(gather_i)
-    xdelta = tf.transpose(gather_f) - x_ini
-    rand_x = x_ini + xdelta * aux_rand
-    x = reg_i + rand_x * (reg_f - reg_i)
-    weights = tf.reduce_prod(xdelta * BINS_MAX, axis=1)
-    return x, int_xn, weights
+    # Get the boundaries of the random numbers
+    #     reg_i = fzero
+    #     reg_f = fone
+    # Get the index of the division we are interested in
+    xn = FBINS * (fone - rnds)
+
+    @tf.function
+    def digest(xn):
+        ind_i = tf.cast(xn, DTYPEINT)
+        # Get the value of the left and right sides of the bins
+        ind_f = ind_i + ione
+        x_ini = tf.gather(divisions, ind_i, batch_dims=1)
+        x_fin = tf.gather(divisions, ind_f, batch_dims=1)
+        # Compute the width of the bins
+        xdelta = x_fin - x_ini
+        return ind_i, x_ini, xdelta
+
+    ind_i, x_ini, xdelta = digest(xn)
+    # Compute the random number between 0 and 1
+    # This is the heavy part of the calc
+    @tf.function
+    def compute_x(x_ini, xn, xdelta):
+        aux_rand = xn - tf.math.floor(xn)
+        return x_ini + xdelta * aux_rand
+
+    x = compute_x(x_ini, xn, xdelta)
+    # Compute the random number between the limits
+    #     x = reg_i + rand_x * (reg_f - reg_i)
+    # and the weight
+    weights = tf.reduce_prod(xdelta * FBINS, axis=0)
+    x_t = tf.transpose(x)
+    int_xn = tf.transpose(ind_i)
+    return x_t, int_xn, weights
 
 
 @tf.function
@@ -107,13 +116,13 @@ def refine_grid_per_dimension(t_res_sq, subdivisions):
         n_bin += 1
         bin_weight += wei_t[n_bin]
         prev = cur
-        cur = subdivisions[n_bin]
+        cur = subdivisions[n_bin + 1]
         return bin_weight, n_bin, cur, prev
 
     ###########################
 
     # And now resize all bins
-    new_bins = []
+    new_bins = [fzero]
     # Auxiliary variables
     bin_weight = fzero
     n_bin = -1
@@ -147,19 +156,23 @@ class VegasFlow(MonteCarloFlow):
         # If training is True, the grid will be changed after every iteration
         # otherwise it will be frozen
         self.train = train
+        self.iteration_content = None
 
         # Initialize grid
-        subdivision_np = np.linspace(1 / BINS_MAX, 1, BINS_MAX)
+        self.grid_bins = BINS_MAX + 1
+        subdivision_np = np.linspace(0, 1, self.grid_bins)
         divisions_np = subdivision_np.repeat(n_dim).reshape(-1, n_dim).T
         self.divisions = tf.Variable(divisions_np, dtype=DTYPE)
 
     def freeze_grid(self):
         """ Stops the grid from refining any more """
         self.train = False
+        self.recompile()
 
     def unfreeze_grid(self):
         """ Enable the refining of the grid """
         self.train = True
+        self.recompile()
 
     def save_grid(self, file_name):
         """ Save the `divisions` array in a json file
@@ -177,7 +190,7 @@ class VegasFlow(MonteCarloFlow):
         json_dict = {
             "dimensions": self.n_dim,
             "ALPHA": ALPHA,
-            "BINS": BINS_MAX,
+            "BINS": self.grid_bins,
             "integrand": int_name,
             "grid": div_np.tolist(),
         }
@@ -226,9 +239,9 @@ class VegasFlow(MonteCarloFlow):
             raise ValueError(
                 f"Received a {grid_dim}-dimensional grid while VegasFlow was instantiated with {self.n_dim} dimensions"
             )
-        if grid_bins is not None and BINS_MAX != grid_bins:
+        if grid_bins is not None and self.grid_bins != grid_bins:
             raise ValueError(
-                f"The received grid contains {grid_bins} bins while the current settings is of {BINS_MAX} bins"
+                f"The received grid contains {grid_bins} bins while the current settings is of {self.grid_bins} bins"
             )
         if file_name:
             print(f" > SUCCESS: Loaded grid from {file_name}")
@@ -236,7 +249,7 @@ class VegasFlow(MonteCarloFlow):
 
     def refine_grid(self, arr_res2):
         """ Receives an array with the values of the integral squared per
-        bin per dimension (`arr_res2.shape = (n_dim, BINS_MAX)`)
+        bin per dimension (`arr_res2.shape = (n_dim, self.grid_bins)`)
         and reshapes the `divisions` attribute accordingly
 
         Parameters
@@ -270,9 +283,10 @@ class VegasFlow(MonteCarloFlow):
         else:
             n_events = ncalls
 
+        tech_cut = 1e-8
         # Generate all random number for this iteration
         rnds = tf.random.uniform(
-            (n_events, self.n_dim), minval=0, maxval=1, dtype=DTYPE
+            (self.n_dim, n_events), minval=tech_cut, maxval=1.0 - tech_cut, dtype=DTYPE
         )
 
         # Pass them through the Vegas digestion
@@ -292,14 +306,13 @@ class VegasFlow(MonteCarloFlow):
             # If the training is active, save the result of the integral sq
             for j in range(self.n_dim):
                 arr_res2.append(
-                    consume_array_into_indices(tmp2, ind[:, j : j + 1], BINS_MAX)
+                    consume_array_into_indices(tmp2, ind[:, j : j + 1], self.grid_bins-1)
                 )
             arr_res2 = tf.reshape(arr_res2, (self.n_dim, -1))
 
         return res, res2, arr_res2
 
-    def _run_iteration(self):
-        """ Runs one iteration of the Vegas integrator """
+    def _iteration_content(self):
         # Compute the result
         res, res2, arr_res2 = self.run_event()
         # Compute the error
@@ -310,8 +323,25 @@ class VegasFlow(MonteCarloFlow):
             self.refine_grid(arr_res2)
         return res, sigma
 
+    def compile(self, integrand, compilable=True, **kwargs):
+        self.compile_args = (integrand, compilable, kwargs)
+        super().compile(integrand, compilable=compilable, **kwargs)
+        if compilable and False:
+            self.iteration_content = tf.function(self._iteration_content)
+        else:
+            self.iteration_content = self._iteration_content
 
-def vegas_wrapper(integrand, n_dim, n_iter, total_n_events):
+    def recompile(self):
+        a = self.compile_args
+        self.compile(a[0], a[1], **a[2])
+
+    def _run_iteration(self):
+        """ Runs one iteration of the Vegas integrator """
+        res, sigma = self.iteration_content()
+        return res, sigma
+
+
+def vegas_wrapper(integrand, n_dim, n_iter, total_n_events, **kwargs):
     """ Convenience wrapper
 
     Parameters
@@ -326,4 +356,4 @@ def vegas_wrapper(integrand, n_dim, n_iter, total_n_events):
         `final_result`: integral value
         `sigma`: monte carlo error
     """
-    return wrapper(VegasFlow, integrand, n_dim, n_iter, total_n_events)
+    return wrapper(VegasFlow, integrand, n_dim, n_iter, total_n_events, **kwargs)
