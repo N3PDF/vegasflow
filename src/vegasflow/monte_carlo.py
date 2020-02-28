@@ -188,7 +188,7 @@ class MonteCarloFlow(ABC):
             results.append(total)
         return results
 
-    def device_run(self, ncalls, **kwargs):
+    def device_run(self, ncalls, sent_pc = 100.0, **kwargs):
         """ Wrapper function to select a specific device when running the event
         If the devices were not set, tensorflow default will be used
 
@@ -200,6 +200,8 @@ class MonteCarloFlow(ABC):
         -------
             `result`: raw result from the integrator
         """
+        if self._verbose:
+            print(f"Events sent to the computing device: {sent_pc:.1f} %", end='\r')
         if not self.event:
             raise RuntimeError("Compile must be ran before running any iterations")
         if self.devices:
@@ -231,23 +233,27 @@ class MonteCarloFlow(ABC):
         # Run until there are no events left to do
         events_left = self.n_events
         events_to_do = []
+        percentages = []
         # Fill the array of event distribution
         # If using multiple devices, decide the policy for job sharing
+        pc = 0.0
         while events_left > 0:
             ncalls = min(events_left, self.events_per_run)
+            pc += ncalls/self.n_events*100
+            percentages.append(pc)
             events_to_do.append(ncalls)
             events_left -= self.events_per_run
 
         if self.devices:
             running_pool = []
-            for i, ncalls in enumerate(events_to_do):
-                delay_job = joblib.delayed(self.device_run)(ncalls, **kwargs)
+            for ncalls, pc in zip(events_to_do, percentages):
+                delay_job = joblib.delayed(self.device_run)(ncalls, sent_pc = pc,**kwargs)
                 running_pool.append(delay_job)
             accumulators = self.pool(running_pool)
         else:
             accumulators = []
             for i, ncalls in enumerate(events_to_do):
-                res = self.device_run(ncalls, **kwargs)
+                res = self.device_run(ncalls, sent_pc=i, **kwargs)
                 accumulators.append(res)
         return self.accumulate(accumulators)
 
