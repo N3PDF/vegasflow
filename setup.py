@@ -35,7 +35,6 @@ setup(name='vegasflow',
       install_requires=[
           'numpy',
           'joblib',
-          'tensorflow',
           ],
       extras_require={
           'docs' : [
