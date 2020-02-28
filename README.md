@@ -1,5 +1,8 @@
 [![Tests](https://github.com/N3PDF/vegasflow/workflows/pytest/badge.svg)](https://github.com/N3PDF/vegasflow/actions?query=workflow%3A%22pytest%22)
 [![Documentation Status](https://readthedocs.org/projects/vegasflow/badge/?version=latest)](https://vegasflow.readthedocs.io/en/latest/?badge=latest)
+[![DOI](https://zenodo.org/badge/226363558.svg)](https://zenodo.org/badge/latestdoi/226363558)
+
+
 
 # VegasFlow
 
@@ -11,8 +14,6 @@ Some of the key features of VegasFlow are:
 - Compatible with Python, C, C++ or Fortran.
 
 - Implementation of different Monte Carlo algorithms.
-
-
 
 ## Documentation
 
@@ -47,5 +48,5 @@ There are some examples in the `examples/` folder.
 ## Citation policy
 
 If you use the theta package please cite the following  paper and zenodo references:
-- Zenodo
-- arXiv:
+- https://doi.org/10.5281/zenodo.3691926
+- arXiv:2003.xxxxxx
