@@ -73,12 +73,14 @@ class MonteCarloFlow(ABC):
         n_events,
         events_limit=MAX_EVENTS_LIMIT,
         list_devices=DEFAULT_ACTIVE_DEVICES,
+        verbose=True,
     ):
         # Save some parameters
         self.n_dim = n_dim
         self.xjac = 1.0 / n_events
         self.integrand = None
         self.event = None
+        self._verbose = verbose
         self._history = []
         self.n_events = n_events
         self._events_per_run = min(events_limit, n_events)
@@ -186,7 +188,7 @@ class MonteCarloFlow(ABC):
             results.append(total)
         return results
 
-    def device_run(self, ncalls, **kwargs):
+    def device_run(self, ncalls, sent_pc = 100.0, **kwargs):
         """ Wrapper function to select a specific device when running the event
         If the devices were not set, tensorflow default will be used
 
@@ -198,6 +200,8 @@ class MonteCarloFlow(ABC):
         -------
             `result`: raw result from the integrator
         """
+        if self._verbose:
+            print(f"Events sent to the computing device: {sent_pc:.1f} %", end='\r')
         if not self.event:
             raise RuntimeError("Compile must be ran before running any iterations")
         if self.devices:
@@ -229,22 +233,28 @@ class MonteCarloFlow(ABC):
         # Run until there are no events left to do
         events_left = self.n_events
         events_to_do = []
+        percentages = []
         # Fill the array of event distribution
         # If using multiple devices, decide the policy for job sharing
+        pc = 0.0
         while events_left > 0:
             ncalls = min(events_left, self.events_per_run)
+            pc += ncalls/self.n_events*100
+            percentages.append(pc)
             events_to_do.append(ncalls)
             events_left -= self.events_per_run
 
         if self.devices:
-            accumulators = self.pool(
-                joblib.delayed(self.device_run)(ncalls, **kwargs)
-                for ncalls in events_to_do
-            )
+            running_pool = []
+            for ncalls, pc in zip(events_to_do, percentages):
+                delay_job = joblib.delayed(self.device_run)(ncalls, sent_pc = pc,**kwargs)
+                running_pool.append(delay_job)
+            accumulators = self.pool(running_pool)
         else:
-            accumulators = [
-                self.device_run(ncalls, **kwargs) for ncalls in events_to_do
-            ]
+            accumulators = []
+            for i, ncalls in enumerate(events_to_do):
+                res = self.device_run(ncalls, sent_pc=i, **kwargs)
+                accumulators.append(res)
         return self.accumulate(accumulators)
 
     def compile(self, integrand, compilable=True):
