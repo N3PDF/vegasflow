@@ -1,0 +1,9 @@
+version: 1
+
+sphinx:
+  builder: html
+  configuration: doc/source/conf.py
+
+python:
+  version: 3.7
+  pip_install: True
