@@ -33,7 +33,7 @@ conda install vegasflow -c conda-forge
 
 If you prefer a manual installation just use:
 ```
-pip install vegasflow
+python setup.py install
 ```
 or if you are planning to extend or develop code just use:
 ```
