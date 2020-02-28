@@ -45,10 +45,18 @@ It is often useful to freeze the grid to compute the integration several times w
 
     vegas_instance.freeze_grid()
 
+On a related note, it is possible to save and load the grid from and to json files, in order to do that we can use the ``save_grid`` and ``load_grid`` methods at any point in the calculation.
+Note, however, that loading a new grid will destroy the current grid.
+
+.. code-block:: python
+
+    json_file = "my_grid.json"
+    vegas_instance.save_grid(json_file)
+    vegas_instance.load_grid(json_file)
 
 .. autoclass:: vegasflow.vflow.VegasFlow
     :show-inheritance:
-    :members: freeze_grid, unfreeze_grid, refine_grid, run_event
+    :members: freeze_grid, unfreeze_grid, save_grid, load_grid
 
  
 PlainFlow
