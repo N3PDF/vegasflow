@@ -3,7 +3,6 @@
 [![DOI](https://zenodo.org/badge/226363558.svg)](https://zenodo.org/badge/latestdoi/226363558)
 
 
-
 # VegasFlow
 
 VegasFlow is a Monte Carlo integration library written in Python and based on the [TensorFlow](https://www.tensorflow.org/) framework. It is developed with a focus on speed and efficiency, enabling researchers to perform very expensive calculation as quick and easy as possible.
@@ -47,6 +46,6 @@ There are some examples in the `examples/` folder.
 
 ## Citation policy
 
-If you use the theta package please cite the following  paper and zenodo references:
+If you use the package please cite the following paper and zenodo references:
 - https://doi.org/10.5281/zenodo.3691926
 - arXiv:2003.xxxxxx
