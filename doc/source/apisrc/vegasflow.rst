@@ -11,21 +11,27 @@ vegasflow.vflow module
    :members:
    :undoc-members:
    :show-inheritance:
-   :noindex:
 
-vegasflow.vflow module
+vegasflow.plain module
 ----------------------
 
 .. automodule:: vegasflow.plain
    :members:
    :undoc-members:
    :show-inheritance:
-   :noindex:
 
 vegasflow.monte_carlo module
 ----------------------------
 
 .. automodule:: vegasflow.monte_carlo
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+vegasflow.utils module
+----------------------------
+
+.. automodule:: vegasflow.utils
    :members:
    :undoc-members:
    :show-inheritance:

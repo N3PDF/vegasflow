@@ -2,8 +2,11 @@
     vegasflow's documentation!
 
 ========================
-VegasFlow: Gotta go fast
+VegasFlow: accelerating Monte Carlo simulation across multiple hardware platforms
 ========================
+
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3691927.svg
+   :target: https://doi.org/10.5281/zenodo.3691927
 
 VegasFlow is a `Monte Carlo integration <https://en.wikipedia.org/wiki/Monte_Carlo_integration>`_ library written in Python and based on the `TensorFlow <https://www.tensorflow.org/>`_ framework.
 It is developed with a focus on speed and efficiency, enabling researchers to perform very expensive calculation as quick and easy as possible.
@@ -38,12 +41,39 @@ Why the name ``vegasflow``?
 It is a combination of the names `Vegas` and `Tensorflow`.
 
 
+How to cite ``vegaflow``?
+-------------------------
+
+When using ``vegasflow`` in your research, please cite the following publications:
+
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3691926.svg
+   :target: https://doi.org/10.5281/zenodo.3691926
+
+hep-ph/20...
+
+
+.. code-block:: latex
+
+    @software{vegasflow_package,
+        author       = {Juan Cruz-Martinez and
+                        Stefano Carrazza},
+        title        = {N3PDF/vegasflow: vegasflow v1.0},
+        month        = feb,
+        year         = 2020,
+        publisher    = {Zenodo},
+        version      = {v1.0},
+        doi          = {10.5281/zenodo.3691926},
+        url          = {https://doi.org/10.5281/zenodo.3691926}
+    }
 
 
 
+
+Indices and tables
+==================
 
 .. toctree::
-    :maxdepth: 3
+    :maxdepth: 4
     :caption: Contents:
 
     index
@@ -52,4 +82,8 @@ It is a combination of the names `Vegas` and `Tensorflow`.
 
 .. automodule:: vegasflow
     :members:
-    :noindex:
+
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

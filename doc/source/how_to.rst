@@ -34,3 +34,67 @@ We also provide a convenience wrapper ``vegas_wrapper`` that allows to run the w
 
     result = vegas_wrapper(example_integrand, dimensions, n_iter, ncalls)
 
+Histograms
+==========
+A commonly used feature in Monte Carlo calculations is the generation of histograms.
+In order to generate them while at the same time keeping all the features of ``vegasflow``,
+such as GPU computing, it is necessary to ensure the histogram generation is also wrapped with the ``@tf.function`` directive.
+
+Below we show one such example (how the histogram is actually generated and saved is up to the user).
+The first step is to create a ``Variable`` tensor which will be used to fill the histograms.
+This is a crucial step (and the only fixed step) as this tensor will be accumulated internally by ``VegasFlow''.
+
+
+.. code-block:: python
+
+    from vegasflow.utils import consume_array_into_indices
+    fzero = tf.constant(0.0, dtype=tf.float64)
+    fone = tf.constant(1.0, dtype=tf.float64)
+    HISTO_BINS = 2
+
+    cumulator_tensor = tf.Variable(tf.zeros(HISTO_BINS, dtype=DTYPE))
+
+    @tf.function
+    def histogram_collector(results, variables):
+        """ This function will receive a tensor (result)
+        and the variables corresponding to those integrand results 
+        In the example integrand below, these corresponds to 
+            `final_result` and `histogram_values` respectively.
+        `current_histograms` instead is the current value of the histogram
+        which will be overwritten """
+        # Fill a histogram with HISTO_BINS (2) bins, (0 to 0.5, 0.5 to 1)
+        # First generate the indices with TF
+        indices = tf.histogram_fixed_width_bins(
+            variables, [fzero, fone], nbins=HISTO_BINS
+        )
+        t_indices = tf.transpose(indices)
+        # Then consume the results with the utility we provide
+        partial_hist = consume_array_into_indices(results, t_indices, HISTO_BINS)
+        # Then update the results of current_histograms
+        new_histograms = partial_hist + current_histograms
+        cummulator_tensor.assign(new_histograms)
+
+    @tf.function
+    def integrand_example(xarr, n_dim=None, weight=fone):
+        # some complicated calculation that generates 
+        # a final_result and some histogram values:
+        final_result = tf.constant(42, dtype=tf.float64)
+        histogram_values = xarr
+        histogram_collector(final_result * weight, histogram_values)
+        return final_result
+
+Finally we can normally call ``vegasflow'', remembering to pass down the accumulator tensor, which will be filled in with the histograms.
+Note that here we are only filling one histograms and so the histogram tuple contains only one element, but any number of histograms can be filled.
+
+
+.. code-block:: python
+
+    histogram_tuple = (cumulator_tensor,)
+    results = mc_instance.run_integration(n_iter, histograms=histogram_tuple)
+
+
+We ship an example of an integrand which generates histograms in the github repository: `here <https://github.com/N3PDF/vegasflow/blob/master/examples/histogram_ex.py>`_.
+
+
+
+
