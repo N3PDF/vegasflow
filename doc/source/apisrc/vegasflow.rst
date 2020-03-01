@@ -1,6 +1,14 @@
 vegasflow package
 =================
 
+Module contents
+---------------
+
+.. automodule:: vegasflow
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Submodules
 ----------
 
@@ -37,10 +45,4 @@ vegasflow.utils module
    :show-inheritance:
 
 
-Module contents
----------------
 
-.. automodule:: vegasflow
-   :members:
-   :undoc-members:
-   :show-inheritance:

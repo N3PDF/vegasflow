@@ -6,6 +6,10 @@ Integration algorithms
 
 This page lists the integration algorithms currently implemented.
 
+.. contents::
+   :local:
+   :depth: 1
+
 .. _vegas-label:
 
 VegasFlow

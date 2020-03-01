@@ -1,12 +1,17 @@
 .. title::
     vegasflow's documentation!
 
+
 ========================
 VegasFlow: accelerating Monte Carlo simulation across multiple hardware platforms
 ========================
 
-.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3691927.svg
-   :target: https://doi.org/10.5281/zenodo.3691927
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3691926.svg
+   :target: https://doi.org/10.5281/zenodo.3691926
+
+.. contents::
+   :local:
+   :depth: 1
 
 VegasFlow is a `Monte Carlo integration <https://en.wikipedia.org/wiki/Monte_Carlo_integration>`_ library written in Python and based on the `TensorFlow <https://www.tensorflow.org/>`_ framework.
 It is developed with a focus on speed and efficiency, enabling researchers to perform very expensive calculation as quick and easy as possible.
@@ -16,6 +21,7 @@ Some of the key features of VegasFlow are:
     - Integrates efficiently high dimensional functions on single (multi-threading) and multi CPU, single and multi GPU, many GPUs or clusters.
     - Compatible with Python, C, C++ or Fortran.
     - Implementation of different Monte Carlo algorithms.
+
 
 Motivation
 ==========
@@ -32,17 +38,9 @@ To that end VegasFlow is based on two technologies that together will enable a n
     - `TensorFlow <https://www.tensorflow.org/>`_: the framework developed by Google and made public in November of 2015 is a perfect combination between performance and usability. With a focus on Deep Learning, TensorFlow provides an algebra library able to easily run operations in many different devices: CPUs, GPUs, TPUs with little input by the developer. Write your code once.
 
 
-FAQ
-===
-
-Why the name ``vegasflow``?
----------------------------
-
-It is a combination of the names `Vegas` and `Tensorflow`.
-
 
 How to cite ``vegaflow``?
--------------------------
+=========================
 
 When using ``vegasflow`` in your research, please cite the following publications:
 
@@ -66,6 +64,14 @@ hep-ph/20...
         url          = {https://doi.org/10.5281/zenodo.3691926}
     }
 
+FAQ
+===
+
+Why the name ``vegasflow``?
+---------------------------
+
+It is a combination of the names `Vegas` and `Tensorflow`.
+
 
 
 
@@ -73,16 +79,15 @@ Indices and tables
 ==================
 
 .. toctree::
-    :maxdepth: 4
+    :maxdepth: 3
+    :glob: 
     :caption: Contents:
 
-    index
+    VegasFlow<self>
     how_to
     intalg
-
-.. automodule:: vegasflow
-    :members:
-
+    apisrc/vegasflow
+    
 
 * :ref:`genindex`
 * :ref:`modindex`

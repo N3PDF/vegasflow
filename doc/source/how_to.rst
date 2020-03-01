@@ -6,6 +6,16 @@ How to use
 
 ``vegasflow`` is a python library that provides a number of functions to perform Monte Carlo integration of some functions.
 
+.. contents::
+   :local:
+   :depth: 1
+
+
+A first VegasFlow integration
+=============================
+
+Prototyping in VegasFlow is easy, the best results are obtained when the interands are written using TensorFlow primitives.
+Below we show one example where we create a TF constant (using ``tf.constant``) and then we use the sum and power functions.
 
 .. code-block:: python
 
