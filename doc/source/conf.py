@@ -26,6 +26,7 @@ author = 'Stefano Carrazza and Juan Cruz-Martinez'
 
 # The full version, including alpha/beta/rc tags
 release = vegasflow.__version__
+autodoc_mock_imports = ['tensorflow']
 
 
 # -- General configuration ---------------------------------------------------

@@ -59,6 +59,7 @@ Note, however, that loading a new grid will destroy the current grid.
     vegas_instance.load_grid(json_file)
 
 .. autoclass:: vegasflow.vflow.VegasFlow
+    :noindex:
     :show-inheritance:
     :members: freeze_grid, unfreeze_grid, save_grid, load_grid
 
@@ -80,4 +81,5 @@ The usage pattern is similar to :ref:`vegas-label`.
 
 
 .. autoclass:: vegasflow.plain.PlainFlow
+    :noindex:
     :show-inheritance:

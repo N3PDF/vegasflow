@@ -25,13 +25,18 @@ def generate_random_array(rnds, divisions):
         Parameters
         ----------
             rnds: array shaped (None, n_dim)
+                Random numbers used as an input for Vegas
             divisions: array shaped (n_dim, BINS_MAX)
+                vegas grid
 
         Returns
         -------
             x: array (None, n_dim)
+                Vegas random output
             div_index: array (None, n_dim)
+                division index in which each (n_dim) set of random numbers fall
             w: array (None,)
+                Weight of each set of (n_dim) random numbers
     """
     # Get the boundaries of the random numbers
     #     reg_i = fzero
