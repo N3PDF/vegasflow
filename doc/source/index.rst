@@ -44,14 +44,27 @@ How to cite ``vegaflow``?
 
 When using ``vegasflow`` in your research, please cite the following publications:
 
+https://arxiv.org/abs/2002.12921
+
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3691926.svg
    :target: https://doi.org/10.5281/zenodo.3691926
 
-hep-ph/20...
-
+Bibtex:
 
 .. code-block:: latex
 
+    @article{Carrazza:2020rdn,
+       author         = "Carrazza, Stefano and Cruz-Martinez, Juan M.",
+       title          = "{VegasFlow: accelerating Monte Carlo simulation across
+                         multiple hardware platforms}",
+       year           = "2020",
+       eprint         = "2002.12921",
+       archivePrefix  = "arXiv",
+       primaryClass   = "physics.comp-ph",
+       reportNumber   = "TIF-UNIMI-2020-8",
+       SLACcitation   = "%%CITATION = ARXIV:2002.12921;%%"
+    }
+		
     @software{vegasflow_package,
         author       = {Juan Cruz-Martinez and
                         Stefano Carrazza},

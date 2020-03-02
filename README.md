@@ -47,5 +47,5 @@ There are some examples in the `examples/` folder.
 ## Citation policy
 
 If you use the package please cite the following paper and zenodo references:
-- https://doi.org/10.5281/zenodo.3691926
-- arXiv:2003.xxxxxx
+- [https://doi.org/10.5281/zenodo.3691926](https://doi.org/10.5281/zenodo.3691926)
+- [https://arxiv.org/abs/2002.12921](https://arxiv.org/abs/2002.12921)
