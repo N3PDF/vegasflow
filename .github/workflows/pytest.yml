@@ -25,8 +25,8 @@ jobs:
       run: |
         pip install pylint
         # Error out only in actual errors
-        pylint src/*/*.py -E
-        pylint src/*/*.py --exit-zero
+        pylint src/*/*.py -E --rcfile .pylintrc
+        pylint src/*/*.py --exit-zero --rcfile .pylintrc
     - name: Test with pytest
       run: |
         pip install pytest
