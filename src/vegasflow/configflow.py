@@ -4,7 +4,7 @@ Define some constants, header style
 # Most of this can be moved to a yaml file without loss of generality
 import tensorflow as tf
 
-# Define the tensorflow numberic types
+# Define the tf.numberic types
 DTYPE = tf.float64
 DTYPEINT = tf.int32
 
@@ -17,15 +17,17 @@ ALPHA = 1.5
 # set it lower if hitting memory problems
 MAX_EVENTS_LIMIT = int(1e7)
 # Select the list of devices to look for
-DEFAULT_ACTIVE_DEVICES = ['GPU']#, 'CPU']
+DEFAULT_ACTIVE_DEVICES = ["GPU"]  # , 'CPU']
 
 # Create wrappers in order to have numbers of the correct type
 def int_me(i):
-    return tf.constant(i, dtype=DTYPEINT)
+    """ Casts any interger to DTYPEINT """
+    return tf.cast(i, dtype=DTYPEINT)
 
 
 def float_me(i):
-    return tf.constant(i, dtype=DTYPE)
+    """ Cast any float to DTYPE """
+    return tf.cast(i, dtype=DTYPE)
 
 
 ione = int_me(1)

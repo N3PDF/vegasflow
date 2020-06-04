@@ -25,7 +25,7 @@ jobs:
       run: |
         pip install pylint
         # Error out only in actual errors
-        pylint src/*/*.py -E
+        pylint src/*/*.py -E -d E1123,E1120
         pylint src/*/*.py --exit-zero
     - name: Test with pytest
       run: |
