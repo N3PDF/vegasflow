@@ -9,7 +9,7 @@ import json
 import numpy as np
 import tensorflow as tf
 
-from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me, ione, izero
+from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me, ione
 from vegasflow.configflow import BINS_MAX, ALPHA
 from vegasflow.monte_carlo import MonteCarloFlow, wrapper
 from vegasflow.utils import consume_array_into_indices
@@ -162,6 +162,7 @@ class VegasFlow(MonteCarloFlow):
         # otherwise it will be frozen
         self.train = train
         self.iteration_content = None
+        self.compile_args = None
 
         # Initialize grid
         self.grid_bins = BINS_MAX + 1
@@ -215,10 +216,12 @@ class VegasFlow(MonteCarloFlow):
         """
         if file_name is not None and numpy_grid is not None:
             raise ValueError(
-                "Received both a numpy grid and a file_name to load the grid from. Ambiguous call to `load_grid`"
+                "Received both a numpy grid and a file_name to load the grid from."
+                "Ambiguous call to `load_grid`"
             )
+
         # If it received a file, loads up the grid
-        elif file_name:
+        if file_name:
             with open(file_name, "r") as f:
                 json_dict = json.load(f)
             # First check the parameters of the grid are unchanged
@@ -230,7 +233,8 @@ class VegasFlow(MonteCarloFlow):
                 integrand_grid = json_dict.get("integrand")
                 if integrand_name != integrand_grid:
                     print(
-                        f"WARNING: The grid was written for the integrand: {integrand_grid} which is different from {integrand_name}"
+                        f"WARNING: The grid was written for the integrand: {integrand_grid}"
+                        f"which is different from {integrand_name}"
                     )
             # Now that everything is clear, let's load up the grid
             numpy_grid = np.array(json_dict["grid"])
@@ -242,11 +246,13 @@ class VegasFlow(MonteCarloFlow):
         # Check that the grid has the right dimensions
         if grid_dim is not None and self.n_dim != grid_dim:
             raise ValueError(
-                f"Received a {grid_dim}-dimensional grid while VegasFlow was instantiated with {self.n_dim} dimensions"
+                f"Received a {grid_dim}-dimensional grid while VegasFlow"
+                f"was instantiated with {self.n_dim} dimensions"
             )
         if grid_bins is not None and self.grid_bins != grid_bins:
             raise ValueError(
-                f"The received grid contains {grid_bins} bins while the current settings is of {self.grid_bins} bins"
+                f"The received grid contains {grid_bins} bins while the"
+                f"current settings is of {self.grid_bins} bins"
             )
         if file_name:
             print(f" > SUCCESS: Loaded grid from {file_name}")
@@ -311,7 +317,9 @@ class VegasFlow(MonteCarloFlow):
             # If the training is active, save the result of the integral sq
             for j in range(self.n_dim):
                 arr_res2.append(
-                    consume_array_into_indices(tmp2, ind[:, j : j + 1], self.grid_bins-1)
+                    consume_array_into_indices(
+                        tmp2, ind[:, j : j + 1], self.grid_bins - 1
+                    )
                 )
             arr_res2 = tf.reshape(arr_res2, (self.n_dim, -1))
 
@@ -334,6 +342,10 @@ class VegasFlow(MonteCarloFlow):
         self.iteration_content = self._iteration_content
 
     def recompile(self):
+        """ Forces recompilation with the same arguments that have
+        previously been used for compilation"""
+        if self.compile_args is None:
+            raise RuntimeError("recompile was called without ever having called compile")
         a = self.compile_args
         self.compile(a[0], a[1], **a[2])
 

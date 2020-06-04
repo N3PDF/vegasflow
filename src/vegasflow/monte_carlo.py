@@ -34,7 +34,6 @@
 
 import time
 import copy
-import inspect
 import threading
 from abc import abstractmethod, ABC
 import joblib
@@ -52,6 +51,28 @@ def print_iteration(it, res, error, extra="", threshold=0.1):
         print(f"Result for iteration {it}: {res:.3e} +/- {error:.3e}" + extra)
     else:
         print(f"Result for iteration {it}: {res:.4f} +/- {error:.4f}" + extra)
+
+def _accumulate(accumulators):
+    """ Accumulate all the quantities in accumulators
+    The default accumulation is implemented for tensorflow tensors
+    as a sum of all partial results.
+
+    Parameters
+    ----------
+        `accumulators`: list of tensorflow tensors
+
+    Returns
+    -------
+        `results`: `sum` for each element of the accumulators
+
+    Function not compiled
+    """
+    results = []
+    len_acc = len(accumulators[0])
+    for i in range(len_acc):
+        total = tf.reduce_sum([acc[i] for acc in accumulators], axis=0)
+        results.append(total)
+    return results
 
 
 class MonteCarloFlow(ABC):
@@ -115,7 +136,8 @@ class MonteCarloFlow(ABC):
         self._events_per_run = min(val, self.n_events)
         if self.n_events % self._events_per_run != 0:
             print(
-                f"Warning, the number of events per run step {self._events_per_run} doesn't perfectly divide the number of events {self.n_events}, which can harm performance"
+                f"Warning, the number of events per run step {self._events_per_run} doesn't perfectly"
+                f"divide the number of events {self.n_events}, which can harm performance"
             )
 
     @property
@@ -169,29 +191,7 @@ class MonteCarloFlow(ABC):
         finally:
             self.lock.release()
 
-    def accumulate(self, accumulators):
-        """ Accumulate all the quantities in accumulators
-        The default accumulation is implemented for tensorflow tensors
-        as a sum of all partial results.
-
-        Parameters
-        ----------
-            `accumulators`: list of tensorflow tensors
-
-        Returns
-        -------
-            `results`: `sum` for each element of the accumulators
-
-        Function not compiled
-        """
-        results = []
-        len_acc = len(accumulators[0])
-        for i in range(len_acc):
-            total = tf.reduce_sum([acc[i] for acc in accumulators], axis=0)
-            results.append(total)
-        return results
-
-    def device_run(self, ncalls, sent_pc = 100.0, **kwargs):
+    def device_run(self, ncalls, sent_pc=100.0, **kwargs):
         """ Wrapper function to select a specific device when running the event
         If the devices were not set, tensorflow default will be used
 
@@ -204,7 +204,7 @@ class MonteCarloFlow(ABC):
             `result`: raw result from the integrator
         """
         if self._verbose:
-            print(f"Events sent to the computing device: {sent_pc:.1f} %", end='\r')
+            print(f"Events sent to the computing device: {sent_pc:.1f} %", end="\r")
         if not self.event:
             raise RuntimeError("Compile must be ran before running any iterations")
         if self.devices:
@@ -242,7 +242,7 @@ class MonteCarloFlow(ABC):
         pc = 0.0
         while events_left > 0:
             ncalls = min(events_left, self.events_per_run)
-            pc += ncalls/self.n_events*100
+            pc += ncalls / self.n_events * 100
             percentages.append(pc)
             events_to_do.append(ncalls)
             events_left -= self.events_per_run
@@ -250,7 +250,7 @@ class MonteCarloFlow(ABC):
         if self.devices:
             running_pool = []
             for ncalls, pc in zip(events_to_do, percentages):
-                delay_job = joblib.delayed(self.device_run)(ncalls, sent_pc = pc,**kwargs)
+                delay_job = joblib.delayed(self.device_run)(ncalls, sent_pc=pc, **kwargs)
                 running_pool.append(delay_job)
             accumulators = self.pool(running_pool)
         else:
@@ -258,7 +258,7 @@ class MonteCarloFlow(ABC):
             for ncalls, pc in zip(events_to_do, percentages):
                 res = self.device_run(ncalls, sent_pc=pc, **kwargs)
                 accumulators.append(res)
-        return self.accumulate(accumulators)
+        return _accumulate(accumulators)
 
     def compile(self, integrand, compilable=True):
         """ Receives an integrand, prepares it for integration
@@ -383,9 +383,7 @@ class MonteCarloFlow(ABC):
         return final_result, sigma
 
 
-def wrapper(
-    integrator_class, integrand, n_dim, n_iter, total_n_events, compilable=True
-):
+def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events, compilable=True):
     """ Convenience wrapper
 
     Parameters

@@ -2,7 +2,7 @@
     Plain implementation of the plainest possible MonteCarlo
 """
 
-from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me
+from vegasflow.configflow import DTYPE, fone, fzero
 from vegasflow.monte_carlo import MonteCarloFlow, wrapper
 import tensorflow as tf
 
@@ -42,4 +42,5 @@ class PlainFlow(MonteCarloFlow):
 
 
 def plain_wrapper(*args):
+    """ Wrapper around PlainFlow """
     return wrapper(PlainFlow, *args)
