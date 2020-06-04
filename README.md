@@ -2,6 +2,7 @@
 [![Documentation Status](https://readthedocs.org/projects/vegasflow/badge/?version=latest)](https://vegasflow.readthedocs.io/en/latest/?badge=latest)
 [![DOI](https://zenodo.org/badge/226363558.svg)](https://zenodo.org/badge/latestdoi/226363558)
 [![Anaconda-Server Badge](https://anaconda.org/conda-forge/vegasflow/badges/installer/conda.svg)](https://conda.anaconda.org/conda-forge)
+[![AUR](https://img.shields.io/aur/version/oha)](https://aur.archlinux.org/packages/python-vegasflow/)]
 
 
 # VegasFlow

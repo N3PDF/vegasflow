@@ -1,4 +1,4 @@
-# Maintainer: Juacrumar <juacrumar@lairen.eu>
+# Maintainer: Juacrumar <juacrumar at lairen dot eu>
 
 pkgname=python-vegasflow
 _name=vegasflow
