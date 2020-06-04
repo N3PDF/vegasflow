@@ -14,21 +14,20 @@ depends=("python>=3.6"
          "python-numpy")
 optdepends=("python-cffi: interfacing vegasflow with C code"
              "python-tensorflow-cuda: GPU support")
-checkdepends=("python-pytest")
+# checkdepends=("python-pytest")
 provides=("vegasflow")
 changelog=
 source=("https://github.com/N3PDF/vegasflow/archive/v.${pkgver}.tar.gz")
 md5sums=("118fa9906f588ab7ecd320728c478ade")
-validpgpkeys=()
 
 prepare() {
 	cd "$_name-v.$pkgver"
 }
 
-check() {
-	cd "$_name-v.$pkgver"
-    pytest
-}
+# check() {
+# 	cd "$_name-v.$pkgver"
+#     pytest
+# }
 
 build() {
 	cd "$_name-v.$pkgver"
