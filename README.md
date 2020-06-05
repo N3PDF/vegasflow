@@ -28,16 +28,18 @@ The package can be installed with pip:
 python3 -m pip install vegasflow
 ```
 
-as well as with `conda`, from the `conda-forge` channel:
+as well as `conda`, from the `conda-forge` channel:
 ```
 conda install vegasflow -c conda-forge
 ```
 
-If you prefer a manual installation just use:
+If you prefer a manual installation you can clone the repository and run:
 ```
+git clone https://github.com/N3PDF/vegasflow.git
+cd vegasflow
 python setup.py install
 ```
-or if you are planning to extend or develop code just use:
+or if you are planning to extend or develop the code just use:
 ```
 python setup.py develop
 ```
@@ -45,6 +47,30 @@ python setup.py develop
 ## Examples
 
 There are some examples in the `examples/` folder.
+
+## Minimum Working Example
+```
+import tensorflow as tf
+from vegasflow.vflow import vegas_wrapper
+
+def integrand(x, **kwargs):
+    """ Function:
+       x_{1} * x_{2} ... * x_{n}
+       x: array of dimension (events, n)
+    """
+    return tf.reduce_prod(x, axis=1)
+
+dimensions = 8
+iterations = 5
+events_per_iteration = int(1e5)
+vegas_wrapper(integrand, dimensions, iterations, events_per_iteration, compilable=True)
+```
+
+For more complicated examples please see the [documentation](https://vegasflow.readthedocs.io/en/latest)
+or the [examples](https://github.com/N3PDF/vegasflow/tree/master/examples) folder.
+
+Please feel free to [open an issue](https://github.com/N3PDF/vegasflow/issues/new) if you would like
+some specific example or find any problems at all with the code or the documentation.
 
 ## Citation policy
 
