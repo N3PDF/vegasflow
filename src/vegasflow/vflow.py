@@ -15,6 +15,7 @@ from vegasflow.monte_carlo import MonteCarloFlow, wrapper
 from vegasflow.utils import consume_array_into_indices
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 FBINS = float_me(BINS_MAX)
@@ -138,10 +139,7 @@ def refine_grid_per_dimension(t_res_sq, subdivisions):
     prev = fzero
     for _ in range(BINS_MAX - 1):
         bin_weight, n_bin, cur, prev = tf.while_loop(
-            while_check,
-            while_body,
-            (bin_weight, n_bin, cur, prev),
-            parallel_iterations=1,
+            while_check, while_body, (bin_weight, n_bin, cur, prev), parallel_iterations=1,
         )
         bin_weight -= ave_t
         delta = (cur - prev) * bin_weight / wei_t[n_bin]
@@ -273,9 +271,7 @@ class VegasFlow(MonteCarloFlow):
         Function not compiled
         """
         for j in range(self.n_dim):
-            new_divisions = refine_grid_per_dimension(
-                arr_res2[j, :], self.divisions[j, :]
-            )
+            new_divisions = refine_grid_per_dimension(arr_res2[j, :], self.divisions[j, :])
             self.divisions[j, :].assign(new_divisions)
 
     def _run_event(self, integrand, ncalls=None):
@@ -320,9 +316,7 @@ class VegasFlow(MonteCarloFlow):
             # If the training is active, save the result of the integral sq
             for j in range(self.n_dim):
                 arr_res2.append(
-                    consume_array_into_indices(
-                        tmp2, ind[:, j : j + 1], self.grid_bins - 1
-                    )
+                    consume_array_into_indices(tmp2, ind[:, j : j + 1], self.grid_bins - 1)
                 )
             arr_res2 = tf.reshape(arr_res2, (self.n_dim, -1))
 

@@ -21,9 +21,7 @@ class PlainFlow(MonteCarloFlow):
         # Jacobian
         xjac = 1.0 / self.n_events
         # Generate all random number for this iteration
-        rnds = tf.random.uniform(
-            (n_events, self.n_dim), minval=0, maxval=1, dtype=DTYPE
-        )
+        rnds = tf.random.uniform((n_events, self.n_dim), minval=0, maxval=1, dtype=DTYPE)
         # Compute the integrand
         tmp = integrand(rnds, n_dim=self.n_dim, weight=xjac) * xjac
         tmp2 = tf.square(tmp)

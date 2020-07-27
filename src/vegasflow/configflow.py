@@ -2,9 +2,11 @@
 Define some constants, header style
 """
 import os
+
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 # Most of this can be moved to a yaml file without loss of generality
 import tensorflow as tf
+
 # uncomment this line for debugging to avoid compiling any tf.function
 # tf.config.experimental_run_functions_eagerly(True)
 

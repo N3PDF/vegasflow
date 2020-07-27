@@ -42,6 +42,7 @@ import tensorflow as tf
 from vegasflow.configflow import MAX_EVENTS_LIMIT, DEFAULT_ACTIVE_DEVICES, DTYPE
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,6 +55,7 @@ def print_iteration(it, res, error, extra="", threshold=0.1):
         logger.info(f"Result for iteration {it}: {res:.3e} +/- {error:.3e}" + extra)
     else:
         logger.info(f"Result for iteration {it}: {res:.4f} +/- {error:.4f}" + extra)
+
 
 def _accumulate(accumulators):
     """ Accumulate all the quantities in accumulators
