@@ -38,13 +38,13 @@ struct IntegrandOpFunctor<CPUDevice, T> {
  *
  * The output shape is set to be (input_shape[0], ), i.e., number of events
  */
-//REGISTER_OP("IntegrandOp")
-//    .Input("xarr: double")
-//    .Output("ret: double")
-//    .SetShapeFn([](shape_inference::InferenceContext* c) {
-//        c -> set_output(0, c -> MakeShape( { c -> Dim(c -> input(0), 0) } ) );
-//        return Status::OK();
-//    });
+REGISTER_OP("IntegrandOp")
+    .Input("xarr: double")
+    .Output("ret: double")
+    .SetShapeFn([](shape_inference::InferenceContext* c) {
+        c -> set_output(0, c -> MakeShape( { c -> Dim(c -> input(0), 0) } ) );
+        return Status::OK();
+    });
 
 template<typename Device, typename T>
 class IntegrandOp: public OpKernel {
@@ -76,7 +76,7 @@ class IntegrandOp: public OpKernel {
 
 // Register the CPU version of the kernel
 #define REGISTER_CPU(T)                                          \
-  REGISTER_KERNEL_BUILDER(Name("IntegrandOp").Device(DEVICE_CPU).TypeConstraint<T>("T"), IntegrandOp<CPUDevice, T>);
+  REGISTER_KERNEL_BUILDER(Name("IntegrandOp").Device(DEVICE_CPU), IntegrandOp<CPUDevice, T>);
 REGISTER_CPU(double);
 
 // Register the GPU version
@@ -84,6 +84,6 @@ REGISTER_CPU(double);
 #define REGISTER_GPU(T) \
   /* Declare explicit instantiations in kernel_example.cu.cc. */ \
   extern template class ExampleFunctor<GPUDevice, T>;            \
-  REGISTER_KERNEL_BUILDER(Name("IntegrandOp").Device(DEVICE_GPU).TypeConstraint<T>("T"),IntegrandOp<GPUDevice, T>);
+  REGISTER_KERNEL_BUILDER(Name("IntegrandOp").Device(DEVICE_GPU),IntegrandOp<GPUDevice, T>);
 REGISTER_GPU(double);
 #endif
