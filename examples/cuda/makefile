@@ -10,7 +10,8 @@ TF_LFLAGS=`python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_l
 CXX=g++
 NCC=nvcc
 CXFLAGS=-std=c++11 -shared -fPIC -O2
-NCCFLAGS=-std=c++11 -D KERNEL_CUDA=1 -x cu -Xcompiler -fPIC
+KERNEL=-D KERNEL_CUDA=1
+NCCFLAGS=-std=c++11 $(KERNEL) -x cu -Xcompiler -fPIC
 NLFLAGS=-L/opt/cuda/lib64 -lcudart
 
 .PHONY: run_cpu run_gpu clean
@@ -18,7 +19,7 @@ NLFLAGS=-L/opt/cuda/lib64 -lcudart
 run_cpu: $(target_cpu)
 	@python cuda_example.py
 
-run_gpu: $(target_gpu) $(target_cpu)
+run_gpu: $(target_gpu)
 	@python cuda_example.py
 
 $(target_cpu): $(cpu_src)
@@ -28,7 +29,7 @@ $(target_cpu): $(cpu_src)
 $(target_gpu): $(gpu_src)
 	@echo "Compiling GPU kernel"
 	@$(NCC) $(NCCFLAGS) -c -o $@ $< $(TF_CFLAGS)
-	@$(CXX) $(CXFLAGS) -o $(target_cpu) $(cpu_src) $(target_gpu) $(TF_CFLAGS) $(NLFLAGS) $(TF_LFLAGS)
+	@$(CXX) $(CXFLAGS) $(KERNEL) -o $(target_cpu) $(cpu_src) $(target_gpu) $(TF_CFLAGS) $(NLFLAGS) $(TF_LFLAGS)
 
 clean:
-	rm -f $(target_gpu) $(target_gpu) integrand.so
+	rm -f $(target_gpu) $(target_cpu)

@@ -83,7 +83,7 @@ REGISTER_CPU(double);
 #ifdef KERNEL_CUDA
 #define REGISTER_GPU(T) \
   /* Declare explicit instantiations in kernel_example.cu.cc. */ \
-  extern template class ExampleFunctor<GPUDevice, T>;            \
+  extern template class IntegrandOpFunctor<GPUDevice, T>;            \
   REGISTER_KERNEL_BUILDER(Name("IntegrandOp").Device(DEVICE_GPU),IntegrandOp<GPUDevice, T>);
 REGISTER_GPU(double);
 #endif

@@ -13,7 +13,7 @@ __global__ void IntegrandOpKernel(const T *input, T *output, const int nevents, 
     const auto gid = blockIdx.x*blockDim.x + threadIdx.x;
     // note: this an example of usage, not an example of a very optimal anything...
     for (int i = gid; i < nevents; i += blockDim.x*gridDim.x) {
-        output[i] = 2.0;
+        output[i] = 0.0;
         for (int j = 0; j < ndim; j++) {
             output[i] += input[i,j];
         }
