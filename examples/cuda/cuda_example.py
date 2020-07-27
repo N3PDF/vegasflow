@@ -6,7 +6,7 @@ from vegasflow.plain import plain_wrapper
 
 # MC integration setup
 dim = 4
-ncalls = np.int32(1e4)
+ncalls = np.int32(1e6)
 n_iter = 5
 
 integrand_module = tf.load_op_library('./integrand.so')
