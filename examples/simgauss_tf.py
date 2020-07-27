@@ -1,8 +1,8 @@
 # Place your function here
+from vegasflow.configflow import DTYPE, DTYPEINT
 import time
 import numpy as np
 import tensorflow as tf
-from vegasflow.configflow import DTYPE, DTYPEINT
 from vegasflow.vflow import vegas_wrapper
 from vegasflow.plain import plain_wrapper 
 
