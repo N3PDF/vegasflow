@@ -1,35 +1,34 @@
-target_cpu=integrand.so
-cpu_src=integrand.cpp
-
-target_gpu=integrand.cu.o
-gpu_src=integrand.cu.cpp
+target_lib=integrand.so
 
 TF_CFLAGS=`python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))' 2> /dev/null`
 TF_LFLAGS=`python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))' 2>/dev/null`
 
 CXX=g++
-NCC=nvcc
 CXFLAGS=-std=c++11 -shared -fPIC -O2
-KERNEL=-D KERNEL_CUDA=1
-NCCFLAGS=-std=c++11 $(KERNEL) -x cu -Xcompiler -fPIC
-NLFLAGS=-L/opt/cuda/lib64 -lcudart
+KERNEL_DEF=-D KERNEL_CUDA=1
+NCCFLAGS=-std=c++11 $(KERNEL_DEF) -x cu -Xcompiler -fPIC --disable-warnings
 
-.PHONY: run_cpu run_gpu clean
+# Check whether there's nvcc
+ifeq (,$(shell which nvcc 2>/dev/null))
+else
+	NCC:=nvcc
+	NCCLIB:=$(subst bin/nvcc,lib64, $(shell which nvcc))
+	CXFLAGS+=$(KERNEL_DEF) -L$(NCCLIB) -lcudart
+	kernel_comp=integrand.cu.o
+endif
 
-run_cpu: $(target_cpu)
+.PHONY: run clean
+
+run: $(target_lib)
 	@python cuda_example.py
 
-run_gpu: $(target_gpu)
-	@python cuda_example.py
-
-$(target_cpu): $(cpu_src)
-	@echo "Compiling CPU kernel"
-	@$(CXX) $(CXFLAGS) $< -o $@ -fPIC $(TF_CFLAGS) $(TF_LFLAGS)
-
-$(target_gpu): $(gpu_src)
-	@echo "Compiling GPU kernel"
+%.cu.o: %.cu.cpp
+	@echo "[$(NCC)] Integrating cuda kernel..."
 	@$(NCC) $(NCCFLAGS) -c -o $@ $< $(TF_CFLAGS)
-	@$(CXX) $(CXFLAGS) $(KERNEL) -o $(target_cpu) $(cpu_src) $(target_gpu) $(TF_CFLAGS) $(NLFLAGS) $(TF_LFLAGS)
+
+%.so: %.cpp $(kernel_comp)
+	@echo "[$(CXX)] Integrating operator..."
+	@$(CXX) $(CXFLAGS) $(KERNEL) -o $@ $^ $(TF_CFLAGS) $(TF_LFLAGS)
 
 clean:
-	rm -f $(target_gpu) $(target_cpu)
+	rm -f $(target_lib) $(kernel_comp)
