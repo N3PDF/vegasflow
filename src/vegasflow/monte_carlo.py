@@ -41,6 +41,10 @@ import numpy as np
 import tensorflow as tf
 from vegasflow.configflow import MAX_EVENTS_LIMIT, DEFAULT_ACTIVE_DEVICES, DTYPE
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def print_iteration(it, res, error, extra="", threshold=0.1):
     """ Checks the size of the result to select between
@@ -48,9 +52,10 @@ def print_iteration(it, res, error, extra="", threshold=0.1):
     # note: actually, the flag 'g' does this automatically
     # but I prefer to choose the precision myself...
     if res < threshold:
-        print(f"Result for iteration {it}: {res:.3e} +/- {error:.3e}" + extra)
+        logger.info(f"Result for iteration {it}: {res:.3e} +/- {error:.3e}" + extra)
     else:
-        print(f"Result for iteration {it}: {res:.4f} +/- {error:.4f}" + extra)
+        logger.info(f"Result for iteration {it}: {res:.4f} +/- {error:.4f}" + extra)
+
 
 def _accumulate(accumulators):
     """ Accumulate all the quantities in accumulators
@@ -135,8 +140,8 @@ class MonteCarloFlow(ABC):
         """ Set the number of events per single step """
         self._events_per_run = min(val, self.n_events)
         if self.n_events % self._events_per_run != 0:
-            print(
-                f"Warning, the number of events per run step {self._events_per_run} doesn't perfectly"
+            logger.warning(
+                f"The number of events per run step {self._events_per_run} doesn't perfectly"
                 f"divide the number of events {self.n_events}, which can harm performance"
             )
 
@@ -379,7 +384,7 @@ class MonteCarloFlow(ABC):
 
         final_result = aux_res / weight_sum
         sigma = np.sqrt(1.0 / weight_sum)
-        print(f" > Final results: {final_result.numpy():g} +/- {sigma:g}")
+        logger.info(f" > Final results: {final_result.numpy():g} +/- {sigma:g}")
         return final_result, sigma
 
 

@@ -14,6 +14,10 @@ from vegasflow.configflow import BINS_MAX, ALPHA
 from vegasflow.monte_carlo import MonteCarloFlow, wrapper
 from vegasflow.utils import consume_array_into_indices
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 FBINS = float_me(BINS_MAX)
 
 # Auxiliary functions for Vegas
@@ -135,10 +139,7 @@ def refine_grid_per_dimension(t_res_sq, subdivisions):
     prev = fzero
     for _ in range(BINS_MAX - 1):
         bin_weight, n_bin, cur, prev = tf.while_loop(
-            while_check,
-            while_body,
-            (bin_weight, n_bin, cur, prev),
-            parallel_iterations=1,
+            while_check, while_body, (bin_weight, n_bin, cur, prev), parallel_iterations=1,
         )
         bin_weight -= ave_t
         delta = (cur - prev) * bin_weight / wei_t[n_bin]
@@ -232,8 +233,8 @@ class VegasFlow(MonteCarloFlow):
                 integrand_name = self.integrand.__name__
                 integrand_grid = json_dict.get("integrand")
                 if integrand_name != integrand_grid:
-                    print(
-                        f"WARNING: The grid was written for the integrand: {integrand_grid}"
+                    logger.warning(
+                        f"The grid was written for the integrand: {integrand_grid}"
                         f"which is different from {integrand_name}"
                     )
             # Now that everything is clear, let's load up the grid
@@ -255,7 +256,7 @@ class VegasFlow(MonteCarloFlow):
                 f"current settings is of {self.grid_bins} bins"
             )
         if file_name:
-            print(f" > SUCCESS: Loaded grid from {file_name}")
+            logger.info(f" > SUCCESS: Loaded grid from {file_name}")
         self.divisions.assign(numpy_grid)
 
     def refine_grid(self, arr_res2):
@@ -270,9 +271,7 @@ class VegasFlow(MonteCarloFlow):
         Function not compiled
         """
         for j in range(self.n_dim):
-            new_divisions = refine_grid_per_dimension(
-                arr_res2[j, :], self.divisions[j, :]
-            )
+            new_divisions = refine_grid_per_dimension(arr_res2[j, :], self.divisions[j, :])
             self.divisions[j, :].assign(new_divisions)
 
     def _run_event(self, integrand, ncalls=None):
@@ -317,9 +316,7 @@ class VegasFlow(MonteCarloFlow):
             # If the training is active, save the result of the integral sq
             for j in range(self.n_dim):
                 arr_res2.append(
-                    consume_array_into_indices(
-                        tmp2, ind[:, j : j + 1], self.grid_bins - 1
-                    )
+                    consume_array_into_indices(tmp2, ind[:, j : j + 1], self.grid_bins - 1)
                 )
             arr_res2 = tf.reshape(arr_res2, (self.n_dim, -1))
 
