@@ -3,7 +3,7 @@ Define some constants, header style
 """
 import os
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "1")
 # Most of this can be moved to a yaml file without loss of generality
 import tensorflow as tf
 
