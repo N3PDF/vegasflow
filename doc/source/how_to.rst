@@ -44,8 +44,67 @@ We also provide a convenience wrapper ``vegas_wrapper`` that allows to run the w
 
     result = vegas_wrapper(example_integrand, dimensions, n_iter, ncalls)
 
+Global configuration
+====================
+
+Verbosity
+---------
+
+Tensorflow is very verbose by default.
+When ``vegasflow`` is imported the environmental variable ``TF_CPP_MIN_LOG_LEVEL``
+is set to 1, hiding most warnings.
+If you want to recover the usual Tensorflow logging level you can
+set your enviroment to ``export TF_CPP_MIN_LOG_LEVEL=0``.
+
+Choosing device
+---------------
+
+The ``CUDA_VISIBLE_DEVICES`` environmental variable will tell Tensorflow
+(and thus VegasFlow) in which device it should run.
+If the variable is not set, it will default to use all (and only) GPUs available.
+In order to use the CPU you can hide the GPU by setting
+``export CUDA_VISIBLE_DEVICES=""``.
+
+If you have a set-up with more than one GPU you can select which one you will
+want to use for the integration by setting the environmental variable to the
+right device, e.g., ``export CUDA_VISIBLE_DEVICES=0``.
+
+
+Eager Vs Graph-mode
+-------------------
+
+When performing computational expensive task Tensorflow's graph mode is preferred.
+When compiling you will notice the first iteration of the integration takes a bit longer, this is normal
+and it's due to the creation of the graph.
+Subsequent iterations will be faster.
+
+Graph-mode however is not debugger friendly as the code is read only once, when compiling the graph.
+You can however enable Tensorflow's eager mode.
+With eager mode the code is run sequentially as you would expect with normal python code,
+this will allow you to throw in instances of ``pdb.set_trace()``.
+In order to enable eager mode include these lines at the top of your program:
+
+.. code-block:: python
+
+    import tensorflow as tf
+    tf.config.run_functions_eagerly(True)
+    
+or if you are using versions of Tensorflow older than 2.3:
+
+.. code-block:: python
+    import tensorflow as tf
+    tf.config.experimental_run_functions_eagerly(True)
+
+
+Eager mode also enables the usage of the library as a `standard` python library
+allowing you to integrate non-tensorflow integrands.
+These integrands, as they are not understood by tensorflow, are not run using
+GPU kernels while the rest of VegasFlow will still be run on GPU if possible.
+
+
 Histograms
 ==========
+
 A commonly used feature in Monte Carlo calculations is the generation of histograms.
 In order to generate them while at the same time keeping all the features of ``vegasflow``,
 such as GPU computing, it is necessary to ensure the histogram generation is also wrapped with the ``@tf.function`` directive.
