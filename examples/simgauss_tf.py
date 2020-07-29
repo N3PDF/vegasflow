@@ -1,4 +1,9 @@
-# Place your function here
+"""
+    Example: basic integration
+
+    Basic example using the vegas_wrapper helper
+"""
+
 from vegasflow.configflow import DTYPE, DTYPEINT
 import time
 import numpy as np
@@ -32,7 +37,7 @@ if __name__ == "__main__":
     print(f"VEGAS MC, ncalls={ncalls}:")
     start = time.time()
     ncalls = 10*ncalls
-    r = vegas_wrapper(symgauss, dim, n_iter, ncalls, compilable=True)
+    r = vegas_wrapper(symgauss, dim, n_iter, ncalls)
     end = time.time()
     print(f"Vegas took: time (s): {end-start}")
 

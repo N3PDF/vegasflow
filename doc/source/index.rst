@@ -99,6 +99,7 @@ Indices and tables
     VegasFlow<self>
     how_to
     intalg
+    examples
     apisrc/vegasflow
     
 

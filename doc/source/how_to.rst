@@ -14,7 +14,8 @@ How to use
 A first VegasFlow integration
 =============================
 
-Prototyping in VegasFlow is easy, the best results are obtained when the interands are written using TensorFlow primitives.
+Prototyping in ``VegasFlow`` is easy, the best results are obtained when the
+integrands are written using TensorFlow primitives.
 Below we show one example where we create a TF constant (using ``tf.constant``) and then we use the sum and power functions.
 
 .. code-block:: python
@@ -51,35 +52,35 @@ Verbosity
 ---------
 
 Tensorflow is very verbose by default.
-When ``vegasflow`` is imported the environmental variable ``TF_CPP_MIN_LOG_LEVEL``
+When ``vegasflow`` is imported the environment variable ``TF_CPP_MIN_LOG_LEVEL``
 is set to 1, hiding most warnings.
 If you want to recover the usual Tensorflow logging level you can
 set your enviroment to ``export TF_CPP_MIN_LOG_LEVEL=0``.
 
-Choosing device
----------------
+Choosing integration device
+---------------------------
 
-The ``CUDA_VISIBLE_DEVICES`` environmental variable will tell Tensorflow
+The ``CUDA_VISIBLE_DEVICES`` environment variable will tell Tensorflow
 (and thus VegasFlow) in which device it should run.
 If the variable is not set, it will default to use all (and only) GPUs available.
 In order to use the CPU you can hide the GPU by setting
 ``export CUDA_VISIBLE_DEVICES=""``.
 
 If you have a set-up with more than one GPU you can select which one you will
-want to use for the integration by setting the environmental variable to the
+want to use for the integration by setting the environment variable to the
 right device, e.g., ``export CUDA_VISIBLE_DEVICES=0``.
 
 
 Eager Vs Graph-mode
 -------------------
 
-When performing computational expensive task Tensorflow's graph mode is preferred.
+When performing computational expensive tasks Tensorflow's graph mode is preferred.
 When compiling you will notice the first iteration of the integration takes a bit longer, this is normal
 and it's due to the creation of the graph.
 Subsequent iterations will be faster.
 
 Graph-mode however is not debugger friendly as the code is read only once, when compiling the graph.
-You can however enable Tensorflow's eager mode.
+You can however enable Tensorflow's `eager execution <https://www.tensorflow.org/guide/eager>`_.
 With eager mode the code is run sequentially as you would expect with normal python code,
 this will allow you to throw in instances of ``pdb.set_trace()``.
 In order to enable eager mode include these lines at the top of your program:
@@ -92,6 +93,7 @@ In order to enable eager mode include these lines at the top of your program:
 or if you are using versions of Tensorflow older than 2.3:
 
 .. code-block:: python
+
     import tensorflow as tf
     tf.config.experimental_run_functions_eagerly(True)
 
@@ -99,7 +101,7 @@ or if you are using versions of Tensorflow older than 2.3:
 Eager mode also enables the usage of the library as a `standard` python library
 allowing you to integrate non-tensorflow integrands.
 These integrands, as they are not understood by tensorflow, are not run using
-GPU kernels while the rest of VegasFlow will still be run on GPU if possible.
+GPU kernels while the rest of ``VegasFlow`` will still be run on GPU if possible.
 
 
 Histograms
@@ -111,7 +113,7 @@ such as GPU computing, it is necessary to ensure the histogram generation is als
 
 Below we show one such example (how the histogram is actually generated and saved is up to the user).
 The first step is to create a ``Variable`` tensor which will be used to fill the histograms.
-This is a crucial step (and the only fixed step) as this tensor will be accumulated internally by ``VegasFlow''.
+This is a crucial step (and the only fixed step) as this tensor will be accumulated internally by ``VegasFlow``.
 
 
 .. code-block:: python
@@ -152,7 +154,7 @@ This is a crucial step (and the only fixed step) as this tensor will be accumula
         histogram_collector(final_result * weight, histogram_values)
         return final_result
 
-Finally we can normally call ``vegasflow'', remembering to pass down the accumulator tensor, which will be filled in with the histograms.
+Finally we can normally call ``vegasflow``, remembering to pass down the accumulator tensor, which will be filled in with the histograms.
 Note that here we are only filling one histograms and so the histogram tuple contains only one element, but any number of histograms can be filled.
 
 
