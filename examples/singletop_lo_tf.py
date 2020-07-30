@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+"""
+    Example: integration of singletop production
+"""
 import sys
 import time
 import numpy as np
-import tensorflow as tf
 from vegasflow.configflow import DTYPE
+import tensorflow as tf
 from vegasflow.vflow import vegas_wrapper
 
 # MC integration setup
@@ -75,7 +78,7 @@ def make_event(xarr):
     cos = 1 - 2 * xarr[:, 2]
     sinxi = cc * tf.sqrt(1 - cos * cos)
     cosxi = cc * cos
-    zeros = tf.zeros(ecmo2.shape, dtype=DTYPE)
+    zeros = tf.zeros_like(ecmo2, dtype=DTYPE)
 
     p0 = tf.stack([ecmo2, zeros, zeros, ecmo2])
     p1 = tf.stack([ecmo2, zeros, zeros, -ecmo2])
@@ -103,9 +106,9 @@ def dot(p1, p2):
 def u0(p, i):
     """Compute the dirac spinor u0"""
 
-    zeros = tf.zeros(p[0].shape, dtype=DTYPE)
+    zeros = tf.zeros_like(p[0], dtype=DTYPE)
     czeros = tf.complex(zeros, zeros)
-    ones = tf.ones(p[0].shape, dtype=DTYPE)
+    ones = tf.ones_like(p[0], dtype=DTYPE)
 
     # case 1) py == 0
     rz = p[3] / p[0]
@@ -149,9 +152,9 @@ def u0(p, i):
 def ubar0(p, i):
     """Compute the dirac spinor ubar0"""
 
-    zeros = tf.zeros(p[0].shape, dtype=DTYPE)
+    zeros = tf.zeros_like(p[0], dtype=DTYPE)
     czeros = tf.complex(zeros, zeros)
-    ones = tf.ones(p[0].shape, dtype=DTYPE)
+    ones = tf.ones_like(p[0], dtype=DTYPE)
 
     # case 1) py == 0
     rz = p[3] / p[0]
