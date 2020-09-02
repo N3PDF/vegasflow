@@ -41,6 +41,35 @@ integrand.
 You can find a `runnable example of such a basic example in the repository <https://github.com/N3PDF/vegasflow/blob/master/examples/simgauss_tf.py>`_.
 
 
+Integrating a numpy function
+============================
+
+``VegasFlow`` admits also the integration of non-tensorflow python-based integrands.
+In this case, however, it is necessary to activate ``eager-mode``, see :ref:`eager-label`.
+
+.. code-block:: python
+
+    import numpy as np
+    import tensorflow as tf
+    tf.config.run_functions_eagerly(True)
+    
+    def my_integrand(xarr, **kwargs):
+      return np.sum(xarr)
+      
+    from VegasFlow.vflow import vegas_wrapper
+
+    n_dim = 10
+    n_events = int(1e6)
+    n_iter = 5
+    result = vegas_wrapper(my_integrand, n_dim, n_iter, n_events)
+
+Note, however, that in this case the integrand will always be run on CPU, while the internal steps of the integration will be run on GPU by ``VegasFlow``.
+In order to run the integration exclusively on GPU the environment variable ``CUDA_VISIBLE_DEVICES`` should be set to ``''``:
+
+.. code-block:: bash
+
+    export CUDA_VISIBLE_DEVICES=""
+
 Interfacing C code: CFFI
 ========================
 

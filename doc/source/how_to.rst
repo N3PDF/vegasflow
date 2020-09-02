@@ -70,6 +70,7 @@ If you have a set-up with more than one GPU you can select which one you will
 want to use for the integration by setting the environment variable to the
 right device, e.g., ``export CUDA_VISIBLE_DEVICES=0``.
 
+.. _eager-label:
 
 Eager Vs Graph-mode
 -------------------
