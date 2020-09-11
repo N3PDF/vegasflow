@@ -40,7 +40,7 @@ logger.setLevel(log_level)
 # Create a handler and format it
 console_handler = logging.StreamHandler()
 console_handler.setLevel(log_level)
-console_format = logging.Formatter("[%(levelname)s] (%(name)s) %(message)s")
+console_format = logging.Formatter("[%(levelname)s] %(message)s")
 console_handler.setFormatter(console_format)
 logger.addHandler(console_handler)
 
