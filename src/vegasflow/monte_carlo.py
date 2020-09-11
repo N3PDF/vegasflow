@@ -47,8 +47,8 @@ logger = logging.getLogger(__name__)
 
 
 def print_iteration(it, res, error, extra="", threshold=0.1):
-    """ Checks the size of the result to select between
-    scientific notation and floating point notation """
+    """Checks the size of the result to select between
+    scientific notation and floating point notation"""
     # note: actually, the flag 'g' does this automatically
     # but I prefer to choose the precision myself...
     if res < threshold:
@@ -58,7 +58,7 @@ def print_iteration(it, res, error, extra="", threshold=0.1):
 
 
 def _accumulate(accumulators):
-    """ Accumulate all the quantities in accumulators
+    """Accumulate all the quantities in accumulators
     The default accumulation is implemented for tensorflow tensors
     as a sum of all partial results.
 
@@ -113,6 +113,7 @@ class MonteCarloFlow(ABC):
         self._history = []
         self.n_events = n_events
         self._events_per_run = min(events_limit, n_events)
+        self.distribute = False
         if list_devices:
             self.lock = threading.Lock()
             # List all devices from the list that can be found by tensorflow
@@ -127,12 +128,11 @@ class MonteCarloFlow(ABC):
             # Generate the pool of workers
             self.pool = joblib.Parallel(n_jobs=len(devices), prefer="threads")
         else:
-            self.lock = None
             self.devices = None
 
     @property
     def events_per_run(self):
-        """ Number of events to run in a single step.
+        """Number of events to run in a single step.
         Use this variable to control how much the memory will be loaded"""
         return self._events_per_run
 
@@ -148,7 +148,7 @@ class MonteCarloFlow(ABC):
 
     @property
     def history(self):
-        """ Returns a list with a tuple of results per iteration
+        """Returns a list with a tuple of results per iteration
         This tuple contains:
 
         - `result`: result of each iteration
@@ -162,20 +162,20 @@ class MonteCarloFlow(ABC):
     #### Abstract methods
     @abstractmethod
     def _run_iteration(self):
-        """ Run one iteration (i.e., `self.n_events`) of the
-        Monte Carlo integration """
+        """Run one iteration (i.e., `self.n_events`) of the
+        Monte Carlo integration"""
 
     @abstractmethod
     def _run_event(self, integrand, ncalls=None):
-        """ Run one single event of the Monte Carlo integration
-        the output must be a tuple """
+        """Run one single event of the Monte Carlo integration
+        the output must be a tuple"""
         result = self.event()
         return result, pow(result, 2)
 
     #### Device management methods
     def get_device(self):
-        """ Looks in the list of devices until it finds a device available, once found
-        makes the device unavailable and returns it """
+        """Looks in the list of devices until it finds a device available, once found
+        makes the device unavailable and returns it"""
         use_dev = None
         self.lock.acquire()
         try:
@@ -198,7 +198,7 @@ class MonteCarloFlow(ABC):
             self.lock.release()
 
     def device_run(self, ncalls, sent_pc=100.0, **kwargs):
-        """ Wrapper function to select a specific device when running the event
+        """Wrapper function to select a specific device when running the event
         If the devices were not set, tensorflow default will be used
 
         Parameters
@@ -221,6 +221,27 @@ class MonteCarloFlow(ABC):
         else:
             result = self.event(ncalls=ncalls, **kwargs)
         return result
+
+    def set_distribute(self, queue_object):
+        """Uses dask to distribute the vegasflow run onto a cluster
+        Takes as input a queue_object defining the jobs to be sent
+
+        Parameters
+        ----------
+            `queue_object`: dask_jobqueue object
+        """
+        try:
+            import dask.distributed  # pylint: disable=import-error
+        except ImportError:
+            raise ImportError("Install dask and distributed to use `set_distribute`")
+        if self.devices is not None:
+            logger.warning("`set_distribute` overrides any previous device configuration")
+        self.list_devices = None
+        self.lock = None
+        self.pool = None
+        self.devices = None
+        self.cluster = queue_object
+        self.distribute = True
 
     def run_event(self, **kwargs):
         """
@@ -259,6 +280,19 @@ class MonteCarloFlow(ABC):
                 delay_job = joblib.delayed(self.device_run)(ncalls, sent_pc=pc, **kwargs)
                 running_pool.append(delay_job)
             accumulators = self.pool(running_pool)
+        elif self.distribute:
+            from dask.distributed import Client  # pylint: disable=import-error
+
+            cluster = self.cluster
+            self.cluster = None  # the cluster might not be pickable # TODO
+            # Generate the client to control the distribution using the cluster variable
+            client = Client(cluster)
+            accumulators_future = client.map(self.device_run, events_to_do, percentages)
+            result_future = client.submit(_accumulate, accumulators_future)
+            result = result_future.result()
+            # Liberate the client
+            client.close()
+            return result
         else:
             accumulators = []
             for ncalls, pc in zip(events_to_do, percentages):
@@ -267,7 +301,7 @@ class MonteCarloFlow(ABC):
         return _accumulate(accumulators)
 
     def compile(self, integrand, compilable=True):
-        """ Receives an integrand, prepares it for integration
+        """Receives an integrand, prepares it for integration
         and tries to compile unless told otherwise.
 
         The input integrand must receive, as an input, an array of random numbers.
@@ -306,7 +340,7 @@ class MonteCarloFlow(ABC):
             self.event = run_event
 
     def run_integration(self, n_iter, log_time=True, histograms=None):
-        """ Runs the integrator for the chosen number of iterations.
+        """Runs the integrator for the chosen number of iterations.
 
         `histograms` must be a tuple of tf.Variables.
         At the end of all iterations the histograms per iteration will
@@ -390,7 +424,7 @@ class MonteCarloFlow(ABC):
 
 
 def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events, compilable=True):
-    """ Convenience wrapper
+    """Convenience wrapper
 
     Parameters
     ----------

@@ -58,6 +58,7 @@ setup(name='vegasflow',
             'dask',
             'distribute',
             'dask-jobqueue',
+            'tensorflow>2.2', # dask needs a more-pickable tensorflow
             ],
           },
       python_requires='>=3.6',
