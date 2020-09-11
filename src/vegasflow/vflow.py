@@ -380,7 +380,7 @@ class DistributedVegasFlow(VegasFlow):
             events_to_do.append(ncalls)
             events_left -= self.events_per_run
 
-        from dask.distributed import Client
+        from dask.distributed import Client # pylint: disable=import-error
         client = Client()
         accumulators_future = client.map(self.device_run, events_to_do, percentages)
         import vegasflow
