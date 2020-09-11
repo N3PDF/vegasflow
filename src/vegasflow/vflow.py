@@ -381,7 +381,8 @@ class DistributedVegasFlow(VegasFlow):
             events_left -= self.events_per_run
 
         # Enable the slurm cluster
-        from dask_jobqueue import SLURMCluster
+        from dask_jobqueue import SLURMCluster # pylint: disable=import-error
+
         cluster = SLURMCluster(memory='2g', processes=1, cores=4,
                 queue='<partition_name>', project='<accout_name>',
                 job_extra=['--get-user-env',
