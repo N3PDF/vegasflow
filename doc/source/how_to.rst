@@ -51,11 +51,47 @@ Global configuration
 Verbosity
 ---------
 
-Tensorflow is very verbose by default.
-When ``vegasflow`` is imported the environment variable ``TF_CPP_MIN_LOG_LEVEL``
-is set to 1, hiding most warnings.
-If you want to recover the usual Tensorflow logging level you can
-set your enviroment to ``export TF_CPP_MIN_LOG_LEVEL=0``.
+``VegasFlow`` uses the internal logging capabilities of python by
+creating a new logger handled named ``vegasflow``.
+You can modify the behavior of the logger as with any sane python library with the following lines:
+
+.. code-block:: python
+
+  import logging
+  log_dict = {
+        "0" : logging.ERROR,
+        "1" : logging.WARNING,
+        "2" : logging.INFO,
+        "3" : logging.DEBUG
+        }
+  logger_vegasflow = logging.getLogger('vegasflow')
+  logger_vegasflow.setLevel(log_dict["0"])
+  
+Where the where the log level can be any level defined in the ``log_dict`` dictionary.
+
+Since ``VegasFlow`` is to be interfaced with non-python code it is also
+possible to control the behaviour through the environment variable ``VEGASFLOW_LOG_LEVEL``, in that case any of the keys in ``log_dict`` can be used. For instance:
+
+.. code-block:: bash
+  
+  export VEGASFLOW_LOG_LEVEL=1
+
+will suppress all logger information other than ``WARNING`` and ``ERROR``.
+
+
+Environment
+-----------
+
+``VegasFlow`` is based on ``TensorFlow`` and as such all environment variable that
+have an effect on ``TensorFlow``s behavior will also have an effect on ``VegasFlow``.
+
+Here we describe only some of what we found to be the most useful variables.
+For a complete description on the variables controlling the GPU-behavior of ``TensorFlow`` please refer to
+the `nvidia official documentation <https://docs.nvidia.com/deeplearning/frameworks/tensorflow-user-guide/index.html#variablestf>`_.
+
+- ``TF_CPP_MIN_LOG_LEVEL``: controls the ``TensorFlow`` logging level. It is set to 1 by default so that only errors are printed.
+- ``VEGASFLOW_LOG_LEVEL``: controls the ``VegasFlow`` logging level. Set to 3 by default so that everything is printed.
+
 
 Choosing integration device
 ---------------------------
@@ -166,7 +202,3 @@ Note that here we are only filling one histograms and so the histogram tuple con
 
 
 We ship an example of an integrand which generates histograms in the github repository: `here <https://github.com/N3PDF/vegasflow/blob/master/examples/histogram_ex.py>`_.
-
-
-
-
