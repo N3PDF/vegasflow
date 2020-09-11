@@ -380,8 +380,17 @@ class DistributedVegasFlow(VegasFlow):
             events_to_do.append(ncalls)
             events_left -= self.events_per_run
 
+        # Enable the slurm cluster
+        from dask_jobqueue import SLURMCluster
+        cluster = SLURMCluster(memory='2g', processes=1, cores=4,
+                queue='<partition_name>', project='<accout_name>',
+                job_extra=['--get-user-env',
+                    '--nodes=1'])
+
+        cluster.scale(jobs=5)
+
         from dask.distributed import Client # pylint: disable=import-error
-        client = Client()
+        client = Client(cluster)
         accumulators_future = client.map(self.device_run, events_to_do, percentages)
         import vegasflow
         result_future = client.submit(vegasflow.monte_carlo._accumulate, accumulators_future)
@@ -411,6 +420,6 @@ if __name__ == "__main__":
     tf.config.experimental_run_functions_eagerly(True)
     def symgauss(xarr, **kwargs):
         return tf.reduce_sum(xarr, axis=1)
-    mc_instance = DistributedVegasFlow(4, int(1e5), events_limit=int(1e4))
+    mc_instance = DistributedVegasFlow(4, int(1e7), events_limit=int(1e6))
     mc_instance.compile(symgauss)
     mc_instance.run_integration(5)

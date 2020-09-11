@@ -132,3 +132,7 @@ dmypy.json
 _*.c
 *.o
 *.so
+
+# dask
+dask-worker-space
+*.out

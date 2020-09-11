@@ -57,6 +57,7 @@ setup(name='vegasflow',
           'distribute' : [
             'dask',
             'distribute',
+            'dask-jobqueue',
             ],
           },
       python_requires='>=3.6',
