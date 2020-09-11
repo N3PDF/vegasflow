@@ -45,6 +45,19 @@ We also provide a convenience wrapper ``vegas_wrapper`` that allows to run the w
 
     result = vegas_wrapper(example_integrand, dimensions, n_iter, ncalls)
 
+Running in distributed systems
+==============================
+
+``vegasflow`` implements an easy interface to distributed system via
+the `dask <https://dask.org/>`_ library.
+In order to enable it is enough by calling the ``set_distribute`` method
+of the instantiated integrator class.
+This method takes a `dask_jobqueue <https://jobqueue.dask.org/en/latest/>`_
+to send the jobs to.
+
+An example can be found in the `examples/cluster_dask.py <https://github.com/N3PDF/vegasflow/blob/master/examples/cluster_dask.py>`_ file where
+the `SLURM <https://slurm.schedmd.com/documentation.html>`_ cluster is used as an example
+
 Global configuration
 ====================
 
@@ -69,6 +82,10 @@ In order to use the CPU you can hide the GPU by setting
 If you have a set-up with more than one GPU you can select which one you will
 want to use for the integration by setting the environment variable to the
 right device, e.g., ``export CUDA_VISIBLE_DEVICES=0``.
+
+
+
+
 
 .. _eager-label:
 
