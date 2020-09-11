@@ -113,8 +113,8 @@ class MonteCarloFlow(ABC):
         self._history = []
         self.n_events = n_events
         self._events_per_run = min(events_limit, n_events)
-        self.lock = threading.Lock()
         if list_devices:
+            self.lock = threading.Lock()
             # List all devices from the list that can be found by tensorflow
             devices = []
             for device_type in list_devices:
@@ -127,6 +127,7 @@ class MonteCarloFlow(ABC):
             # Generate the pool of workers
             self.pool = joblib.Parallel(n_jobs=len(devices), prefer="threads")
         else:
+            self.lock = None
             self.devices = None
 
     @property

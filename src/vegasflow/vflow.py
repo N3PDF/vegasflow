@@ -352,6 +352,44 @@ class VegasFlow(MonteCarloFlow):
         return res, sigma
 
 
+class DistributedVegasFlow(VegasFlow):
+
+    def __init__(self, n_dim, n_events, **kwargs):
+        if "list_devices" in kwargs:
+            logger.warning("DistributedVegasFlow does not accept an input list of devices")
+            kwargs.pop("list_devices")
+        super().__init__(n_dim, n_events, list_devices = None, **kwargs)
+
+    def run_event(self, **kwargs):
+        """ Overrides ``MonteCarlo.run_event`` to distribute
+        the workload using dask
+        """
+        if not self.event:
+            raise RuntimeError("Compile must be ran before running any iterations")
+        # Run until there are no events left to do
+        events_left = self.n_events
+        events_to_do = []
+        percentages = []
+        # Fill the array of event distribution
+        # If using multiple devices, decide the policy for job sharing
+        pc = 0.0
+        while events_left > 0:
+            ncalls = min(events_left, self.events_per_run)
+            pc += ncalls / self.n_events * 100
+            percentages.append(pc)
+            events_to_do.append(ncalls)
+            events_left -= self.events_per_run
+
+        from dask.distributed import Client
+        client = Client()
+        accumulators_future = client.map(self.device_run, events_to_do, percentages)
+        import vegasflow
+        result_future = client.submit(vegasflow.monte_carlo._accumulate, accumulators_future)
+        result = result_future.result()
+        # Close client
+        client.close()
+        return result
+        
 def vegas_wrapper(integrand, n_dim, n_iter, total_n_events, **kwargs):
     """ Convenience wrapper
 
@@ -368,3 +406,11 @@ def vegas_wrapper(integrand, n_dim, n_iter, total_n_events, **kwargs):
         `sigma`: monte carlo error
     """
     return wrapper(VegasFlow, integrand, n_dim, n_iter, total_n_events, **kwargs)
+
+if __name__ == "__main__":
+    tf.config.experimental_run_functions_eagerly(True)
+    def symgauss(xarr, **kwargs):
+        return tf.reduce_sum(xarr, axis=1)
+    mc_instance = DistributedVegasFlow(4, int(1e5), events_limit=int(1e4))
+    mc_instance.compile(symgauss)
+    mc_instance.run_integration(5)

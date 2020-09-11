@@ -54,6 +54,10 @@ setup(name='vegasflow',
           'benchmark' : [
             'vegas', # Lepage's Vegas for benchmarking
             ],
+          'distribute' : [
+            'dask',
+            'distribute',
+            ],
           },
       python_requires='>=3.6',
       long_description=long_description,
