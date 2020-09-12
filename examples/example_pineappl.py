@@ -8,8 +8,7 @@ from vegasflow.vflow import vegas_wrapper, VegasFlow
 import pineappl
 from pdfflow.pflow import mkPDF
 from functools import partial
-from multiprocessing import Pool
-
+from multiprocessing.pool import ThreadPool as Pool
 
 # configuration
 dim = 3
