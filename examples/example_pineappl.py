@@ -4,9 +4,11 @@ import time
 import numpy as np
 import tensorflow as tf
 tf.config.run_functions_eagerly(True)
-from vegasflow.vflow import vegas_wrapper
+from vegasflow.vflow import vegas_wrapper, VegasFlow
 import pineappl
 from pdfflow.pflow import mkPDF
+from functools import partial
+from multiprocessing import Pool
 
 
 # configuration
@@ -17,7 +19,6 @@ n_iter = 3
 # Constants in GeV^2 pbarn
 hbarc2 = tf.constant(389379372.1, dtype=DTYPE)
 alpha0 = tf.constant(1.0 / 137.03599911, dtype=DTYPE)
-grid = None
 
 
 @tf.function
@@ -56,13 +57,12 @@ def hadronic_pspgen(xarr, mmin, mmax):
     return s, t, u, x1, x2, jacobian
 
 
-def fill(x1, x2, q2, yll, weight):
-    global grid
+def fill(grid, x1, x2, q2, yll, weight):
     for ix1, ix2, iyll, iw in zip(x1, x2, yll, weight):
         grid.fill(ix1, ix2, q2, 0, np.abs(iyll), 0, iw)
+pool = Pool(processes=1)
 
 
-@tf.function
 def fill_grid(xarr, n_dim=None, **kwargs):
     s, t, u, x1, x2, jacobian = hadronic_pspgen(xarr, 10.0, 7000.0)
 
@@ -83,7 +83,8 @@ def fill_grid(xarr, n_dim=None, **kwargs):
     weight = jacobian * int_photo(s, u, t)
     q2 = 90.0 * 90.0
 
-    fill(x1, x2, q2, yll, weight)
+    #fill(kwargs['grid'], x1, x2, q2, yll, weight)
+    pool.apply_async(fill, [kwargs['grid'], x1, x2, q2, yll, weight]).get()
     return weight
 
 
@@ -105,7 +106,10 @@ if __name__ == "__main__":
     print('Generating events, please wait...')
 
     print(f"VEGAS MC, ncalls={ncalls}:")
-    r = vegas_wrapper(fill_grid, dim, n_iter, ncalls, compilable=True)
+    mc_instance = VegasFlow(dim, ncalls)
+    mc_instance.compile(partial(fill_grid, grid=grid))
+    mc_instance.run_integration(n_iter)
+
     end = time.time()
     print(f"Vegas took: time (s): {end-start}")
 
