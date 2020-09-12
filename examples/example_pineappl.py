@@ -4,11 +4,12 @@ import time
 import numpy as np
 import tensorflow as tf
 tf.config.run_functions_eagerly(True)
-from vegasflow.vflow import vegas_wrapper, VegasFlow
+from vegasflow.vflow import VegasFlow
 import pineappl
 from pdfflow.pflow import mkPDF
 from functools import partial
 from multiprocessing.pool import ThreadPool as Pool
+
 
 # configuration
 dim = 3
@@ -59,7 +60,6 @@ def hadronic_pspgen(xarr, mmin, mmax):
 def fill(grid, x1, x2, q2, yll, weight):
     for ix1, ix2, iyll, iw in zip(x1, x2, yll, weight):
         grid.fill(ix1, ix2, q2, 0, np.abs(iyll), 0, iw)
-pool = Pool(processes=1)
 
 
 def fill_grid(xarr, n_dim=None, **kwargs):
@@ -82,8 +82,7 @@ def fill_grid(xarr, n_dim=None, **kwargs):
     weight = jacobian * int_photo(s, u, t)
     q2 = 90.0 * 90.0
 
-    #fill(kwargs['grid'], x1, x2, q2, yll, weight)
-    pool.apply_async(fill, [kwargs['grid'], x1, x2, q2, yll, weight]).get()
+    pool.apply_async(fill, [kwargs['grid'], x1, x2, q2, yll, weight])#.get()
     return weight
 
 
@@ -100,13 +99,14 @@ if __name__ == "__main__":
     bins = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2,
             1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4]
     grid = pineappl.grid(lumi, orders, bins)
+    pool = Pool(processes=1)
 
     # fill the grid with phase-space points
     print('Generating events, please wait...')
 
     print(f"VEGAS MC, ncalls={ncalls}:")
     mc_instance = VegasFlow(dim, ncalls)
-    mc_instance.compile(partial(fill_grid, grid=grid))
+    mc_instance.compile(partial(fill_grid, grid=grid, pool=pool))
     mc_instance.run_integration(n_iter)
 
     end = time.time()
