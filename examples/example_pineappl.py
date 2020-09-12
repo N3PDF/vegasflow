@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 from vegasflow.configflow import DTYPE, DTYPEINT
 import time
-import lhapdf
 import numpy as np
 import tensorflow as tf
 tf.config.run_functions_eagerly(True)
 from vegasflow.vflow import vegas_wrapper
 import pineappl
+from pdfflow.pflow import mkPDF
 
 
 # configuration
@@ -116,13 +116,13 @@ if __name__ == "__main__":
 
     # check convolution
     # load pdf for testing
-    pdf = lhapdf.mkPDF('NNPDF31_nlo_as_0118_luxqed', 0)
+    pdf = mkPDF('NNPDF31_nlo_as_0118_luxqed/0')
 
     def xfx(id, x, q2, p):
-        return pdf.xfxQ2(id, x, q2)
+        return pdf.py_xfxQ2([id], [x], [q2])
 
     def alphas(q2, p):
-        return pdf.alphasQ2(q2)
+        return pdf.py_alphasQ2([q2])
 
     # perform convolution
     dxsec = grid.convolute(xfx, xfx, alphas, None, None, 1.0, 1.0)
