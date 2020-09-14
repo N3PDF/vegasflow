@@ -305,7 +305,10 @@ class VegasFlow(MonteCarloFlow):
 
         # Now compute the integrand
         xjac = self.xjac * w
-        tmp = xjac * integrand(x, n_dim=self.n_dim, weight=xjac)
+        if self.simplify_signature:
+            tmp = xjac * integrand(x)
+        else:
+            tmp = xjac * integrand(x, n_dim=self.n_dim, weight=xjac)
         tmp2 = tf.square(tmp)
 
         # Compute the final result for this step
