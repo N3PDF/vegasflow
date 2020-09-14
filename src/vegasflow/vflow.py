@@ -5,11 +5,12 @@
     The main interfaces of this class are the class `VegasFlow` and the
     `vegas_wrapper`
 """
+from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me, ione, int_me
 import json
 import numpy as np
 import tensorflow as tf
 
-from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me, ione
+from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me, ione, int_me
 from vegasflow.configflow import BINS_MAX, ALPHA
 from vegasflow.monte_carlo import MonteCarloFlow, wrapper
 from vegasflow.utils import consume_array_into_indices
@@ -316,7 +317,7 @@ class VegasFlow(MonteCarloFlow):
             # If the training is active, save the result of the integral sq
             for j in range(self.n_dim):
                 arr_res2.append(
-                    consume_array_into_indices(tmp2, ind[:, j : j + 1], self.grid_bins - 1)
+                    consume_array_into_indices(tmp2, ind[:, j : j + 1], int_me(self.grid_bins - 1))
                 )
             arr_res2 = tf.reshape(arr_res2, (self.n_dim, -1))
 

@@ -2,11 +2,13 @@
     This module contains tensorflow_compiled utilities
 """
 
+from vegasflow.configflow import DTYPEINT, DTYPE, float_me, int_me, fzero
 import tensorflow as tf
-from vegasflow.configflow import DTYPEINT, fzero
 
 
-@tf.function
+@tf.function(input_signature=[tf.TensorSpec(shape=[None], dtype=DTYPE),
+    tf.TensorSpec(shape=[None, None], dtype=DTYPEINT),
+    tf.TensorSpec(shape=[], dtype=DTYPEINT)]) 
 def consume_array_into_indices(input_arr, indices, result_size):
     """
     Accumulate the input tensor `input_arr` into an output tensor of
@@ -35,3 +37,10 @@ def consume_array_into_indices(input_arr, indices, result_size):
     res_tmp = tf.where(eq, input_arr, fzero)
     final_result = tf.reduce_sum(res_tmp, axis=1)
     return final_result
+
+def py_consume_array_into_indices(input_arr, indices, result_size):
+    """
+    Python interface wrapper for ``consume_array_into_indices``.
+    It casts the possible python-object input into the correct tensorflow types.
+    """
+    return consume_array_into_indices(float_me(input_arr), int_me(indices), int_me(result_size))
