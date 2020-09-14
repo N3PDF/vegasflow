@@ -52,8 +52,23 @@ if bad_log_warning is not None:
     logger.warning(f"Setting log level to its default value: {DEFAULT_LOG_LEVEL}")
 
 # Define the tensorflow number types
-DTYPE = tf.float64
-DTYPEINT = tf.int32
+_float_env = os.environ.get("VEGASFLOW_FLOAT", "64")
+_int_env = os.environ.get("VEGASFLOW_INT", "32")
+
+if _float_env == "64":
+    DTYPE = tf.float64
+elif _float_env == "32":
+    DTYPE = tf.float32
+else:
+    logger.warning(f"VEGASFLOW_FLOAT={_float_env} not understood, defaulting to 64 bits")
+
+if _int_env == "64":
+    DTYPEINT = tf.int64
+elif _int_env == "32":
+    DTYPEINT = tf.int32
+else:
+    logger.warning(f"VEGASFLOW_INT={_int_env} not understood, defaulting to 64 bits")
+
 FMAX = tf.constant(np.finfo(np.float64).max, dtype=DTYPE)
 
 # The wrappers below transform tensors and array to the correct type

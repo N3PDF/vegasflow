@@ -91,6 +91,8 @@ the `nvidia official documentation <https://docs.nvidia.com/deeplearning/framewo
 
 - ``TF_CPP_MIN_LOG_LEVEL``: controls the ``TensorFlow`` logging level. It is set to 1 by default so that only errors are printed.
 - ``VEGASFLOW_LOG_LEVEL``: controls the ``VegasFlow`` logging level. Set to 3 by default so that everything is printed.
+- ``VEGASFLOW_FLOAT``: controls the ``VegasFlow`` float precision. Default is 64 for 64-bits. Accepts: 64, 32.
+- ``VEGASFLOW_INT``: controls the ``VegasFlow`` integer precision. Default is 32 for 32-bits. Accepts: 64, 32.
 
 
 Choosing integration device
