@@ -151,7 +151,3 @@ The example includes a `makefile <https://github.com/N3PDF/vegasflow/blob/master
 
 Note that in order to run the code in both GPUs and CPU you will need to provide
 a GPU and CPU capable kernels.
-
-
-
-

@@ -18,13 +18,15 @@ Prototyping in ``VegasFlow`` is easy, the best results are obtained when the
 integrands are written using TensorFlow primitives.
 Below we show one example where we create a TF constant (using ``tf.constant``) and then we use the sum and power functions.
 
+.. note:: If ``vegasflow`` is imported before ``tensorflow`` it will take control of the logging.
+
 .. code-block:: python
 
+    from vegasflow import VegasFlow, float_me
     import tensorflow as tf
 
-    @tf.function
-    def example_integrand(xarr, n_dim=None):
-        c = tf.constant(0.1, dtype=tf.float64)
+    def example_integrand(xarr, n_dim=None, weight=None):
+        c = float_me(0.1)
         s = tf.reduce_sum(xarr)
         result = tf.pow(c/s)
         return result
@@ -44,6 +46,44 @@ We also provide a convenience wrapper ``vegas_wrapper`` that allows to run the w
 .. code-block:: python
 
     result = vegas_wrapper(example_integrand, dimensions, n_iter, ncalls)
+
+.. note:: ``float_me`` is a wrapper around ``tf.cast`` to ensure that all input to the tensorflow function have consistent types, see :ref:`environ-label`.
+
+
+Improving results by simplifying the integrand
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In the above example the integrand receives the keyword arguments `n_dim` and `xjac`.
+Although these are useful for instance for filling histograms or dimensional-dependent integrands,
+these extra argument can harm the performance of the integration when they are not being used.
+
+It is possible to instantiate ``VegasFlow`` algorithms with ``simplify_signature``.
+In this case the integrand will only receive the array of random numbers and, in exchange for this
+loss of flexibility, the function will be retraced less often.
+For more details in what function retracing entails we direct to the `TensorFlow documentation <https://www.tensorflow.org/api_docs/python/tf/function>`_.
+
+.. code-block:: python
+
+    from vegasflow import VegasFlow, float_me
+    import tensorflow as tf
+
+    def example_integrand(xarr):
+        c = float_me(0.1)
+        s = tf.reduce_sum(xarr)
+        result = tf.pow(c/s)
+        return result
+
+    dimensions = 3
+    ncalls = int(1e7)
+    # Create an instance of the VegasFlow class
+    vegas_instance = VegasFlow(dimensions, ncalls, simplify_signature = True)
+    # Compile the function to be integrated
+    vegas_instance.compile(example_integrand)
+    # Compute the result after a number of iterations
+    n_iter = 5
+    result = vegas_instance.run_integration(n_iter)
+
+
 
 Global configuration
 ====================
@@ -78,6 +118,9 @@ possible to control the behaviour through the environment variable ``VEGASFLOW_L
 
 will suppress all logger information other than ``WARNING`` and ``ERROR``.
 
+
+
+.. _environ-label:
 
 Environment
 -----------
