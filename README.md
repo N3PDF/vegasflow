@@ -24,23 +24,23 @@ Some of the key features of VegasFlow are:
 ## Installation
 
 The package can be installed with pip:
-```
+```bash
 python3 -m pip install vegasflow
 ```
 
 as well as `conda`, from the `conda-forge` channel:
-```
+```bash
 conda install vegasflow -c conda-forge
 ```
 
 If you prefer a manual installation you can clone the repository and run:
-```
+```bash
 git clone https://github.com/N3PDF/vegasflow.git
 cd vegasflow
 python setup.py install
 ```
 or if you are planning to extend or develop the code just use:
-```
+```bash
 python setup.py develop
 ```
 
@@ -49,9 +49,9 @@ python setup.py develop
 There are some examples in the `examples/` folder.
 
 ## Minimum Working Example
-```
+```python
+from vegasflow import vegas_wrapper
 import tensorflow as tf
-from vegasflow.vflow import vegas_wrapper
 
 def integrand(x, **kwargs):
     """ Function:
