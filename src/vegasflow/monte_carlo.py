@@ -94,6 +94,7 @@ class MonteCarloFlow(ABC):
             Note: for a better performance, when n_events is greater than the event limit,
             `n_events` should be exactly divisible by `events_limit`
         `list_devices`: list of device type to use (use `None` to do the tensorflow default)
+        `simplify_signature`: if true only the array of random numbers will be passed to the integrand
     """
 
     def __init__(
@@ -103,12 +104,14 @@ class MonteCarloFlow(ABC):
         events_limit=MAX_EVENTS_LIMIT,
         list_devices=DEFAULT_ACTIVE_DEVICES,
         verbose=True,
+        simplify_signature=False,
     ):
         # Save some parameters
         self.n_dim = n_dim
         self.xjac = 1.0 / n_events
         self.integrand = None
         self.event = None
+        self.simplify_signature = simplify_signature
         self._verbose = verbose
         self._history = []
         self.n_events = n_events
@@ -284,6 +287,11 @@ class MonteCarloFlow(ABC):
 
         - `integrand(array_random, **kwargs)`.
 
+        if the integrator is instantiated with the ``simplify_signature`` argument
+        the signature will be:
+
+        - `integrand(array_random)`
+
         Parameters
         ----------
             `integrand`: the function to integrate
@@ -291,8 +299,17 @@ class MonteCarloFlow(ABC):
                 is not passed through `tf.function`
         """
         self.integrand = integrand
+        compile_options = {"experimental_autograph_options": tf.autograph.experimental.Feature.ALL}
+
         if compilable:
-            tf_integrand = tf.function(integrand)
+            if self.simplify_signature:
+                compile_options["input_signature"] = [tf.TensorSpec(shape=[None, self.n_dim], dtype=DTYPE)]
+            # Don't override user own compilation
+            try:
+                integrand.function_spec
+                tf_integrand = integrand
+            except AttributeError:
+                tf_integrand = tf.function(integrand, **compile_options)
         else:
             tf_integrand = integrand
 

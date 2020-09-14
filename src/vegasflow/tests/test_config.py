@@ -30,6 +30,9 @@ def test_float_env():
     from vegasflow.configflow import DTYPE
 
     assert DTYPE.as_numpy_dtype == np.float64
+    # Reset to default
+    os.environ["VEGASFLOW_FLOAT"] = "64"
+    importlib.reload(vegasflow.configflow)
 
 
 def test_int_env():
@@ -43,3 +46,6 @@ def test_int_env():
     from vegasflow.configflow import DTYPEINT
 
     assert DTYPEINT.as_numpy_dtype == np.int64
+    # Reset to default
+    os.environ["VEGASFLOW_INT"] = "32"
+    importlib.reload(vegasflow.configflow)
