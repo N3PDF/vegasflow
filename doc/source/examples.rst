@@ -24,13 +24,12 @@ integrand.
 
 .. code-block:: python
 
+    from VegasFlow import vegas_wrapper
     import tensorflow as tf
 
     @tf.function
     def my_integrand(xarr, **kwargs):
       return tf.reduce_sum(xarr, axis=1)
-      
-    from VegasFlow.vflow import vegas_wrapper
 
     n_dim = 10
     n_events = int(1e6)
@@ -50,13 +49,11 @@ In this case, however, it is necessary to activate ``eager-mode``, see :ref:`eag
 .. code-block:: python
 
     import numpy as np
-    import tensorflow as tf
-    tf.config.run_functions_eagerly(True)
-    
+    from VegasFlow import vegas_wrapper, run_eager
+    run_eager()
+
     def my_integrand(xarr, **kwargs):
       return np.sum(xarr)
-      
-    from VegasFlow.vflow import vegas_wrapper
 
     n_dim = 10
     n_events = int(1e6)
@@ -97,7 +94,7 @@ by using the CFFI library as you can see in `this <https://github.com/N3PDF/vega
 
     from vegasflow.configflow import DTYPE
     import numpy as np
-    from vegasflow.vflow import vegas_wrapper
+    from vegasflow import vegas_wrapper
 
     from cffi import FFI
     ffibuilder = FFI()
