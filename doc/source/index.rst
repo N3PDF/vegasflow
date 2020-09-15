@@ -80,10 +80,20 @@ Bibtex:
 FAQ
 ===
 
-Why the name ``vegasflow``?
+Why the name ``VegasFlow``?
 ---------------------------
 
 It is a combination of the names `Vegas` and `Tensorflow`.
+
+- *Vegas*: this integration algorithm, created originally by `G.P. Lepage <https://www.sciencedirect.com/science/article/pii/S001046559900209X>`_
+sits at the core of many of the most advanced calculations in High Energy Physics,
+it powers `Madgraph <https://cp3.irmp.ucl.ac.be/projects/madgraph/>_`, `MCFM <https://mcfm.fnal.gov/>`_
+or `Sherpa <https://sherpa.hepforge.org/doc/SHERPA-MC-2.2.8.html#VEGAS>`_ among others.
+Lepage's own implementation is available in `github <https://github.com/gplepage/vegas>`_.
+
+- *Tensorflow*: a powerful and flexible framework for Machine Learning developed by Google.
+It provides algebraical tools and automatic hardware acceleration which makes it suitable for
+acceleration of complicated calculations.
 
 
 
