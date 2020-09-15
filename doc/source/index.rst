@@ -35,9 +35,6 @@ Indeed, while at the theoretical level these are some of the most complicated ca
 With VegasFlow we aim to fill this gap between theoretical calculations and technical performance by providing a framework which can automatically make the best of the machine in which it runs.
 To that end VegasFlow is based on two technologies that together will enable a new age of research.
 
-    - `TensorFlow <https://www.tensorflow.org/>`_: the framework developed by Google and made public in November of 2015 is a perfect combination between performance and usability. With a focus on Deep Learning, TensorFlow provides an algebra library able to easily run operations in many different devices: CPUs, GPUs, TPUs with little input by the developer. Write your code once.
-
-
 
 How to cite ``vegaflow``?
 =========================
@@ -85,17 +82,20 @@ Why the name ``VegasFlow``?
 
 It is a combination of the names `Vegas` and `Tensorflow`.
 
-- *Vegas*: this integration algorithm, created originally by `G.P. Lepage <https://www.sciencedirect.com/science/article/pii/S001046559900209X>`_
+- **Vegas**: this integration algorithm, created originally by `G.P. Lepage <https://www.sciencedirect.com/science/article/pii/S001046559900209X>`_
 sits at the core of many of the most advanced calculations in High Energy Physics,
 it powers `Madgraph <https://cp3.irmp.ucl.ac.be/projects/madgraph/>_`, `MCFM <https://mcfm.fnal.gov/>`_
 or `Sherpa <https://sherpa.hepforge.org/doc/SHERPA-MC-2.2.8.html#VEGAS>`_ among others.
 Lepage's own implementation is available in `github <https://github.com/gplepage/vegas>`_.
 
-- *Tensorflow*: a powerful and flexible framework for Machine Learning developed by Google.
-It provides algebraical tools and automatic hardware acceleration which makes it suitable for
-acceleration of complicated calculations.
+- **TensorFlow**: the `tensorflow <https://www.tensorflow.org/>`_ is developed by Google and was made public in November of 2015.
+It is a perfect combination between performance and usability. With a focus on Deep Learning, TensorFlow provides an algebra library able to easily run operations in many different devices: CPUs, GPUs, TPUs with little input by the developer.
 
-
+I have a problem I can't solve
+------------------------------
+Please, `open an issue <https://github.com/N3PDF/vegasflow/issues/new?assignees=&labels=bug&template=bug_report.md&title=>`_ in the github repository
+or `check <https://github.com/N3PDF/vegasflow/issues>`_ whether someone has already asked the same question.
+We will be happy to help.
 
 
 Indices and tables

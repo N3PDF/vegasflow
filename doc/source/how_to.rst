@@ -1,8 +1,8 @@
 .. _howto-label:
 
-==========
-How to use
-==========
+=====
+Usage
+=====
 
 ``vegasflow`` is a python library that provides a number of functions to perform Monte Carlo integration of some functions.
 
@@ -11,44 +11,123 @@ How to use
    :depth: 1
 
 
-A first VegasFlow integration
-=============================
+Integrating with VegasFlow
+==========================
 
-Prototyping in ``VegasFlow`` is easy, the best results are obtained when the
-integrands are written using TensorFlow primitives.
-Below we show one example where we create a TF constant (using ``tf.constant``) and then we use the sum and power functions.
+Basic usage
+^^^^^^^^^^^
 
-.. note:: If ``vegasflow`` is imported before ``tensorflow`` it will take control of the logging.
+Integrating a function with ``VegasFlow`` is done in three basic steps:
+
+1. **Instating an integrator**: At the time of instantiation it is necessary to provide
+   a number of dimensions and a number of calls per iteration.
+   The reason for giving this information beforehand is to allow for optimization.
 
 .. code-block:: python
 
-    from vegasflow import VegasFlow, float_me
+    from vegasflow import VegasFlow
+    dims = 3
+    n_calls = int(1e7)
+    vegas_instance = VegasFlow(dims, n_calls)
+
+2. **Compiling the integrand**: The integrand needs to be given to the integrator for compilation.
+Compilation serves a dual purposes, it first registers the integrand and then it compiles it
+using the ``tf.function`` decorator.
+
+.. code-block:: python
+
     import tensorflow as tf
-
-    def example_integrand(xarr, n_dim=None, weight=None):
-        c = float_me(0.1)
-        s = tf.reduce_sum(xarr)
-        result = tf.pow(c/s)
-        return result
-
-    dimensions = 3
-    ncalls = int(1e7)
-    # Create an instance of the VegasFlow class
-    vegas_instance = VegasFlow(dimensions, ncalls)
-    # Compile the function to be integrated
+    def example_integrand(xarr, n_dim=none, weight=none):
+      s = tf.reduce_sum(xarr, axis=1)
+      result = tf.pow(0.1/s, 2)
+      return result
     vegas_instance.compile(example_integrand)
-    # Compute the result after a number of iterations
-    n_iter = 5
-    result = vegas_instance.run_integration(n_iter)
 
-We also provide a convenience wrapper ``vegas_wrapper`` that allows to run the whole thing in one go.
+3. **Running the integration**: Once everything is in place, we just need to inform the integrator of the number of
+   iterations we want.
 
 .. code-block:: python
 
-    result = vegas_wrapper(example_integrand, dimensions, n_iter, ncalls)
+    n_iter = 5
+    result = vegas_instance.run_integration(n_iter)Q
 
-.. note:: ``float_me`` is a wrapper around ``tf.cast`` to ensure that all input to the tensorflow function have consistent types, see :ref:`environ-label`.
 
+Constructing the integrand
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note that the ``example_integrand`` contained only ``TensorFlow`` operations.
+All ``VegasFlow`` integrands such, in principle, depend only on python primitives
+and ``TensorFlow`` operations, otherwise the code cannot be compiled and as a result it cannot
+run on GPU u other ``TensorFlow``-supported hardware accelerators.
+
+It is possible, however (and often useful when prototyping) integrate functions not
+based on ``TensorFlow``, by passing the ``compilable`` flag at compile time.
+This will spare the compilation of the integrand (while maintaining the compilation of
+the integration algorithm).
+
+.. code-block:: python
+
+    import numpy as np
+    def example_integrand(xarr, n_dim=None, weight=None):
+      s = np.pow(xarr, axis=1)
+      result = np.square(0.1/s)
+      return result
+    vegas_instance.compile(example_integrand, compilable=False)
+
+
+.. note:: Integrands must accept the keyword arguments ``n_dim`` and ``weight``, as the integrators
+   will try to pass those argument when convenient. It is however possible to construct integrands
+   that accept only the array of random number ``xarr``, see :ref:`simple-label`
+
+
+It is also possible to completely avoid compilation,
+by leveraging ``TensorFlow``'s `eager execution <https://www.tensorflow.org/guide/eager>`_ as
+explained at :ref:`eager-label`.
+
+Choosing the correct types
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A common pitfall when writing ``TensorFlow``-compilable integrands is to mix different precision types.
+If a function is compiled with a 32-bit float input not only it won't work when called with a 64-bit
+float, but it will catastrophically fail.
+The types in ``VegasFlow`` can be controlled via :ref:`environ-label` but we also provide the
+``float_me`` and ``int_me`` function in order to ensure that all variables in the program have consistent
+types.
+
+These functions are wrappers around ``tf.cast`` `🔗 <https://www.tensorflow.org/api_docs/python/tf/cast>`__.
+
+.. code-block:: python
+
+    from vegasflow import float_me, int_me
+    import tensorflow as tf
+    constant = float_me(0.1)
+    def example_integrand(xarr, n_dim=None, weight=None):
+      s = tf.reduce_sum(xarr, axis=1)
+      result = tf.pow(constant/s, 2)
+      return result
+    vegas_instance.compile(example_integrand)
+
+
+
+Integration wrappers
+^^^^^^^^^^^^^^^^^^^^
+
+Although manually instantiating the integrator allows for a better fine-grained control
+of the integration, it is also possible to use wrappers which automatically do most of the work
+behind the scenes.
+
+.. code-block:: python
+
+   from vegasflow import vegas_wrapper
+   result = vegas_wrapper(example_integrand, dims, n_iter, n_calls, compilable=False)
+
+
+The full list of integration algorithms and wrappers can be consulted at: :ref:`intalg-label`.
+
+
+Tips and Tricks
+===============
+
+.. _simple-label:
 
 Improving results by simplifying the integrand
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -74,22 +153,17 @@ For more details in what function retracing entails we direct to the `TensorFlow
         return result
 
     dimensions = 3
-    ncalls = int(1e7)
+    n_calls = int(1e7)
     # Create an instance of the VegasFlow class
-    vegas_instance = VegasFlow(dimensions, ncalls, simplify_signature = True)
+    vegas_instance = VegasFlow(dimensions, n_calls, simplify_signature = True)
     # Compile the function to be integrated
     vegas_instance.compile(example_integrand)
     # Compute the result after a number of iterations
     n_iter = 5
     result = vegas_instance.run_integration(n_iter)
 
-
-
-Global configuration
-====================
-
 Verbosity
----------
+^^^^^^^^^
 
 ``VegasFlow`` uses the internal logging capabilities of python by
 creating a new logger handled named ``vegasflow``.
@@ -123,7 +197,7 @@ will suppress all logger information other than ``WARNING`` and ``ERROR``.
 .. _environ-label:
 
 Environment
------------
+^^^^^^^^^^^
 
 ``VegasFlow`` is based on ``TensorFlow`` and as such all environment variable that
 have an effect on ``TensorFlow``s behavior will also have an effect on ``VegasFlow``.
@@ -139,7 +213,7 @@ the `nvidia official documentation <https://docs.nvidia.com/deeplearning/framewo
 
 
 Choosing integration device
----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``CUDA_VISIBLE_DEVICES`` environment variable will tell Tensorflow
 (and thus VegasFlow) in which device it should run.
@@ -154,7 +228,7 @@ right device, e.g., ``export CUDA_VISIBLE_DEVICES=0``.
 .. _eager-label:
 
 Eager Vs Graph-mode
--------------------
+^^^^^^^^^^^^^^^^^^^
 
 When performing computational expensive tasks Tensorflow's graph mode is preferred.
 When compiling you will notice the first iteration of the integration takes a bit longer, this is normal
@@ -162,10 +236,19 @@ and it's due to the creation of the graph.
 Subsequent iterations will be faster.
 
 Graph-mode however is not debugger friendly as the code is read only once, when compiling the graph.
-You can however enable Tensorflow's `eager execution <https://www.tensorflow.org/guide/eager>`_.
+You can however enable ``Tensorflow``'s `eager execution <https://www.tensorflow.org/guide/eager>`_.
 With eager mode the code is run sequentially as you would expect with normal python code,
-this will allow you to throw in instances of ``pdb.set_trace()``.
-In order to enable eager mode include these lines at the top of your program:
+this will allow you for instance throw in instances of ``pdb.set_trace()``.
+In order to use eager execution we provide the ``run_eager`` wrapper.
+
+.. code-block:: python
+
+   from vegasflow import run_eager
+   run_eager() # Enable eager-mode
+   run_eager(False) # Disable
+
+
+This is a wrapper around the following lines of code:
 
 .. code-block:: python
 
@@ -201,9 +284,8 @@ This is a crucial step (and the only fixed step) as this tensor will be accumula
 .. code-block:: python
 
     from vegasflow.utils import consume_array_into_indices
-    fzero = tf.constant(0.0, dtype=tf.float64)
-    fone = tf.constant(1.0, dtype=tf.float64)
-    HISTO_BINS = 2
+    from vegasflow.configflow import fzero, fone, int_me, DTYPE
+    HISTO_BINS = int_me(2)
 
     cumulator_tensor = tf.Variable(tf.zeros(HISTO_BINS, dtype=DTYPE))
 
