@@ -67,7 +67,7 @@ You can modify the behavior of the logger as with any sane python library with t
   logger_vegasflow = logging.getLogger('vegasflow')
   logger_vegasflow.setLevel(log_dict["0"])
   
-Where the where the log level can be any level defined in the ``log_dict`` dictionary.
+Where the log level can be any level defined in the ``log_dict`` dictionary.
 
 Since ``VegasFlow`` is to be interfaced with non-python code it is also
 possible to control the behaviour through the environment variable ``VEGASFLOW_LOG_LEVEL``, in that case any of the keys in ``log_dict`` can be used. For instance:
