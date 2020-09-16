@@ -46,7 +46,6 @@ def generate_condition_function(n_mask, condition='and'):
 
     Note that for 2 masks you can directly use & and |
 
-
     >>> from vegasflow.utils import generate_condition_function
     >>> import tensorflow as tf
     >>> f_cond = generate_condition_function(2, condition='or')
@@ -55,7 +54,9 @@ def generate_condition_function(n_mask, condition='and'):
     >>> full_mask, indices = f_cond(t_1, t_2)
     >>> print(f"{full_mask=}\n{indices=}")
     full_mask=<tf.Tensor: shape=(3,), dtype=bool, numpy=array([ True, False,  True])>
-    indices=<tf.Tensor: shape=(2,), dtype=int32, numpy=array([0, 2], dtype=int32)>
+    indices=<tf.Tensor: shape=(2, 1), dtype=int32, numpy=
+    array([[0],
+        [2]], dtype=int32)>
     >>> f_cond = generate_condition_function(3, condition=['or', 'and'])
     >>> t_1 = tf.constant([True, False, True])
     >>> t_2 = tf.constant([False, False, True])
@@ -63,7 +64,8 @@ def generate_condition_function(n_mask, condition='and'):
     >>> full_mask, indices = f_cond(t_1, t_2, t_3)
     >>> print(f"{full_mask=}\n{indices=}")
     full_mask=<tf.Tensor: shape=(3,), dtype=bool, numpy=array([ True, False, False])>
-    indices=<tf.Tensor: shape=(), dtype=int32, numpy=0>
+    indices=<tf.Tensor: shape=(1, 1), dtype=int32, numpy=array([[0]], dtype=int32)>
+
     
 
     Parameters
@@ -118,7 +120,7 @@ def generate_condition_function(n_mask, condition='and'):
             res = tf.math.reduce_all(masks, axis=0)
         elif condition == 'or':
             res = tf.math.reduce_any(masks, axis=0)
-        indices = int_me(tf.squeeze(tf.where(res)))
+        indices = int_me(tf.where(res))
         return res, indices
 
     signature = n_mask*[tf.TensorSpec(shape=[None], dtype=tf.bool)]

@@ -31,7 +31,9 @@ def test_consume_array_into_indices():
 
 def util_check(np_mask, tf_mask, tf_ind):
     np.testing.assert_array_equal(np_mask, tf_mask)
-    np.testing.assert_array_equal(np_mask.nonzero()[0], tf_ind)
+    # Numpy returns things the other way around
+    np_indices = np.array(np_mask.nonzero()).T
+    np.testing.assert_array_equal(np_indices, tf_ind)
 
 def test_generate_condition_function():
     """ Tests generate_condition_function and its errors """
