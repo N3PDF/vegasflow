@@ -26,6 +26,7 @@ Integrating a function with ``VegasFlow`` is done in three basic steps:
 .. code-block:: python
 
     from vegasflow import VegasFlow
+    
     dims = 3
     n_calls = int(1e7)
     vegas_instance = VegasFlow(dims, n_calls)
@@ -37,10 +38,12 @@ using the ``tf.function`` decorator.
 .. code-block:: python
 
     import tensorflow as tf
+    
     def example_integrand(xarr, n_dim=none, weight=none):
       s = tf.reduce_sum(xarr, axis=1)
       result = tf.pow(0.1/s, 2)
       return result
+      
     vegas_instance.compile(example_integrand)
 
 3. **Running the integration**: Once everything is in place, we just need to inform the integrator of the number of
@@ -67,10 +70,12 @@ the integration algorithm).
 .. code-block:: python
 
     import numpy as np
+    
     def example_integrand(xarr, n_dim=None, weight=None):
       s = np.pow(xarr, axis=1)
       result = np.square(0.1/s)
       return result
+      
     vegas_instance.compile(example_integrand, compilable=False)
 
 
@@ -99,11 +104,14 @@ These functions are wrappers around ``tf.cast`` `🔗 <https://www.tensorflow.or
 
     from vegasflow import float_me, int_me
     import tensorflow as tf
+    
     constant = float_me(0.1)
+    
     def example_integrand(xarr, n_dim=None, weight=None):
       s = tf.reduce_sum(xarr, axis=1)
       result = tf.pow(constant/s, 2)
       return result
+      
     vegas_instance.compile(example_integrand)
 
 
@@ -118,6 +126,7 @@ behind the scenes.
 .. code-block:: python
 
    from vegasflow import vegas_wrapper
+   
    result = vegas_wrapper(example_integrand, dims, n_iter, n_calls, compilable=False)
 
 
@@ -172,6 +181,7 @@ You can modify the behavior of the logger as with any sane python library with t
 .. code-block:: python
 
   import logging
+  
   log_dict = {
         "0" : logging.ERROR,
         "1" : logging.WARNING,
@@ -244,6 +254,7 @@ In order to use eager execution we provide the ``run_eager`` wrapper.
 .. code-block:: python
 
    from vegasflow import run_eager
+   
    run_eager() # Enable eager-mode
    run_eager(False) # Disable
 
@@ -285,8 +296,8 @@ This is a crucial step (and the only fixed step) as this tensor will be accumula
 
     from vegasflow.utils import consume_array_into_indices
     from vegasflow.configflow import fzero, fone, int_me, DTYPE
+    
     HISTO_BINS = int_me(2)
-
     cumulator_tensor = tf.Variable(tf.zeros(HISTO_BINS, dtype=DTYPE))
 
     @tf.function
@@ -329,3 +340,67 @@ Note that here we are only filling one histograms and so the histogram tuple con
 
 
 We ship an example of an integrand which generates histograms in the github repository: `here <https://github.com/N3PDF/vegasflow/blob/master/examples/histogram_ex.py>`_.
+
+Generate conditions
+===================
+
+A very common case when integrating using Monte Carlo method is to add non trivial cuts to the
+integration space.
+It is not obvious how to implement cuts in a consistent manner in GPU or using ``TensorFlow``
+routines when we have to combine several conditions.
+We provide the ``generate_condition_function``  auxiliary function which generates
+a ``TensorFlow``-compiled function for the necessary number of conditions.
+
+For instance, let's take the case of a parton collision simulation, in which
+we want to constraint the phase space of the two final state particles to the region
+in which the two particles have a transverse momentum above 15 GeV or any of them
+a rapidity below 4.
+
+We first generate the condition we want to apply using ``generate_condition_function``.
+
+.. code-block:: python
+
+    from vegasflow.utils import generate_condition_function
+    
+    f_cond = generate_condition_function(3, condition = ['and', 'or'])
+
+
+Now we can use the ``f_cond`` function in our integrand.
+This ``f_cond`` function accepts three arguments and returns a mask of all of them
+and the ``True`` indices.
+
+.. code-block:: python
+
+    import tensorflow as tf
+    from vegasflow import vegas_wrapper
+    
+    def two_particle(xarr, **kwargs):
+        # Complicated calculation of phase space
+        pt_jet_1 = xarr[:,0]*100 + 5
+        pt_jet_2 = xarr[:,1]*100 + 5
+        rapidity = xarr[:,2]*50
+        # Generate the conditions
+        c_1 = pt_jet_1 > 15
+        c_2 = pt_jet_2 > 15
+        c_3 = rapidity < 4
+        mask, idx = f_cond(c_1, c_2, c_3)
+        # Now we can mask away the unwanted results
+        good_vals = tf.boolean_mask(xarr[:,3], mask, axis=0)
+        # Perform very complicated calculation
+        result = tf.square(good_vals)
+        # Return a sparse tensor so that only the actual results have a value
+        ret = tf.scatter_nd(idx, result, shape=c_1.shape)
+        return ret
+      
+    result = vegas_wrapper(two_particle, 4, 3, 100, compilable=False)
+    
+Note that we use the mask to remove the values that are not part of the phase space.
+If the phase space to be integrated is much smaller than the integration region,
+removing unwanted values can have a huge impact in the calculation from the
+point of view of speed and memory, so we recommend removing them instead of just
+zeroing them.
+
+The resulting array, however, must have one value per event, so before returning
+back the array to ``VegasFlow`` we use ``tf.scatter_nd`` to create a sparse tensor
+where all values are set to 0 except the indices defined in ``idx`` that
+have the values defined by ``result``.
