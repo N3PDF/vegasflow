@@ -1,10 +1,11 @@
 #!/usr/bin/env python
-from vegasflow.configflow import DTYPE, DTYPEINT
+from vegasflow.configflow import DTYPE
 import time
 import numpy as np
 import tensorflow as tf
 tf.config.run_functions_eagerly(True)
 from vegasflow.vflow import VegasFlow
+from vegasflow.utils import generate_condition_function
 import pineappl
 from pdfflow.pflow import mkPDF
 from functools import partial
@@ -13,12 +14,13 @@ from multiprocessing.pool import ThreadPool as Pool
 
 # configuration
 dim = 3
-ncalls = np.int32(10000)
+ncalls = np.int32(100000)
 n_iter = 3
 
 # Constants in GeV^2 pbarn
 hbarc2 = tf.constant(389379372.1, dtype=DTYPE)
 alpha0 = tf.constant(1.0 / 137.03599911, dtype=DTYPE)
+cuts = generate_condition_function(6, condition='and')
 
 
 @tf.function
@@ -73,17 +75,23 @@ def fill_grid(xarr, n_dim=None, **kwargs):
 
     jacobian *= hbarc2 / ncalls
 
-    # cuts for LO for the invariant-mass slice containing the
-    # Z-peak from CMSDY2D11
-    #if ptl < 14.0 or np.abs(yll) > 2.4 or ylp > 2.4 \
-    #    or ylm > 2.4 or mll < 60.0 or mll > 120.0:
-    #    continue
+    # apply cuts
+    t_1 = ptl >= 14.0
+    t_2 = tf.abs(yll) <= 2.4
+    t_3 = ylp <= 2.3
+    t_4 = ylm <= 2.4
+    t_5 = mll >= 60.0
+    t_6 = mll <= 120.0
+    full_mask, indices = cuts(t_1, t_2, t_3, t_4, t_5, t_6)
 
-    weight = jacobian * int_photo(s, u, t)
+    weight = tf.boolean_mask(jacobian * int_photo(s, u, t), full_mask, axis=0)
+    x1 = tf.boolean_mask(x1, full_mask, axis=0)
+    x2 = tf.boolean_mask(x2, full_mask, axis=0)
+    yll = tf.boolean_mask(yll, full_mask, axis=0)
     q2 = 90.0 * 90.0
 
-    pool.apply_async(fill, [kwargs['grid'], x1, x2, q2, yll, weight])#.get()
-    return weight
+    pool.apply_async(fill, [grid, x1, x2, q2, yll, weight])
+    return tf.scatter_nd(indices, weight, shape=xarr.shape[0:1])
 
 
 if __name__ == "__main__":
