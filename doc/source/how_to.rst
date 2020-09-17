@@ -58,6 +58,8 @@ to send the jobs to.
 An example can be found in the `examples/cluster_dask.py <https://github.com/N3PDF/vegasflow/blob/master/examples/cluster_dask.py>`_ file where
 the `SLURM <https://slurm.schedmd.com/documentation.html>`_ cluster is used as an example
 
+.. note:: When the distributing capabilities of dask are being useful, ``VegasFlow`` "forfeits" control of the devices in which to run, trusting ``TensorFlow``'s defaults. To run, for instance, two GPUs in one single node while using dask the user should send two separate dask jobs, each targetting a different GPU.
+
 Global configuration
 ====================
 
