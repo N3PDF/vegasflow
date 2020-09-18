@@ -3,8 +3,6 @@
 
 [![Tests](https://github.com/N3PDF/vegasflow/workflows/pytest/badge.svg)](https://github.com/N3PDF/vegasflow/actions?query=workflow%3A%22pytest%22)
 [![Documentation Status](https://readthedocs.org/projects/vegasflow/badge/?version=latest)](https://vegasflow.readthedocs.io/en/latest/?badge=latest)
-[![Anaconda-Server Badge](https://anaconda.org/conda-forge/vegasflow/badges/installer/conda.svg)](https://anaconda.org/conda-forge/vegasflow)
-[![AUR](https://img.shields.io/aur/version/python-vegasflow)](https://aur.archlinux.org/packages/python-vegasflow/)
 
 
 # VegasFlow
@@ -24,6 +22,8 @@ Some of the key features of VegasFlow are:
 
 
 ## Installation
+[![Anaconda-Server Badge](https://anaconda.org/conda-forge/vegasflow/badges/installer/conda.svg)](https://anaconda.org/conda-forge/vegasflow)
+[![AUR](https://img.shields.io/aur/version/python-vegasflow)](https://aur.archlinux.org/packages/python-vegasflow/)
 
 The package can be installed with pip:
 ```bash
@@ -80,7 +80,7 @@ If you use the package please cite the following paper and zenodo references:
 - [https://doi.org/10.5281/zenodo.3691926](https://doi.org/10.5281/zenodo.3691926)
 - [https://arxiv.org/abs/2002.12921](https://arxiv.org/abs/2002.12921)
 
-```latex
+```bibtex
     @article{Carrazza:2020rdn,
         author = "Carrazza, Stefano and Cruz-Martinez, Juan M.",
         title = "{VegasFlow: accelerating Monte Carlo simulation across multiple hardware platforms}",
