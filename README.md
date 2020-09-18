@@ -1,6 +1,8 @@
+[![DOI](https://zenodo.org/badge/226363558.svg)](https://zenodo.org/badge/latestdoi/226363558)
+[![cpc](https://img.shields.io/badge/j.%20Computer%20Physics%20Communication-2020%2F107376-blue)](https://inspirehep.net/literature/1783000)
+
 [![Tests](https://github.com/N3PDF/vegasflow/workflows/pytest/badge.svg)](https://github.com/N3PDF/vegasflow/actions?query=workflow%3A%22pytest%22)
 [![Documentation Status](https://readthedocs.org/projects/vegasflow/badge/?version=latest)](https://vegasflow.readthedocs.io/en/latest/?badge=latest)
-[![DOI](https://zenodo.org/badge/226363558.svg)](https://zenodo.org/badge/latestdoi/226363558)
 [![Anaconda-Server Badge](https://anaconda.org/conda-forge/vegasflow/badges/installer/conda.svg)](https://anaconda.org/conda-forge/vegasflow)
 [![AUR](https://img.shields.io/aur/version/python-vegasflow)](https://aur.archlinux.org/packages/python-vegasflow/)
 
@@ -77,3 +79,32 @@ some specific example or find any problems at all with the code or the documenta
 If you use the package please cite the following paper and zenodo references:
 - [https://doi.org/10.5281/zenodo.3691926](https://doi.org/10.5281/zenodo.3691926)
 - [https://arxiv.org/abs/2002.12921](https://arxiv.org/abs/2002.12921)
+
+```latex
+    @article{Carrazza:2020rdn,
+        author = "Carrazza, Stefano and Cruz-Martinez, Juan M.",
+        title = "{VegasFlow: accelerating Monte Carlo simulation across multiple hardware platforms}",
+        eprint = "2002.12921",
+        archivePrefix = "arXiv",
+        primaryClass = "physics.comp-ph",
+        reportNumber = "TIF-UNIMI-2020-8",
+        doi = "10.1016/j.cpc.2020.107376",
+        journal = "Comput. Phys. Commun.",
+        volume = "254",
+        pages = "107376",
+        year = "2020"
+    }
+
+
+    @software{vegasflow_package,
+        author       = {Juan Cruz-Martinez and
+                        Stefano Carrazza},
+        title        = {N3PDF/vegasflow: vegasflow v1.0},
+        month        = feb,
+        year         = 2020,
+        publisher    = {Zenodo},
+        version      = {v1.0},
+        doi          = {10.5281/zenodo.3691926},
+        url          = {https://doi.org/10.5281/zenodo.3691926}
+    }
+```

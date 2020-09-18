@@ -6,6 +6,12 @@
 VegasFlow: accelerating Monte Carlo simulation across multiple hardware platforms
 =================================================================================
 
+.. image:: https://img.shields.io/badge/j.%20Computer%20Physics%20Communication-2020%2F107376-blue
+   :target: https://doi.org/10.1016/j.cpc.2020.107376
+
+.. image:: https://img.shields.io/badge/arXiv-physics.comp--ph%2F%20%20%20%202002.12921-%23B31B1B
+   :target: https://arxiv.org/abs/2002.12921
+
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3691926.svg
    :target: https://doi.org/10.5281/zenodo.3691926
 
@@ -22,6 +28,41 @@ Some of the key features of VegasFlow are:
     - Compatible with Python, C, C++ or Fortran.
     - Implementation of different Monte Carlo algorithms.
 
+How to obtain the code
+======================
+
+Open Source
+-----------
+The ``vegasflow`` package is open source and available at https://github.com/N3PDF/vegasflow
+
+Installation
+------------
+The package can be installed with pip:
+
+.. code-block:: bash
+
+  python3 -m pip install vegasflow
+
+If you prefer a manual installation just use:
+
+.. code-block:: bash
+
+  git clone https://github.com/N3PDF/vegasflow
+  cd vegasflow
+  python3 setup.py install
+
+or if you are planning to extend or develop code just use:
+
+.. code-block:: bash
+
+  python3 setup.py develop
+  
+It is also possible to install the package from repositories such as `conda-forge <https://anaconda.org/conda-forge/vegasflow>`_ or the `Arch User Repository <https://aur.archlinux.org/packages/python-vegasflow/>`_
+
+.. code-block:: bash
+
+  conda install vegasflow -c conda-forge
+  yay -S python-vegasflow
 
 Motivation
 ==========
@@ -41,7 +82,13 @@ How to cite ``vegaflow``?
 
 When using ``vegasflow`` in your research, please cite the following publications:
 
-https://arxiv.org/abs/2002.12921
+.. image:: https://img.shields.io/badge/j.%20Computer%20Physics%20Communication-2020%2F107376-blue
+   :target: https://doi.org/10.1016/j.cpc.2020.107376
+   
+
+.. image:: https://img.shields.io/badge/arXiv-physics.comp--ph%2F%20%20%20%202002.12921-%23B31B1B
+   :target: https://arxiv.org/abs/2002.12921
+
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3691926.svg
    :target: https://doi.org/10.5281/zenodo.3691926
@@ -51,17 +98,20 @@ Bibtex:
 .. code-block:: latex
 
     @article{Carrazza:2020rdn,
-       author         = "Carrazza, Stefano and Cruz-Martinez, Juan M.",
-       title          = "{VegasFlow: accelerating Monte Carlo simulation across
-                         multiple hardware platforms}",
-       year           = "2020",
-       eprint         = "2002.12921",
-       archivePrefix  = "arXiv",
-       primaryClass   = "physics.comp-ph",
-       reportNumber   = "TIF-UNIMI-2020-8",
-       SLACcitation   = "%%CITATION = ARXIV:2002.12921;%%"
+        author = "Carrazza, Stefano and Cruz-Martinez, Juan M.",
+        title = "{VegasFlow: accelerating Monte Carlo simulation across multiple hardware platforms}",
+        eprint = "2002.12921",
+        archivePrefix = "arXiv",
+        primaryClass = "physics.comp-ph",
+        reportNumber = "TIF-UNIMI-2020-8",
+        doi = "10.1016/j.cpc.2020.107376",
+        journal = "Comput. Phys. Commun.",
+        volume = "254",
+        pages = "107376",
+        year = "2020"
     }
-		
+
+
     @software{vegasflow_package,
         author       = {Juan Cruz-Martinez and
                         Stefano Carrazza},
