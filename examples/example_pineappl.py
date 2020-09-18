@@ -92,8 +92,8 @@ def fill_grid(xarr, n_dim=None, **kwargs):
     vweight = weight * tf.boolean_mask(kwargs.get('weight'), full_mask, axis=0)
 
     if kwargs.get('fill_pineappl'):
-        kwargs.get('pool').apply_async(fill, [kwargs.get('grid'), x1.numpy(), x2.numpy(), q2, yll.numpy(), vweight.numpy()])
-#         fill(kwargs.get('grid'), x1, x2, q2, yll, vweight)
+#         kwargs.get('pool').apply_async(fill, [kwargs.get('grid'), x1.numpy(), x2.numpy(), q2, yll.numpy(), vweight.numpy()])
+        fill(kwargs.get('grid'), x1.numpy(), x2.numpy(), q2, yll.numpy(), vweight.numpy())
 
     return tf.scatter_nd(indices, weight, shape=xarr.shape[0:1])
 
