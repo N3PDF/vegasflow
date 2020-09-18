@@ -78,7 +78,7 @@ def fill_grid(xarr, n_dim=None, **kwargs):
     # apply cuts
     t_1 = ptl >= 14.0
     t_2 = tf.abs(yll) <= 2.4
-    t_3 = ylp <= 2.3
+    t_3 = ylp <= 2.4
     t_4 = ylm <= 2.4
     t_5 = mll >= 60.0
     t_6 = mll <= 120.0
