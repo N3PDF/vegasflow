@@ -73,7 +73,7 @@ def fill_grid(xarr, n_dim=None, **kwargs):
     ylp = tf.abs(yll + tf.math.acosh(0.5 * mll / ptl))
     ylm = tf.abs(yll - tf.math.acosh(0.5 * mll / ptl))
 
-    jacobian *= hbarc2 / ncalls
+    jacobian *= hbarc2
 
     # apply cuts
     t_1 = ptl >= 14.0
@@ -89,8 +89,12 @@ def fill_grid(xarr, n_dim=None, **kwargs):
     x2 = tf.boolean_mask(x2, full_mask, axis=0)
     yll = tf.boolean_mask(yll, full_mask, axis=0)
     q2 = 90.0 * 90.0
+    vweight = weight * tf.boolean_mask(kwargs.get('weight'), full_mask, axis=0)
 
-    pool.apply_async(fill, [grid, x1, x2, q2, yll, weight])
+    if kwargs.get('fill_pineappl'):
+        #kwargs.get('pool').apply_async(fill, [kwargs.get('grid'), x1, x2, q2, yll, vweight])
+        fill(kwargs.get('grid'), x1, x2, q2, yll, vweight)
+
     return tf.scatter_nd(indices, weight, shape=xarr.shape[0:1])
 
 
@@ -114,11 +118,14 @@ if __name__ == "__main__":
 
     print(f"VEGAS MC, ncalls={ncalls}:")
     mc_instance = VegasFlow(dim, ncalls)
-    mc_instance.compile(partial(fill_grid, grid=grid, pool=pool))
+    mc_instance.compile(partial(fill_grid, fill_pineappl=False, grid=grid, pool=pool))
     mc_instance.run_integration(n_iter)
-
+    mc_instance.compile(partial(fill_grid, fill_pineappl=True, grid=grid, pool=pool))
+    mc_instance.freeze_grid()
+    mc_instance.run_integration(1)
     end = time.time()
     print(f"Vegas took: time (s): {end-start}")
+
 
     # write the grid to disk
     filename = 'DY-LO-AA.pineappl'
