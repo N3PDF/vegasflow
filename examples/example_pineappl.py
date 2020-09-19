@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from vegasflow.configflow import DTYPE
+from vegasflow.configflow import DTYPE, MAX_EVENTS_LIMIT
 import time
 import numpy as np
 import tensorflow as tf
@@ -14,8 +14,10 @@ from multiprocessing.pool import ThreadPool as Pool
 
 # configuration
 dim = 3
-ncalls = np.int32(100000)
+ncalls = np.int32(10000000)
 n_iter = 3
+events_limit = MAX_EVENTS_LIMIT
+STRATEGY = 'ASYNC' # SEQUENTIAL, ASYNC
 
 # Constants in GeV^2 pbarn
 hbarc2 = tf.constant(389379372.1, dtype=DTYPE)
@@ -92,8 +94,11 @@ def fill_grid(xarr, n_dim=None, **kwargs):
     vweight = weight * tf.boolean_mask(kwargs.get('weight'), full_mask, axis=0)
 
     if kwargs.get('fill_pineappl'):
-#         kwargs.get('pool').apply_async(fill, [kwargs.get('grid'), x1.numpy(), x2.numpy(), q2, yll.numpy(), vweight.numpy()])
-        fill(kwargs.get('grid'), x1.numpy(), x2.numpy(), q2, yll.numpy(), vweight.numpy())
+        if STRATEGY == 'SEQUENTIAL':
+            fill(kwargs.get('grid'), x1.numpy(), x2.numpy(), q2, yll.numpy(), vweight.numpy())
+        elif STRATEGY == 'ASYNC':
+            kwargs.get('pool').apply_async(fill, [kwargs.get('grid'), x1.numpy(), x2.numpy(), q2, yll.numpy(), vweight.numpy()])
+
 
     return tf.scatter_nd(indices, weight, shape=xarr.shape[0:1])
 
@@ -117,7 +122,7 @@ if __name__ == "__main__":
     print('Generating events, please wait...')
 
     print(f"VEGAS MC, ncalls={ncalls}:")
-    mc_instance = VegasFlow(dim, ncalls)
+    mc_instance = VegasFlow(dim, ncalls, events_limit=events_limit)
     mc_instance.compile(partial(fill_grid, fill_pineappl=False, grid=grid, pool=pool))
     mc_instance.run_integration(n_iter)
     mc_instance.compile(partial(fill_grid, fill_pineappl=True, grid=grid, pool=pool))
@@ -126,6 +131,9 @@ if __name__ == "__main__":
     end = time.time()
     print(f"Vegas took: time (s): {end-start}")
 
+    # wait until pineappl has filled the grids properly
+    pool.close()
+    pool.join()
 
     # write the grid to disk
     filename = 'DY-LO-AA.pineappl'
