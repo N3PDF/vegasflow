@@ -175,6 +175,11 @@ class MonteCarloFlow(ABC):
         result = self.event()
         return result, pow(result, 2)
 
+    #### Integration management
+    def set_seed(self, seed):
+        """ Sets the interation seed """
+        tf.random.set_seed(seed)
+
     #### Device management methods
     def get_device(self):
         """Looks in the list of devices until it finds a device available, once found

@@ -170,6 +170,56 @@ For more details in what function retracing entails we direct to the `TensorFlow
     # Compute the result after a number of iterations
     n_iter = 5
     result = vegas_instance.run_integration(n_iter)
+    
+
+Seeding the random number generator
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Seeding operations in ``TensorFlow`` is not always trivial.
+We include in all integrator the method ``set_seed`` which is a wrapper to
+``TensorFlow``'s own `seed method <https://www.tensorflow.org/api_docs/python/tf/random/set_seed>`_.
+
+.. code-block:: python
+
+    from vegasflow import VegasFlow
+
+    vegas_instance = VegasFlow(dimensions, n_calls)
+    vegas_instance.set_seed(7)
+
+
+This is equivalent to:
+
+.. code-block:: python
+
+    from vegasflow import VegasFlow
+    import tensorflow as tf
+    
+    vegas_instance = VegasFlow(dimensions, n_calls)
+    tf.random.set_seed(7)
+    
+
+This seed is what ``TensorFlow`` calls a global seed and is then used to generate operation-level seeds.
+In graph mode (:ref:`eager-label`) all top level ``tf.functions`` branch out
+of the same initial state.
+As a consequence, if we were to run two separate instances of ``VegasFlow``,
+despite running sequentially, they would both run with the same seed.
+Note that it only occurs if the seed is manually set.
+
+.. code-block:: python
+
+    from vegasflow import vegas_wrapper
+    import tensorflow as tf
+    
+    tf.random.set_seed(7)
+    result_1 = vegas_wrapper(example_integrand, dims, n_iter, n_calls)
+    result_2 = vegas_wrapper(example_integrand, dims, n_iter, n_calls)
+    assert result_1 == result_2
+    
+
+The way ``TensorFlow`` seeding works can be consulted here `here <https://www.tensorflow.org/api_docs/python/tf/random/set_seed>`_.
+
+.. note:: Even when using seed, reproducibility is not guaranteed between two different versions of TensorFlow.
+
 
 Running in distributed systems
 ==============================
