@@ -11,6 +11,14 @@ from pdfflow.pflow import mkPDF
 from functools import partial
 from multiprocessing.pool import ThreadPool as Pool
 
+# Seed everything seedable
+import random as rn
+seed = 7
+np.random.seed(seed)
+rn.seed(seed+1)
+tf.random.set_seed(seed+2)
+
+
 
 # configuration
 dim = 3
