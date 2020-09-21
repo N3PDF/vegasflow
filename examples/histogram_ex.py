@@ -5,10 +5,9 @@
 
 import time
 import numpy as np
-from vegasflow.configflow import DTYPE, DTYPEINT, fzero, fone
+from vegasflow.configflow import DTYPE, fzero, fone
 import tensorflow as tf
 from vegasflow.plain import PlainFlow
-from vegasflow.vflow import VegasFlow
 from vegasflow.utils import consume_array_into_indices
 
 # MC integration setup

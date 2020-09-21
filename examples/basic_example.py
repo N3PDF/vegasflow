@@ -1,20 +1,18 @@
 """
     Example: basic integration
 
-    Basic example using the vegas_wrapper helper
+    Very basic example with a simple integrand, uses simplify_signature
 """
 
 from vegasflow import VegasFlow, float_me
 import time
 import numpy as np
 import tensorflow as tf
-from vegasflow.vflow import vegas_wrapper
-from vegasflow.plain import plain_wrapper 
 
 
 # MC integration setup
 dim = 4
-ncalls = np.int32(1e5)
+ncalls = int(1e5)
 n_iter = 5
 
 
