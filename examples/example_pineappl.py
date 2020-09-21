@@ -140,6 +140,8 @@ if __name__ == "__main__":
     # wait until pineappl has filled the grids properly
     pool.close()
     pool.join()
+    end = time.time()
+    print(f"Pool took: time (s): {end-start}")
 
     # write the grid to disk
     filename = 'DY-LO-AA.pineappl'
