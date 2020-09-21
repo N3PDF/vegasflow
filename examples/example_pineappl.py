@@ -1,23 +1,23 @@
 #!/usr/bin/env python
+import random as rn
+from multiprocessing.pool import ThreadPool as Pool
+from functools import partial
+from pdfflow.pflow import mkPDF
+import pineappl
+from vegasflow.utils import generate_condition_function
+from vegasflow.vflow import VegasFlow
 from vegasflow.configflow import DTYPE, MAX_EVENTS_LIMIT
 import time
 import numpy as np
 import tensorflow as tf
 tf.config.run_functions_eagerly(True)
-from vegasflow.vflow import VegasFlow
-from vegasflow.utils import generate_condition_function
-import pineappl
-from pdfflow.pflow import mkPDF
-from functools import partial
-from multiprocessing.pool import ThreadPool as Pool
+
 
 # Seed everything seedable
-import random as rn
 seed = 7
 np.random.seed(seed)
 rn.seed(seed+1)
 tf.random.set_seed(seed+2)
-
 
 
 # configuration
@@ -25,7 +25,6 @@ dim = 3
 ncalls = np.int32(10000000)
 n_iter = 3
 events_limit = MAX_EVENTS_LIMIT
-STRATEGY = 'ASYNC' # SEQUENTIAL, ASYNC
 
 # Constants in GeV^2 pbarn
 hbarc2 = tf.constant(389379372.1, dtype=DTYPE)
@@ -70,8 +69,8 @@ def hadronic_pspgen(xarr, mmin, mmax):
 
 
 def fill(grid, x1, x2, q2, yll, weight):
-    for ix1, ix2, iyll, iw in zip(x1, x2, yll, weight):
-        grid.fill(ix1, ix2, q2, 0, np.abs(iyll), 0, iw)
+    zeros = np.zeros(len(weight), dtype=np.uintp)
+    grid.fill_array(x1, x2, q2, zeros, yll, zeros, weight)
 
 
 def fill_grid(xarr, n_dim=None, **kwargs):
@@ -98,15 +97,12 @@ def fill_grid(xarr, n_dim=None, **kwargs):
     x1 = tf.boolean_mask(x1, full_mask, axis=0)
     x2 = tf.boolean_mask(x2, full_mask, axis=0)
     yll = tf.boolean_mask(yll, full_mask, axis=0)
-    q2 = 90.0 * 90.0
     vweight = weight * tf.boolean_mask(kwargs.get('weight'), full_mask, axis=0)
 
     if kwargs.get('fill_pineappl'):
-        if STRATEGY == 'SEQUENTIAL':
-            fill(kwargs.get('grid'), x1.numpy(), x2.numpy(), q2, yll.numpy(), vweight.numpy())
-        elif STRATEGY == 'ASYNC':
-            kwargs.get('pool').apply_async(fill, [kwargs.get('grid'), x1.numpy(), x2.numpy(), q2, yll.numpy(), vweight.numpy()])
-
+        q2 = 90.0 * 90.0 * tf.ones(weight.shape, dtype=tf.float64)
+        kwargs.get('pool').apply_async(fill, [kwargs.get('grid'), x1.numpy(), x2.numpy(),
+                                              q2.numpy(), tf.abs(yll).numpy(), vweight.numpy()])
 
     return tf.scatter_nd(indices, weight, shape=xarr.shape[0:1])
 
@@ -131,9 +127,11 @@ if __name__ == "__main__":
 
     print(f"VEGAS MC, ncalls={ncalls}:")
     mc_instance = VegasFlow(dim, ncalls, events_limit=events_limit)
-    mc_instance.compile(partial(fill_grid, fill_pineappl=False, grid=grid, pool=pool))
+    mc_instance.compile(
+        partial(fill_grid, fill_pineappl=False, grid=grid, pool=pool))
     mc_instance.run_integration(n_iter)
-    mc_instance.compile(partial(fill_grid, fill_pineappl=True, grid=grid, pool=pool))
+    mc_instance.compile(
+        partial(fill_grid, fill_pineappl=True, grid=grid, pool=pool))
     mc_instance.freeze_grid()
     mc_instance.run_integration(1)
     end = time.time()
