@@ -54,6 +54,12 @@ setup(name='vegasflow',
           'benchmark' : [
             'vegas', # Lepage's Vegas for benchmarking
             ],
+          'distribute' : [
+            'dask',
+            'distribute',
+            'dask-jobqueue',
+            'tensorflow>2.2', # dask needs a more-pickable tensorflow
+            ],
           },
       python_requires='>=3.6',
       long_description=long_description,

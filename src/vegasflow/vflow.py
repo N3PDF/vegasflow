@@ -25,23 +25,23 @@ FBINS = float_me(BINS_MAX)
 @tf.function
 def generate_random_array(rnds, divisions):
     """
-        Generates the Vegas random array for any number of events
+    Generates the Vegas random array for any number of events
 
-        Parameters
-        ----------
-            rnds: array shaped (None, n_dim)
-                Random numbers used as an input for Vegas
-            divisions: array shaped (n_dim, BINS_MAX)
-                vegas grid
+    Parameters
+    ----------
+        rnds: array shaped (None, n_dim)
+            Random numbers used as an input for Vegas
+        divisions: array shaped (n_dim, BINS_MAX)
+            vegas grid
 
-        Returns
-        -------
-            x: array (None, n_dim)
-                Vegas random output
-            div_index: array (None, n_dim)
-                division index in which each (n_dim) set of random numbers fall
-            w: array (None,)
-                Weight of each set of (n_dim) random numbers
+    Returns
+    -------
+        x: array (None, n_dim)
+            Vegas random output
+        div_index: array (None, n_dim)
+            division index in which each (n_dim) set of random numbers fall
+        w: array (None,)
+            Weight of each set of (n_dim) random numbers
     """
     # Get the boundaries of the random numbers
     #     reg_i = fzero
@@ -81,23 +81,32 @@ def generate_random_array(rnds, divisions):
 @tf.function
 def refine_grid_per_dimension(t_res_sq, subdivisions):
     """
-        Modifies the boundaries for the vegas grid for a given dimension
+    Modifies the boundaries for the vegas grid for a given dimension
 
-        Parameters
-        ----------
-            `t_res_sq`: tensor
-                array of results squared per bin
-            `subdivision`: tensor
-                current boundaries for the grid
+    Parameters
+    ----------
+        `t_res_sq`: tensor
+            array of results squared per bin
+        `subdivision`: tensor
+            current boundaries for the grid
 
-        Returns
-        -------
-            `new_divisions`: tensor
-                array with the new boundaries of the grid
+    Returns
+    -------
+        `new_divisions`: tensor
+            array with the new boundaries of the grid
     """
     # Define some constants
-    paddings = tf.constant([[1, 1],])
-    tmp_meaner = tf.fill([BINS_MAX - 2,], float_me(3.0))
+    paddings = tf.constant(
+        [
+            [1, 1],
+        ]
+    )
+    tmp_meaner = tf.fill(
+        [
+            BINS_MAX - 2,
+        ],
+        float_me(3.0),
+    )
     meaner = tf.pad(tmp_meaner, paddings, constant_values=2.0)
     # Pad the vector of results
     res_padded = tf.pad(t_res_sq, paddings)
@@ -115,14 +124,14 @@ def refine_grid_per_dimension(t_res_sq, subdivisions):
     ###### Auxiliary functions for the while loop
     @tf.function
     def while_check(bin_weight, *args):
-        """ Checks whether the bin has enough weight
-        to beat the average """
+        """Checks whether the bin has enough weight
+        to beat the average"""
         return bin_weight < ave_t
 
     @tf.function
     def while_body(bin_weight, n_bin, cur, prev):
-        """ Fills the bin weight until it surpassed the avg
-        once it's done, returns the limits of the last bin """
+        """Fills the bin weight until it surpassed the avg
+        once it's done, returns the limits of the last bin"""
         n_bin += 1
         bin_weight += wei_t[n_bin]
         prev = cur
@@ -140,7 +149,10 @@ def refine_grid_per_dimension(t_res_sq, subdivisions):
     prev = fzero
     for _ in range(BINS_MAX - 1):
         bin_weight, n_bin, cur, prev = tf.while_loop(
-            while_check, while_body, (bin_weight, n_bin, cur, prev), parallel_iterations=1,
+            while_check,
+            while_body,
+            (bin_weight, n_bin, cur, prev),
+            parallel_iterations=1,
         )
         bin_weight -= ave_t
         delta = (cur - prev) * bin_weight / wei_t[n_bin]
@@ -183,7 +195,7 @@ class VegasFlow(MonteCarloFlow):
         self.recompile()
 
     def save_grid(self, file_name):
-        """ Save the `divisions` array in a json file
+        """Save the `divisions` array in a json file
 
         Parameters
         ----------
@@ -206,7 +218,7 @@ class VegasFlow(MonteCarloFlow):
             json.dump(json_dict, f, indent=True)
 
     def load_grid(self, file_name=None, numpy_grid=None):
-        """ Load the `divisions` array from a json file
+        """Load the `divisions` array from a json file
         or from a numpy_array
 
         Parameters
@@ -261,7 +273,7 @@ class VegasFlow(MonteCarloFlow):
         self.divisions.assign(numpy_grid)
 
     def refine_grid(self, arr_res2):
-        """ Receives an array with the values of the integral squared per
+        """Receives an array with the values of the integral squared per
         bin per dimension (`arr_res2.shape = (n_dim, self.grid_bins)`)
         and reshapes the `divisions` attribute accordingly
 
@@ -276,7 +288,7 @@ class VegasFlow(MonteCarloFlow):
             self.divisions[j, :].assign(new_divisions)
 
     def _run_event(self, integrand, ncalls=None):
-        """ Runs one step of Vegas.
+        """Runs one step of Vegas.
 
         Parameters
         ----------
@@ -343,7 +355,7 @@ class VegasFlow(MonteCarloFlow):
         self.iteration_content = self._iteration_content
 
     def recompile(self):
-        """ Forces recompilation with the same arguments that have
+        """Forces recompilation with the same arguments that have
         previously been used for compilation"""
         if self.compile_args is None:
             raise RuntimeError("recompile was called without ever having called compile")
@@ -357,7 +369,7 @@ class VegasFlow(MonteCarloFlow):
 
 
 def vegas_wrapper(integrand, n_dim, n_iter, total_n_events, **kwargs):
-    """ Convenience wrapper
+    """Convenience wrapper
 
     Parameters
     ----------
