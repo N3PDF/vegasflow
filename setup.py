@@ -50,6 +50,8 @@ setup(name='vegasflow',
             ],
           'examples' : [
             'cffi',
+            'pineappl',
+            'scipy'
             ],
           'benchmark' : [
             'vegas', # Lepage's Vegas for benchmarking
