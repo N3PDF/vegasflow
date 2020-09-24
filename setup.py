@@ -4,10 +4,7 @@ import os
 import re
 
 
-requirements = ['joblib', 'numpy']
-if os.environ.get('READTHEDOCS') != 'True':
-    requirements.append('tensorflow')
-
+requirements = ['joblib', 'numpy', 'tensorflow']
 PACKAGE = 'vegasflow'
 
 def get_version():
@@ -51,6 +48,7 @@ setup(name='vegasflow',
           'examples' : [
             'cffi',
             'pineappl',
+            'pdfflow',
             'scipy'
             ],
           'benchmark' : [
