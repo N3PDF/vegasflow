@@ -5,6 +5,8 @@ Usage
 =====
 
 ``vegasflow`` is a python library that provides a number of functions to perform Monte Carlo integration of some functions.
+In this guide we do our best to explain the steps to follow in order to perform a successful calculation with VegasFlow.
+If, after reading this, you have any doubts, questions (or ideas for improvements!) please, don't hesistate to contact us [opening an issue](https://github.com/N3PDF/vegasflow/issues/new?assignees=&body=I%20have%20a%20question%20about%20VegasFlow...&labels=question) in Github.
 
 .. contents::
    :local:
