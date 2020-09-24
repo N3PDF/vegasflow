@@ -4,8 +4,8 @@ import numpy as np
 import tensorflow as tf
 import pytest
 
-from vegasflow.configflow import DTYPEINT
-from vegasflow.utils import consume_array_into_indices
+from vegasflow.configflow import DTYPEINT, int_me
+from vegasflow.utils import consume_array_into_indices, py_consume_array_into_indices
 
 from vegasflow.utils import generate_condition_function
 
@@ -20,7 +20,9 @@ def test_consume_array_into_indices():
     # Make them into TF
     tf_input = tf.constant(input_array)
     tf_indx = tf.constant(indices.reshape(-1,1), dtype=DTYPEINT)
-    result = consume_array_into_indices(tf_input, tf_indx, size_out)
+    result = consume_array_into_indices(tf_input, tf_indx, int_me(size_out))
+    py_result = py_consume_array_into_indices(tf_input, tf_indx, size_out)
+    np.testing.assert_array_equal(result, py_result)
     # Check that no results were lost
     np.testing.assert_almost_equal(np.sum(input_array), np.sum(result))
     # Check that the arrays in numpy produce the same in numpy

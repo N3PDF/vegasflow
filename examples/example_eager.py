@@ -1,18 +1,17 @@
 """
     Example: eager mode integrand
 
-    Running a non-tensorflow integrand using VegasFlow
+    Demonstrates how to run a non-tensorflow integrand using VegasFlow
 """
 
-from vegasflow.configflow import DTYPE, DTYPEINT
+from vegasflow import run_eager, vegas_wrapper
 import time
 import numpy as np
 from scipy.special import expit
 import tensorflow as tf
 
-tf.config.run_functions_eagerly(True)
-from vegasflow.vflow import vegas_wrapper
-
+# Enable eager mode
+run_eager(True)
 
 # MC integration setup
 dim = 4

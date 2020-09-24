@@ -1,7 +1,7 @@
 # Place your function here
 import time
 import numpy as np
-from vegasflow.configflow import DTYPE, DTYPEINT
+from vegasflow.configflow import DTYPE
 from vegasflow.vflow import VegasFlow
 import tensorflow as tf
 

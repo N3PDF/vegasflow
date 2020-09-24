@@ -1,8 +1,8 @@
 .. _howto-label:
 
-==========
-How to use
-==========
+=====
+Usage
+=====
 
 ``vegasflow`` is a python library that provides a number of functions to perform Monte Carlo integration of some functions.
 
@@ -11,39 +11,215 @@ How to use
    :depth: 1
 
 
-A first VegasFlow integration
-=============================
+Integrating with VegasFlow
+==========================
 
-Prototyping in ``VegasFlow`` is easy, the best results are obtained when the
-integrands are written using TensorFlow primitives.
-Below we show one example where we create a TF constant (using ``tf.constant``) and then we use the sum and power functions.
+Basic usage
+^^^^^^^^^^^
+
+Integrating a function with ``VegasFlow`` is done in three basic steps:
+
+1. **Instating an integrator**: At the time of instantiation it is necessary to provide
+   a number of dimensions and a number of calls per iteration.
+   The reason for giving this information beforehand is to allow for optimization.
+
+.. code-block:: python
+
+    from vegasflow import VegasFlow
+    
+    dims = 3
+    n_calls = int(1e7)
+    vegas_instance = VegasFlow(dims, n_calls)
+
+2. **Compiling the integrand**: The integrand needs to be given to the integrator for compilation.
+Compilation serves a dual purposes, it first registers the integrand and then it compiles it
+using the ``tf.function`` decorator.
 
 .. code-block:: python
 
     import tensorflow as tf
+    
+    def example_integrand(xarr, n_dim=none, weight=none):
+      s = tf.reduce_sum(xarr, axis=1)
+      result = tf.pow(0.1/s, 2)
+      return result
+      
+    vegas_instance.compile(example_integrand)
 
-    @tf.function
-    def example_integrand(xarr, n_dim=None):
-        c = tf.constant(0.1, dtype=tf.float64)
+3. **Running the integration**: Once everything is in place, we just need to inform the integrator of the number of
+   iterations we want.
+
+.. code-block:: python
+
+    n_iter = 5
+    result = vegas_instance.run_integration(n_iter)Q
+
+
+Constructing the integrand
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+Note that the ``example_integrand`` contained only ``TensorFlow`` operations.
+All ``VegasFlow`` integrands such, in principle, depend only on python primitives
+and ``TensorFlow`` operations, otherwise the code cannot be compiled and as a result it cannot
+run on GPU u other ``TensorFlow``-supported hardware accelerators.
+
+It is possible, however (and often useful when prototyping) integrate functions not
+based on ``TensorFlow``, by passing the ``compilable`` flag at compile time.
+This will spare the compilation of the integrand (while maintaining the compilation of
+the integration algorithm).
+
+.. code-block:: python
+
+    import numpy as np
+    
+    def example_integrand(xarr, n_dim=None, weight=None):
+      s = np.pow(xarr, axis=1)
+      result = np.square(0.1/s)
+      return result
+      
+    vegas_instance.compile(example_integrand, compilable=False)
+
+
+.. note:: Integrands must accept the keyword arguments ``n_dim`` and ``weight``, as the integrators
+   will try to pass those argument when convenient. It is however possible to construct integrands
+   that accept only the array of random number ``xarr``, see :ref:`simple-label`
+
+
+It is also possible to completely avoid compilation,
+by leveraging ``TensorFlow``'s `eager execution <https://www.tensorflow.org/guide/eager>`_ as
+explained at :ref:`eager-label`.
+
+Choosing the correct types
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A common pitfall when writing ``TensorFlow``-compilable integrands is to mix different precision types.
+If a function is compiled with a 32-bit float input not only it won't work when called with a 64-bit
+float, but it will catastrophically fail.
+The types in ``VegasFlow`` can be controlled via :ref:`environ-label` but we also provide the
+``float_me`` and ``int_me`` function in order to ensure that all variables in the program have consistent
+types.
+
+These functions are wrappers around ``tf.cast`` `🔗 <https://www.tensorflow.org/api_docs/python/tf/cast>`__.
+
+.. code-block:: python
+
+    from vegasflow import float_me, int_me
+    import tensorflow as tf
+    
+    constant = float_me(0.1)
+    
+    def example_integrand(xarr, n_dim=None, weight=None):
+      s = tf.reduce_sum(xarr, axis=1)
+      result = tf.pow(constant/s, 2)
+      return result
+      
+    vegas_instance.compile(example_integrand)
+
+
+
+Integration wrappers
+^^^^^^^^^^^^^^^^^^^^
+
+Although manually instantiating the integrator allows for a better fine-grained control
+of the integration, it is also possible to use wrappers which automatically do most of the work
+behind the scenes.
+
+.. code-block:: python
+
+   from vegasflow import vegas_wrapper
+   
+   result = vegas_wrapper(example_integrand, dims, n_iter, n_calls, compilable=False)
+
+
+The full list of integration algorithms and wrappers can be consulted at: :ref:`intalg-label`.
+
+
+Tips and Tricks
+===============
+
+.. _simple-label:
+
+Improving results by simplifying the integrand
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In the above example the integrand receives the keyword arguments `n_dim` and `xjac`.
+Although these are useful for instance for filling histograms or dimensional-dependent integrands,
+these extra argument can harm the performance of the integration when they are not being used.
+
+It is possible to instantiate ``VegasFlow`` algorithms with ``simplify_signature``.
+In this case the integrand will only receive the array of random numbers and, in exchange for this
+loss of flexibility, the function will be retraced less often.
+For more details in what function retracing entails we direct to the `TensorFlow documentation <https://www.tensorflow.org/api_docs/python/tf/function>`_.
+
+.. code-block:: python
+
+    from vegasflow import VegasFlow, float_me
+    import tensorflow as tf
+
+    def example_integrand(xarr):
+        c = float_me(0.1)
         s = tf.reduce_sum(xarr)
         result = tf.pow(c/s)
         return result
 
     dimensions = 3
-    ncalls = int(1e7)
+    n_calls = int(1e7)
     # Create an instance of the VegasFlow class
-    vegas_instance = VegasFlow(dimensions, ncalls)
+    vegas_instance = VegasFlow(dimensions, n_calls, simplify_signature = True)
     # Compile the function to be integrated
     vegas_instance.compile(example_integrand)
     # Compute the result after a number of iterations
     n_iter = 5
     result = vegas_instance.run_integration(n_iter)
+    
 
-We also provide a convenience wrapper ``vegas_wrapper`` that allows to run the whole thing in one go.
+Seeding the random number generator
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Seeding operations in ``TensorFlow`` is not always trivial.
+We include in all integrator the method ``set_seed`` which is a wrapper to
+``TensorFlow``'s own `seed method <https://www.tensorflow.org/api_docs/python/tf/random/set_seed>`_.
 
 .. code-block:: python
 
-    result = vegas_wrapper(example_integrand, dimensions, n_iter, ncalls)
+    from vegasflow import VegasFlow
+
+    vegas_instance = VegasFlow(dimensions, n_calls)
+    vegas_instance.set_seed(7)
+
+
+This is equivalent to:
+
+.. code-block:: python
+
+    from vegasflow import VegasFlow
+    import tensorflow as tf
+    
+    vegas_instance = VegasFlow(dimensions, n_calls)
+    tf.random.set_seed(7)
+    
+
+This seed is what ``TensorFlow`` calls a global seed and is then used to generate operation-level seeds.
+In graph mode (:ref:`eager-label`) all top level ``tf.functions`` branch out
+of the same initial state.
+As a consequence, if we were to run two separate instances of ``VegasFlow``,
+despite running sequentially, they would both run with the same seed.
+Note that it only occurs if the seed is manually set.
+
+.. code-block:: python
+
+    from vegasflow import vegas_wrapper
+    import tensorflow as tf
+    
+    tf.random.set_seed(7)
+    result_1 = vegas_wrapper(example_integrand, dims, n_iter, n_calls)
+    result_2 = vegas_wrapper(example_integrand, dims, n_iter, n_calls)
+    assert result_1 == result_2
+    
+
+The way ``TensorFlow`` seeding works can be consulted here `here <https://www.tensorflow.org/api_docs/python/tf/random/set_seed>`_.
+
+.. note:: Even when using seed, reproducibility is not guaranteed between two different versions of TensorFlow.
+
 
 Running in distributed systems
 ==============================
@@ -64,7 +240,7 @@ Global configuration
 ====================
 
 Verbosity
----------
+^^^^^^^^^
 
 ``VegasFlow`` uses the internal logging capabilities of python by
 creating a new logger handled named ``vegasflow``.
@@ -73,6 +249,7 @@ You can modify the behavior of the logger as with any sane python library with t
 .. code-block:: python
 
   import logging
+  
   log_dict = {
         "0" : logging.ERROR,
         "1" : logging.WARNING,
@@ -94,8 +271,11 @@ possible to control the behaviour through the environment variable ``VEGASFLOW_L
 will suppress all logger information other than ``WARNING`` and ``ERROR``.
 
 
+
+.. _environ-label:
+
 Environment
------------
+^^^^^^^^^^^
 
 ``VegasFlow`` is based on ``TensorFlow`` and as such all environment variable that
 have an effect on ``TensorFlow``s behavior will also have an effect on ``VegasFlow``.
@@ -106,10 +286,12 @@ the `nvidia official documentation <https://docs.nvidia.com/deeplearning/framewo
 
 - ``TF_CPP_MIN_LOG_LEVEL``: controls the ``TensorFlow`` logging level. It is set to 1 by default so that only errors are printed.
 - ``VEGASFLOW_LOG_LEVEL``: controls the ``VegasFlow`` logging level. Set to 3 by default so that everything is printed.
+- ``VEGASFLOW_FLOAT``: controls the ``VegasFlow`` float precision. Default is 64 for 64-bits. Accepts: 64, 32.
+- ``VEGASFLOW_INT``: controls the ``VegasFlow`` integer precision. Default is 32 for 32-bits. Accepts: 64, 32.
 
 
 Choosing integration device
----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``CUDA_VISIBLE_DEVICES`` environment variable will tell Tensorflow
 (and thus VegasFlow) in which device it should run.
@@ -128,7 +310,7 @@ right device, e.g., ``export CUDA_VISIBLE_DEVICES=0``.
 .. _eager-label:
 
 Eager Vs Graph-mode
--------------------
+^^^^^^^^^^^^^^^^^^^
 
 When performing computational expensive tasks Tensorflow's graph mode is preferred.
 When compiling you will notice the first iteration of the integration takes a bit longer, this is normal
@@ -136,10 +318,20 @@ and it's due to the creation of the graph.
 Subsequent iterations will be faster.
 
 Graph-mode however is not debugger friendly as the code is read only once, when compiling the graph.
-You can however enable Tensorflow's `eager execution <https://www.tensorflow.org/guide/eager>`_.
+You can however enable ``Tensorflow``'s `eager execution <https://www.tensorflow.org/guide/eager>`_.
 With eager mode the code is run sequentially as you would expect with normal python code,
-this will allow you to throw in instances of ``pdb.set_trace()``.
-In order to enable eager mode include these lines at the top of your program:
+this will allow you for instance throw in instances of ``pdb.set_trace()``.
+In order to use eager execution we provide the ``run_eager`` wrapper.
+
+.. code-block:: python
+
+   from vegasflow import run_eager
+   
+   run_eager() # Enable eager-mode
+   run_eager(False) # Disable
+
+
+This is a wrapper around the following lines of code:
 
 .. code-block:: python
 
@@ -175,10 +367,9 @@ This is a crucial step (and the only fixed step) as this tensor will be accumula
 .. code-block:: python
 
     from vegasflow.utils import consume_array_into_indices
-    fzero = tf.constant(0.0, dtype=tf.float64)
-    fone = tf.constant(1.0, dtype=tf.float64)
-    HISTO_BINS = 2
-
+    from vegasflow.configflow import fzero, fone, int_me, DTYPE
+    
+    HISTO_BINS = int_me(2)
     cumulator_tensor = tf.Variable(tf.zeros(HISTO_BINS, dtype=DTYPE))
 
     @tf.function
@@ -221,3 +412,67 @@ Note that here we are only filling one histograms and so the histogram tuple con
 
 
 We ship an example of an integrand which generates histograms in the github repository: `here <https://github.com/N3PDF/vegasflow/blob/master/examples/histogram_ex.py>`_.
+
+Generate conditions
+===================
+
+A very common case when integrating using Monte Carlo method is to add non trivial cuts to the
+integration space.
+It is not obvious how to implement cuts in a consistent manner in GPU or using ``TensorFlow``
+routines when we have to combine several conditions.
+We provide the ``generate_condition_function``  auxiliary function which generates
+a ``TensorFlow``-compiled function for the necessary number of conditions.
+
+For instance, let's take the case of a parton collision simulation, in which
+we want to constraint the phase space of the two final state particles to the region
+in which the two particles have a transverse momentum above 15 GeV or any of them
+a rapidity below 4.
+
+We first generate the condition we want to apply using ``generate_condition_function``.
+
+.. code-block:: python
+
+    from vegasflow.utils import generate_condition_function
+    
+    f_cond = generate_condition_function(3, condition = ['and', 'or'])
+
+
+Now we can use the ``f_cond`` function in our integrand.
+This ``f_cond`` function accepts three arguments and returns a mask of all of them
+and the ``True`` indices.
+
+.. code-block:: python
+
+    import tensorflow as tf
+    from vegasflow import vegas_wrapper
+    
+    def two_particle(xarr, **kwargs):
+        # Complicated calculation of phase space
+        pt_jet_1 = xarr[:,0]*100 + 5
+        pt_jet_2 = xarr[:,1]*100 + 5
+        rapidity = xarr[:,2]*50
+        # Generate the conditions
+        c_1 = pt_jet_1 > 15
+        c_2 = pt_jet_2 > 15
+        c_3 = rapidity < 4
+        mask, idx = f_cond(c_1, c_2, c_3)
+        # Now we can mask away the unwanted results
+        good_vals = tf.boolean_mask(xarr[:,3], mask, axis=0)
+        # Perform very complicated calculation
+        result = tf.square(good_vals)
+        # Return a sparse tensor so that only the actual results have a value
+        ret = tf.scatter_nd(idx, result, shape=c_1.shape)
+        return ret
+      
+    result = vegas_wrapper(two_particle, 4, 3, 100, compilable=False)
+    
+Note that we use the mask to remove the values that are not part of the phase space.
+If the phase space to be integrated is much smaller than the integration region,
+removing unwanted values can have a huge impact in the calculation from the
+point of view of speed and memory, so we recommend removing them instead of just
+zeroing them.
+
+The resulting array, however, must have one value per event, so before returning
+back the array to ``VegasFlow`` we use ``tf.scatter_nd`` to create a sparse tensor
+where all values are set to 0 except the indices defined in ``idx`` that
+have the values defined by ``result``.

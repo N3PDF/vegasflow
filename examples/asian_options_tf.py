@@ -2,13 +2,13 @@
 # From https://doi.org/10.1016/S0885-064X(03)00003-7
 # Equation (14)
 
+from vegasflow.configflow import DTYPE, DTYPEINT
+from vegasflow import vegas_wrapper
+
+from tensorflow.python.ops.distributions.special_math import ndtri
 import time
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.ops.distributions.special_math import ndtri
-from vegasflow.configflow import DTYPE, DTYPEINT
-from vegasflow.vflow import vegas_wrapper
-
 
 # MC integration setup
 d =  16

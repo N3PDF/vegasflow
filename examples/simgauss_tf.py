@@ -4,7 +4,7 @@
     Basic example using the vegas_wrapper helper
 """
 
-from vegasflow.configflow import DTYPE, DTYPEINT
+from vegasflow.configflow import DTYPE
 import time
 import numpy as np
 import tensorflow as tf
