@@ -19,9 +19,6 @@ Some of the key features of VegasFlow are:
 ## Documentation
 The documentation for VegasFlow is available at [vegasflow.readthedocs.io](https://vegasflow.readthedocs.io/en/latest).
 
-## Examples
-A number of examples (basic integration, cuda, external tools integration) can be found in the [examples folder](https://github.com/N3PDF/vegasflow/tree/master/examples). A more detailed description can be found in the [documention](https://vegasflow.readthedocs.io/en/latest/examples.html).
-
 ## Installation
 [![Anaconda-Server Badge](https://anaconda.org/conda-forge/vegasflow/badges/installer/conda.svg)](https://anaconda.org/conda-forge/vegasflow)
 [![AUR](https://img.shields.io/aur/version/python-vegasflow)](https://aur.archlinux.org/packages/python-vegasflow/)
@@ -48,13 +45,11 @@ python setup.py develop
 ```
 
 ## Examples
+A number of examples (basic integration, cuda, external tools integration) can be found in the [examples folder](https://github.com/N3PDF/vegasflow/tree/master/examples). A more detailed description can be found in the [documention](https://vegasflow.readthedocs.io/en/latest/examples.html).
 
-Below you can find a minimal working example of an integration using VegasFlow
+Below you can find a minimal workflow for using the examples provided with VegasFlow:
 
-For more complicated examples please see the [documentation](https://vegasflow.readthedocs.io/en/latest)
-or the [examples](https://github.com/N3PDF/vegasflow/tree/master/examples) folder.
-
-It is possible to install the dependencies required by the examples using:
+Firstly, one can install any extra dependencies required by the examples using:
 
 ```bash
 pip install .[examples]
@@ -77,7 +72,6 @@ iterations = 5
 events_per_iteration = int(1e5)
 vegas_wrapper(integrand, dimensions, iterations, events_per_iteration, compilable=True)
 ```
-
 
 Please feel free to [open an issue](https://github.com/N3PDF/vegasflow/issues/new) if you would like
 some specific example or find any problems at all with the code or the documentation.
