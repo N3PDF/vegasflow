@@ -17,9 +17,10 @@ Some of the key features of VegasFlow are:
 - Implementation of different Monte Carlo algorithms.
 
 ## Documentation
+The documentation for VegasFlow is available at [vegasflow.readthedocs.io](https://vegasflow.readthedocs.io/en/latest).
 
-[https://vegasflow.readthedocs.io/en/latest](https://vegasflow.readthedocs.io/en/latest)
-
+## Examples
+A number of examples (basic integration, cuda, external tools integration) can be found in the [examples folder](https://github.com/N3PDF/vegasflow/tree/master/examples). A more detailed description can be found in the [documention](https://vegasflow.readthedocs.io/en/latest/examples.html).
 
 ## Installation
 [![Anaconda-Server Badge](https://anaconda.org/conda-forge/vegasflow/badges/installer/conda.svg)](https://anaconda.org/conda-forge/vegasflow)
