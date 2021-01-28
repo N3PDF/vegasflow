@@ -88,10 +88,10 @@ fone = float_me(1)
 fzero = float_me(0)
 
 
-# Define some default parameters for Vegas
+# Define some default parameters for the MC algorithms
 BINS_MAX = 50
 ALPHA = 1.5
-TECH_CUT = 1e-8
+TECH_CUT = float_me(1e-8)
 
 # Set up the logistics of the integration
 # Events Limit limits how many events are done in one single run of the event_loop

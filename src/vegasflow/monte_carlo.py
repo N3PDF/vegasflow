@@ -39,7 +39,7 @@ from abc import abstractmethod, ABC
 import joblib
 import numpy as np
 import tensorflow as tf
-from vegasflow.configflow import MAX_EVENTS_LIMIT, DEFAULT_ACTIVE_DEVICES, DTYPE
+from vegasflow.configflow import MAX_EVENTS_LIMIT, DEFAULT_ACTIVE_DEVICES, DTYPE, TECH_CUT, float_me
 
 import logging
 
@@ -108,7 +108,6 @@ class MonteCarloFlow(ABC):
     ):
         # Save some parameters
         self.n_dim = n_dim
-        self.xjac = 1.0 / n_events
         self.integrand = None
         self.event = None
         self.simplify_signature = simplify_signature
@@ -163,20 +162,23 @@ class MonteCarloFlow(ABC):
         return self._history
 
     def generate_random_array(self, n_events):
-        """ Generate a 2D array of (n_dim, n_events) points
-        
+        """Generate a 2D array of (n_events, n_dim) points
         Parameters
         ----------
             `n_events`: number of events to generate
 
         Returns
         -------
-            `rnds`: array of (n_dim, n_events) random points
+            `rnds`: array of (n_events, n_dim) random points
+            `idx` : index associated to each random point
+            `wgt` : wgt associated to the random point
         """
         rnds = tf.random.uniform(
-            (self.n_dim, n_events), minval=TECH_CUT, maxval=1.0 - TECH_CUT, dtype=DTYPE
+            (n_events, self.n_dim), minval=TECH_CUT, maxval=1.0 - TECH_CUT, dtype=DTYPE
         )
-        return rnds
+        idx = 0
+        wgt = 1.0 / float_me(n_events)
+        return rnds, idx, wgt
 
     #### Abstract methods
     @abstractmethod
@@ -359,7 +361,9 @@ class MonteCarloFlow(ABC):
 
         if compilable:
             if self.simplify_signature:
-                compile_options["input_signature"] = [tf.TensorSpec(shape=[None, self.n_dim], dtype=DTYPE)]
+                compile_options["input_signature"] = [
+                    tf.TensorSpec(shape=[None, self.n_dim], dtype=DTYPE)
+                ]
             # Don't override user own compilation
             try:
                 integrand.function_spec
