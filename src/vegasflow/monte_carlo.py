@@ -462,7 +462,7 @@ class MonteCarloFlow(ABC):
         final_result = aux_res / weight_sum
         sigma = np.sqrt(1.0 / weight_sum)
         logger.info(f" > Final results: {final_result.numpy():g} +/- {sigma:g}")
-        return final_result, sigma
+        return final_result.numpy(), sigma
 
 
 def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events, compilable=True):
