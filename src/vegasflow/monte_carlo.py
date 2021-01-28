@@ -162,6 +162,22 @@ class MonteCarloFlow(ABC):
         """
         return self._history
 
+    def generate_random_array(self, n_events):
+        """ Generate a 2D array of (n_dim, n_events) points
+        
+        Parameters
+        ----------
+            `n_events`: number of events to generate
+
+        Returns
+        -------
+            `rnds`: array of (n_dim, n_events) random points
+        """
+        rnds = tf.random.uniform(
+            (self.n_dim, n_events), minval=TECH_CUT, maxval=1.0 - TECH_CUT, dtype=DTYPE
+        )
+        return rnds
+
     #### Abstract methods
     @abstractmethod
     def _run_iteration(self):
