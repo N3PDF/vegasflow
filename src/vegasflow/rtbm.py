@@ -1,0 +1,133 @@
+"""
+    Plain implementation of the plainest possible MonteCarlo
+"""
+
+from vegasflow.configflow import DTYPE, fone, fzero, float_me
+from vegasflow.monte_carlo import MonteCarloFlow, wrapper
+import numpy as np
+import tensorflow as tf
+
+from theta.rtbm import RTBM
+from theta.minimizer import CMA
+from theta import costfunctions
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class RTBMFlow(MonteCarloFlow):
+    """
+    RTBM based Monte Carlo integrator
+    """
+
+    def __init__(self, n_hidden=2, rtbm = None, train = True, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._train = train
+        self._first_run = True
+        if rtbm is None:
+            logger.info("Generating a RTBM with %d visible nodes and %d hidden" % (self.n_dim, n_hidden))
+            self._rtbm = RTBM(self.n_dim, n_hidden, init_max_param_bound=50, random_bound=1, diagonal_T=True)
+        else:
+            # Check whether it is a valid rtbm model
+            if not hasattr(rtbm, "make_sample"):
+                raise TypeError(f"{rtbm} is not a valid boltzman machine")
+            self._rtbm = rtbm
+
+    def freeze(self):
+        self.train=False
+    
+    def unfreeze(self):
+        self.train=True
+
+    def compile(self, integrand, compilable=False, **kwargs):
+        if compilable:
+            logger.warning("RTBMFlow is still WIP and not compilable")
+        self._trainer = CMA(ncores=1, verbose=True)
+        super().compile(integrand, compilable=False, **kwargs)
+
+    def generate_random_array(self, n_events):
+        if self._first_run:
+            return super().generate_random_array(n_events)
+        xrand, _ = self._rtbm.make_sample(n_events)
+        xjac = 1.0/self._rtbm(xrand.T)/n_events
+        return float_me(xrand), None, xjac
+
+    def _train_machine(self, x, yraw):
+        options = {
+                "popsize": 50,
+                "tolfun": 1e-1,
+                "maxiter" : 3,
+                }
+        # The output is a probability, therefore:
+        y = yraw / tf.reduce_sum(yraw)
+        # We don't want to train tf variables because it would be slow here...
+        xnp = x.numpy().T
+        ynp = y.numpy()
+        self._trainer.train(costfunctions.kullbackLeibler, self._rtbm, xnp, ynp, **options)
+        self._first_run = False
+
+    @staticmethod
+    def _accumulate(accumulators):
+        """ For the RTBM accumulation strategy we need to keep track
+        of all results and who produced it"""
+        # In the accumulators we should receive a number of items with
+        # (res, xrands) which have shape ( (n_events,), (n_events, n_dim) )
+        all_res = []
+        all_rnd = []
+        for res, rnds, in accumulators:
+            all_res.append(res)
+            all_rnd.append(rnds)
+        return tf.concat(all_res, axis=0), tf.concat(all_rnd, axis=0)
+
+    def _run_event(self, integrand, ncalls=None):
+        if ncalls is None:
+            n_events = self.n_events
+        else:
+            n_events = ncalls
+
+        # Generate all random number for this iteration
+        rnds, _, xjac = self.generate_random_array(n_events)
+        # Compute the integrand
+        res = integrand(rnds, n_dim=self.n_dim, weight=xjac) * xjac
+
+        # Clean up the array from numbers outside the 0-1 range
+        if not self._first_run:
+            # Accept for now only random number between 0 and 1
+            condition = tf.reduce_all(rnds>=0.0, axis=1) & tf.reduce_all(rnds<=1.0, axis=1)
+            res = tf.where(condition, res, fzero)[0]
+            if np.count_nonzero(res) != n_events:
+                logger.warning(f"Found only {np.count_nonzero(res)} of {n_events} valid values\n")
+
+        return res, rnds
+
+    def _run_iteration(self):
+        all_res, rnds = self.run_event()
+        if self.train:
+            self._train_machine(rnds, all_res)
+
+        res = tf.reduce_sum(all_res)
+        all_res2 = all_res**2
+        res2 = tf.reduce_sum(all_res2)*self.n_events
+
+        # Compute the error
+        err_tmp2 = (res2 - tf.square(res)) / (self.n_events - fone)
+        sigma = tf.sqrt(tf.maximum(err_tmp2, fzero))
+        return res, sigma
+
+def rtbm_wrapper(integrand, n_dim, n_iter, total_n_events, **kwargs):
+    """Convenience wrapper
+
+    Parameters
+    ----------
+        `integrand`: tf.function
+        `n_dim`: number of dimensions
+        `n_iter`: number of iterations
+        `n_events`: number of events per iteration
+
+    Returns
+    -------
+        `final_result`: integral value
+        `sigma`: monte carlo error
+    """
+    return wrapper(RTBMFlow, integrand, n_dim, n_iter, total_n_events, **kwargs)

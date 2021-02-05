@@ -57,27 +57,7 @@ def print_iteration(it, res, error, extra="", threshold=0.1):
         logger.info(f"Result for iteration {it}: {res:.4f} +/- {error:.4f}" + extra)
 
 
-def _accumulate(accumulators):
-    """Accumulate all the quantities in accumulators
-    The default accumulation is implemented for tensorflow tensors
-    as a sum of all partial results.
 
-    Parameters
-    ----------
-        `accumulators`: list of tensorflow tensors
-
-    Returns
-    -------
-        `results`: `sum` for each element of the accumulators
-
-    Function not compiled
-    """
-    results = []
-    len_acc = len(accumulators[0])
-    for i in range(len_acc):
-        total = tf.reduce_sum([acc[i] for acc in accumulators], axis=0)
-        results.append(total)
-    return results
 
 
 class MonteCarloFlow(ABC):
@@ -99,13 +79,15 @@ class MonteCarloFlow(ABC):
 
     def __init__(
         self,
-        n_dim,
-        n_events,
+        n_dim=None,
+        n_events=None,
         events_limit=MAX_EVENTS_LIMIT,
         list_devices=DEFAULT_ACTIVE_DEVICES,
         verbose=True,
         simplify_signature=False,
     ):
+        if not ( isinstance(n_dim, int) and n_dim > 0 ):
+            raise ValueError(f"Can't integrate an integrand with non-positive or non-integer dimensionality, received: {n_dim}")
         # Save some parameters
         self.n_dim = n_dim
         self.integrand = None
@@ -132,6 +114,11 @@ class MonteCarloFlow(ABC):
             self.pool = joblib.Parallel(n_jobs=len(devices), prefer="threads")
         else:
             self.devices = None
+        self._train = False
+
+    @property
+    def train(self):
+        return self._train
 
     @property
     def events_per_run(self):
@@ -161,6 +148,29 @@ class MonteCarloFlow(ABC):
         - `histograms`: list of histograms for the corresponding iteration
         """
         return self._history
+
+    @staticmethod
+    def _accumulate(accumulators):
+        """Accumulate all the quantities in accumulators
+        The default accumulation is implemented for tensorflow tensors
+        as a sum of all partial results.
+
+        Parameters
+        ----------
+            `accumulators`: list of tensorflow tensors
+
+        Returns
+        -------
+            `results`: `sum` for each element of the accumulators
+
+        Function not compiled
+        """
+        results = []
+        len_acc = len(accumulators[0])
+        for i in range(len_acc):
+            total = tf.reduce_sum([acc[i] for acc in accumulators], axis=0)
+            results.append(total)
+        return results
 
     def generate_random_array(self, n_events):
         """Generate a 2D array of (n_events, n_dim) points
@@ -314,7 +324,7 @@ class MonteCarloFlow(ABC):
             # Generate the client to control the distribution using the cluster variable
             client = Client(cluster)
             accumulators_future = client.map(self.device_run, events_to_do, percentages)
-            result_future = client.submit(_accumulate, accumulators_future)
+            result_future = client.submit(self._accumulate, accumulators_future)
             result = result_future.result()
             # Liberate the client
             client.close()
@@ -325,7 +335,7 @@ class MonteCarloFlow(ABC):
             for ncalls, pc in zip(events_to_do, percentages):
                 res = self.device_run(ncalls, sent_pc=pc, **kwargs)
                 accumulators.append(res)
-        return _accumulate(accumulators)
+        return self._accumulate(accumulators)
 
     def compile(self, integrand, compilable=True):
         """Receives an integrand, prepares it for integration
@@ -482,6 +492,6 @@ def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events, compilab
         `final_result`: integral value
         `sigma`: monte carlo error
     """
-    mc_instance = integrator_class(n_dim, total_n_events)
+    mc_instance = integrator_class(n_dim = n_dim, n_events=total_n_events)
     mc_instance.compile(integrand, compilable=compilable)
     return mc_instance.run_integration(n_iter)

@@ -8,6 +8,7 @@ import numpy as np
 from vegasflow.configflow import DTYPE
 import tensorflow as tf
 from vegasflow.vflow import vegas_wrapper
+from vegasflow.rtbm import rtbm_wrapper
 
 # MC integration setup
 dim = 3
@@ -272,6 +273,13 @@ def singletop(xarr, n_dim=None, **kwargs):
 
 if __name__ == "__main__":
     """Testing a basic integration"""
+
+    print(f"RTBM MC, ncalls={ncalls}:")
+    start = time.time()
+    r = rtbm_wrapper(singletop, dim, n_iter, ncalls)
+    end = time.time()
+    print(f"RTBM took: time (s): {end-start}")
+
     print(f"VEGAS MC, ncalls={ncalls}:")
     start = time.time()
     r = vegas_wrapper(singletop, dim, n_iter, ncalls)

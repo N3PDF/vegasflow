@@ -10,10 +10,11 @@ import numpy as np
 import tensorflow as tf
 from vegasflow.vflow import vegas_wrapper
 from vegasflow.plain import plain_wrapper 
+from vegasflow.rtbm import rtbm_wrapper
 
 
 # MC integration setup
-dim = 4
+dim = 3
 ncalls = np.int32(1e5)
 n_iter = 5
 
@@ -34,9 +35,16 @@ def symgauss(xarr, n_dim=None, **kwargs):
 
 if __name__ == "__main__":
     """Testing several different integrations"""
+    print(f"RTBM MC, ncalls={ncalls}:")
+    start = time.time()
+    ncalls = ncalls
+    r = rtbm_wrapper(symgauss, dim, n_iter, ncalls)
+    end = time.time()
+    print(f"RTBM took: time (s): {end-start}")
+
     print(f"VEGAS MC, ncalls={ncalls}:")
     start = time.time()
-    ncalls = 10*ncalls
+    ncalls = ncalls
     r = vegas_wrapper(symgauss, dim, n_iter, ncalls)
     end = time.time()
     print(f"Vegas took: time (s): {end-start}")
