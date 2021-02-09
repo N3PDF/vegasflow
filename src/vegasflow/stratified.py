@@ -9,6 +9,7 @@ import tensorflow as tf
 import numpy as np
 from itertools import chain,repeat,product
 N_STRAT_MIN = 4
+BETA = 0.75
 
 
 @tf.function
@@ -46,18 +47,19 @@ def generate_random_array(rnds,n_strat,n_ev,hypercubes):
 
 class StratifiedFlow(MonteCarloFlow):
     """
-        Simple Monte Carlo integrator with stratified sampling.
+        Simple Monte Carlo integrator with Stratified Sampling.
     """
 
-    def __init__(self, n_dim, n_events, **kwargs):
+    def __init__(self, n_dim, n_events,adaptive=True, **kwargs):
         super().__init__(n_dim, n_events, **kwargs)
+
+        self.adaptive = adaptive
 
         # Initialize stratifications
         self.n_strat = tf.math.floor(tf.math.pow(n_events/N_STRAT_MIN, 1/n_dim))
         substratification_np = np.linspace(0,1,int(self.n_strat)+1)
         stratifications_np = substratification_np.repeat(n_dim).reshape(-1, n_dim).T
         self.stratifications = tf.Variable(stratifications_np, dtype=DTYPE)
-
         # Initialize hypercubes
         hypercubes_one_dim = np.arange(1,int(self.n_strat)+1)
         hypercubes = [list(p) for p in product(hypercubes_one_dim, repeat=int(n_dim))]
@@ -72,7 +74,13 @@ class StratifiedFlow(MonteCarloFlow):
         #correction of self.n_events due to samples per hypercube
         self.n_events = int(n_ev*tf.math.pow(self.n_strat,n_dim))
 
-
+    def redistribute_samples(self,arr_var):
+        """Receives an array with the variance of the integrand in each hypercube
+        and recalculate the samples per hypercube according to VEGAS+ algorithm"""
+        
+        damped_arr_var = tf.pow(arr_var,BETA)
+        new_n_ev = tf.maximum(2,damped_arr_var * self.n_events/tf.reduce_sum(damped_arr_var))
+        self.n_ev = tf.math.floor(new_n_ev)
     
         
     def _run_event(self, integrand, ncalls=None):
@@ -97,12 +105,18 @@ class StratifiedFlow(MonteCarloFlow):
         ress = tf.math.segment_sum(tmp,segm)
         ress2 = tf.math.segment_sum(tmp2,segm)
 
-        return ress, ress2
+        #if adaptive save variance of each hypercube
+        arr_var = None
+        if self.adaptive:
+            hypercube_volume = tf.cast(tf.math.pow(1/self.n_strat, self.n_dim),DTYPE)
+            arr_var = ress2 * tf.cast(self.n_ev,DTYPE)* tf.square(hypercube_volume) - tf.square(ress*hypercube_volume)
+        
+        return ress, ress2, arr_var
 
 
     def _run_iteration(self):
 
-        ress, raw_ress2 = self.run_event()
+        ress, raw_ress2, arr_var = self.run_event()
 
         # compute variance for each hypercube
         ress2 = raw_ress2 * tf.cast(self.n_ev,DTYPE)
@@ -113,6 +127,11 @@ class StratifiedFlow(MonteCarloFlow):
         res = tf.reduce_sum(ress) / tf.cast(tf.math.pow(self.n_strat,self.n_dim),DTYPE)
         sigma2 = tf.reduce_sum(sigmas2)/tf.cast(tf.math.pow(self.n_strat,self.n_dim),DTYPE)/self.n_events    
         sigma = tf.sqrt(sigma2)
+
+        # If adaptive is active redistributes samples
+        if self.adaptive:
+            self.redistribute_samples(arr_var)
+
         return res, sigma
 
 
@@ -147,7 +166,6 @@ if __name__ == "__main__":
 
     start = time.time()
     vegas_instance = StratifiedFlow(dim, ncalls,simplify_signature=True)
-    #print(int(tf.shape(vegas_instance.hypercubes)[1]))
     vegas_instance.compile(symgauss)
     result = vegas_instance.run_integration(n_iter)
     end = time.time()
