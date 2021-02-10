@@ -27,7 +27,7 @@ class RTBMFlow(MonteCarloFlow):
         self._first_run = True
         if rtbm is None:
             logger.info("Generating a RTBM with %d visible nodes and %d hidden" % (self.n_dim, n_hidden))
-            self._rtbm = RTBM(self.n_dim, n_hidden, init_max_param_bound=50, random_bound=1, diagonal_T=True)
+            self._rtbm = RTBM(self.n_dim, n_hidden, init_max_param_bound=50, random_bound=2, diagonal_T=False, positive_T=True, positive_Q=True)
         else:
             # Check whether it is a valid rtbm model
             if not hasattr(rtbm, "make_sample"):
@@ -43,21 +43,33 @@ class RTBMFlow(MonteCarloFlow):
     def compile(self, integrand, compilable=False, **kwargs):
         if compilable:
             logger.warning("RTBMFlow is still WIP and not compilable")
-        self._trainer = CMA(ncores=1, verbose=True)
+        self._trainer = CMA(parallel=False, ncores=1, verbose=True)
         super().compile(integrand, compilable=False, **kwargs)
 
     def generate_random_array(self, n_events):
         if self._first_run:
             return super().generate_random_array(n_events)
         xrand, _ = self._rtbm.make_sample(n_events)
-        xjac = 1.0/self._rtbm(xrand.T)/n_events
-        return float_me(xrand), None, xjac
+        xjac_raw = 1.0/self._rtbm(xrand.T)/n_events
+        # Now re-scale the values to the 0-1 range per dimension.
+        # NOTE: this is only valid while the points in_device are equal to the points being utilized
+        # so when the RTBM can run in the GPU it will need to be modified!
+        # mainly to carry the first limits to the rest of the calculation
+        epsilon = np.abs(np.max(xrand)/4.0)
+        max_per_d = np.max(xrand, axis=0) + epsilon
+        min_per_d = np.min(xrand, axis=0) - epsilon
+        delta = max_per_d - min_per_d
+        new_rand = (xrand - min_per_d)/delta
+        xjac = xjac_raw/np.prod(delta)
+        print(delta)
+        print("")
+        return float_me(new_rand), None, xjac
 
     def _train_machine(self, x, yraw):
         options = {
-                "popsize": 50,
-                "tolfun": 1e-1,
-                "maxiter" : 3,
+                "popsize": 75,
+                "tolfun": 1e-4,
+                "maxiter" : 4,
                 }
         # The output is a probability, therefore:
         y = yraw / tf.reduce_sum(yraw)

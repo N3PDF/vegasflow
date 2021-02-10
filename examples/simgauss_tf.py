@@ -4,19 +4,23 @@
     Basic example using the vegas_wrapper helper
 """
 
-from vegasflow.configflow import DTYPE
+import tensorflow as tf
+tf.config.threading.set_inter_op_parallelism_threads(1)
+tf.config.threading.set_intra_op_parallelism_threads(1)
+from vegasflow.configflow import DTYPE, run_eager
+run_eager(True)
+
 import time
 import numpy as np
-import tensorflow as tf
 from vegasflow.vflow import vegas_wrapper
 from vegasflow.plain import plain_wrapper 
 from vegasflow.rtbm import rtbm_wrapper
 
 
 # MC integration setup
-dim = 3
-ncalls = np.int32(1e5)
-n_iter = 5
+dim = 4
+ncalls = np.int32(1e6)
+n_iter = 3
 
 
 @tf.function
