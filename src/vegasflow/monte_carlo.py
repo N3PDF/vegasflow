@@ -120,6 +120,10 @@ class MonteCarloFlow(ABC):
     def train(self):
         return self._train
 
+    @train.setter
+    def train(self, new_val):
+        self._train = new_val
+
     @property
     def events_per_run(self):
         """Number of events to run in a single step.

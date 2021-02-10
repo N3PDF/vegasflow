@@ -185,12 +185,12 @@ class VegasFlow(MonteCarloFlow):
 
     def freeze_grid(self):
         """ Stops the grid from refining any more """
-        self.train = False
+        self._train = False
         self.recompile()
 
     def unfreeze_grid(self):
         """ Enable the refining of the grid """
-        self.train = True
+        self._train = True
         self.recompile()
 
     def save_grid(self, file_name):

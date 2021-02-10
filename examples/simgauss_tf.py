@@ -18,7 +18,7 @@ from vegasflow.rtbm import rtbm_wrapper
 
 
 # MC integration setup
-dim = 4
+dim = 2
 ncalls = np.int32(1e6)
 n_iter = 3
 

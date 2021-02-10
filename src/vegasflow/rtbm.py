@@ -21,13 +21,23 @@ class RTBMFlow(MonteCarloFlow):
     RTBM based Monte Carlo integrator
     """
 
-    def __init__(self, n_hidden=2, rtbm = None, train = True, *args, **kwargs):
+    def __init__(self, n_hidden=2, rtbm=None, train=True, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._train = train
         self._first_run = True
         if rtbm is None:
-            logger.info("Generating a RTBM with %d visible nodes and %d hidden" % (self.n_dim, n_hidden))
-            self._rtbm = RTBM(self.n_dim, n_hidden, init_max_param_bound=50, random_bound=2, diagonal_T=False, positive_T=True, positive_Q=True)
+            logger.info(
+                "Generating a RTBM with %d visible nodes and %d hidden" % (self.n_dim, n_hidden)
+            )
+            self._rtbm = RTBM(
+                self.n_dim,
+                n_hidden,
+                minimization_bound=50,
+                gaussian_init=True,
+                diagonal_T=False,
+                positive_T=True,
+                positive_Q=True,
+            )
         else:
             # Check whether it is a valid rtbm model
             if not hasattr(rtbm, "make_sample"):
@@ -35,10 +45,10 @@ class RTBMFlow(MonteCarloFlow):
             self._rtbm = rtbm
 
     def freeze(self):
-        self.train=False
-    
+        self.train = False
+
     def unfreeze(self):
-        self.train=True
+        self.train = True
 
     def compile(self, integrand, compilable=False, **kwargs):
         if compilable:
@@ -50,27 +60,25 @@ class RTBMFlow(MonteCarloFlow):
         if self._first_run:
             return super().generate_random_array(n_events)
         xrand, _ = self._rtbm.make_sample(n_events)
-        xjac_raw = 1.0/self._rtbm(xrand.T)/n_events
+        xjac_raw = 1.0 / self._rtbm(xrand.T) / n_events
         # Now re-scale the values to the 0-1 range per dimension.
         # NOTE: this is only valid while the points in_device are equal to the points being utilized
         # so when the RTBM can run in the GPU it will need to be modified!
         # mainly to carry the first limits to the rest of the calculation
-        epsilon = np.abs(np.max(xrand)/4.0)
+        epsilon = np.abs(np.max(xrand) / 4.0)
         max_per_d = np.max(xrand, axis=0) + epsilon
         min_per_d = np.min(xrand, axis=0) - epsilon
         delta = max_per_d - min_per_d
-        new_rand = (xrand - min_per_d)/delta
-        xjac = xjac_raw/np.prod(delta)
-        print(delta)
-        print("")
+        new_rand = (xrand - min_per_d) / delta
+        xjac = xjac_raw / np.prod(delta)
         return float_me(new_rand), None, xjac
 
     def _train_machine(self, x, yraw):
         options = {
-                "popsize": 75,
-                "tolfun": 1e-4,
-                "maxiter" : 4,
-                }
+            "popsize": 75,
+            "tolfun": 1e-4,
+            "maxiter": 4,
+        }
         # The output is a probability, therefore:
         y = yraw / tf.reduce_sum(yraw)
         # We don't want to train tf variables because it would be slow here...
@@ -81,13 +89,16 @@ class RTBMFlow(MonteCarloFlow):
 
     @staticmethod
     def _accumulate(accumulators):
-        """ For the RTBM accumulation strategy we need to keep track
+        """For the RTBM accumulation strategy we need to keep track
         of all results and who produced it"""
         # In the accumulators we should receive a number of items with
         # (res, xrands) which have shape ( (n_events,), (n_events, n_dim) )
         all_res = []
         all_rnd = []
-        for res, rnds, in accumulators:
+        for (
+            res,
+            rnds,
+        ) in accumulators:
             all_res.append(res)
             all_rnd.append(rnds)
         return tf.concat(all_res, axis=0), tf.concat(all_rnd, axis=0)
@@ -106,7 +117,7 @@ class RTBMFlow(MonteCarloFlow):
         # Clean up the array from numbers outside the 0-1 range
         if not self._first_run:
             # Accept for now only random number between 0 and 1
-            condition = tf.reduce_all(rnds>=0.0, axis=1) & tf.reduce_all(rnds<=1.0, axis=1)
+            condition = tf.reduce_all(rnds >= 0.0, axis=1) & tf.reduce_all(rnds <= 1.0, axis=1)
             res = tf.where(condition, res, fzero)[0]
             if np.count_nonzero(res) != n_events:
                 logger.warning(f"Found only {np.count_nonzero(res)} of {n_events} valid values\n")
@@ -119,13 +130,14 @@ class RTBMFlow(MonteCarloFlow):
             self._train_machine(rnds, all_res)
 
         res = tf.reduce_sum(all_res)
-        all_res2 = all_res**2
-        res2 = tf.reduce_sum(all_res2)*self.n_events
+        all_res2 = all_res ** 2
+        res2 = tf.reduce_sum(all_res2) * self.n_events
 
         # Compute the error
         err_tmp2 = (res2 - tf.square(res)) / (self.n_events - fone)
         sigma = tf.sqrt(tf.maximum(err_tmp2, fzero))
         return res, sigma
+
 
 def rtbm_wrapper(integrand, n_dim, n_iter, total_n_events, **kwargs):
     """Convenience wrapper
