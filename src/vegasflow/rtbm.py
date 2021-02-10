@@ -1,15 +1,15 @@
 """
     Plain implementation of the plainest possible MonteCarlo
 """
-
+import copy
+import numpy as np
 from vegasflow.configflow import DTYPE, fone, fzero, float_me
 from vegasflow.monte_carlo import MonteCarloFlow, wrapper
-import numpy as np
 import tensorflow as tf
 
 from theta.rtbm import RTBM
-from theta.minimizer import CMA
 from theta import costfunctions
+from cma import CMAEvolutionStrategy
 
 import logging
 
@@ -32,7 +32,7 @@ class RTBMFlow(MonteCarloFlow):
             self._rtbm = RTBM(
                 self.n_dim,
                 n_hidden,
-                minimization_bound=50,
+                minimization_bound=80,
                 gaussian_init=True,
                 diagonal_T=False,
                 positive_T=True,
@@ -53,7 +53,6 @@ class RTBMFlow(MonteCarloFlow):
     def compile(self, integrand, compilable=False, **kwargs):
         if compilable:
             logger.warning("RTBMFlow is still WIP and not compilable")
-        self._trainer = CMA(parallel=False, ncores=1, verbose=True)
         super().compile(integrand, compilable=False, **kwargs)
 
     def generate_random_array(self, n_events):
@@ -71,20 +70,44 @@ class RTBMFlow(MonteCarloFlow):
         delta = max_per_d - min_per_d
         new_rand = (xrand - min_per_d) / delta
         xjac = xjac_raw / np.prod(delta)
+        print(delta)
+        print("")
         return float_me(new_rand), None, xjac
 
     def _train_machine(self, x, yraw):
+        # Get a reference to the initial solution of the CMA
+        x0 = copy.deepcopy(self._rtbm.get_parameters())
+        bounds = self._rtbm.get_bounds()
+
         options = {
-            "popsize": 75,
-            "tolfun": 1e-4,
-            "maxiter": 4,
-        }
-        # The output is a probability, therefore:
-        y = yraw / tf.reduce_sum(yraw)
-        # We don't want to train tf variables because it would be slow here...
+                "bounds": bounds,
+                "maxiter": 250,
+                }
+
         xnp = x.numpy().T
-        ynp = y.numpy()
-        self._trainer.train(costfunctions.kullbackLeibler, self._rtbm, xnp, ynp, **options)
+        ynp = yraw.numpy()
+
+        sol_found = False
+        def optimization(n=1):
+            sigma = np.min(bounds[1])/(4.0*n)
+            es = CMAEvolutionStrategy(x0, sigma, options)
+
+            def target(params):
+                if not self._rtbm.set_parameters(params):
+                    return np.NaN
+                prob = self._rtbm(xnp)
+                return costfunctions.kullbackLeibler.cost(prob, ynp)
+
+            es.optimize(target)
+            return es.result
+
+        n = 1
+        while not sol_found:
+            res = optimization(n)
+            sol_found = self._rtbm.set_parameters(res.xbest)
+            logger.warning("Optimization failed, trying again!")
+            n+=1
+
         self._first_run = False
 
     @staticmethod
