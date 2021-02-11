@@ -7,9 +7,9 @@ from vegasflow.configflow import DTYPE, fone, fzero, float_me
 from vegasflow.monte_carlo import MonteCarloFlow, wrapper
 import tensorflow as tf
 
-from theta.rtbm import RTBM
-from theta import costfunctions
-from cma import CMAEvolutionStrategy
+from theta.rtbm import RTBM # pylint:disable=import-error
+from theta import costfunctions # pylint:disable=import-error
+from cma import CMAEvolutionStrategy # pylint:disable=import-error
 
 import logging
 
