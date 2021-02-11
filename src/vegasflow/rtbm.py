@@ -62,8 +62,8 @@ class RTBMFlow(MonteCarloFlow):
         and xjac the correspondent jacobian factor.
         original_r is the original random values sampled by the RTBM to be used at training
         """
-        xrand, original_r, px = self._rtbm.make_sample_rho(n_events)
-        xjac = float_me(1.0/px)
+        xrand, px, original_r = self._rtbm.make_sample_rho(n_events)
+        xjac = float_me(1.0/px/n_events)
         return float_me(xrand), original_r, xjac
 
     def _train_machine(self, x, yraw):
@@ -136,7 +136,7 @@ class RTBMFlow(MonteCarloFlow):
         if True: # They should always be between 0 and 1 anyway
             # Accept for now only random number between 0 and 1
             condition = tf.reduce_all(rnds >= 0.0, axis=1) & tf.reduce_all(rnds <= 1.0, axis=1)
-            res = tf.where(condition, res, fzero)[0]
+            res = tf.where(condition, res, fzero)
             if np.count_nonzero(res) != n_events:
                 logger.warning(f"Found only {np.count_nonzero(res)} of {n_events} valid values\n")
 
