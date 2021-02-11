@@ -12,8 +12,8 @@ from vegasflow.rtbm import rtbm_wrapper
 
 # MC integration setup
 dim = 3
-ncalls = np.int32(1e5)
-n_iter = 5
+ncalls = np.int32(1e6)
+n_iter = 4
 
 # Physics setup
 # top mass

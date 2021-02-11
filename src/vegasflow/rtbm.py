@@ -105,7 +105,8 @@ class RTBMFlow(MonteCarloFlow):
         while not sol_found:
             res = optimization(n)
             sol_found = self._rtbm.set_parameters(res.xbest)
-            logger.warning("Optimization failed, trying again!")
+            if not sol_found:
+                logger.warning("Optimization failed, trying again!")
             n+=1
 
         self._first_run = False
