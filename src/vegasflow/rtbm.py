@@ -32,7 +32,7 @@ class RTBMFlow(MonteCarloFlow):
             self._rtbm = RTBM(
                 self.n_dim,
                 n_hidden,
-                minimization_bound=80,
+                minimization_bound=50,
                 gaussian_init=True,
                 diagonal_T=False,
                 positive_T=True,
@@ -56,25 +56,19 @@ class RTBMFlow(MonteCarloFlow):
         super().compile(integrand, compilable=False, **kwargs)
 
     def generate_random_array(self, n_events):
-        if self._first_run:
-            return super().generate_random_array(n_events)
-        xrand, _ = self._rtbm.make_sample(n_events)
-        xjac_raw = 1.0 / self._rtbm(xrand.T) / n_events
-        # Now re-scale the values to the 0-1 range per dimension.
-        # NOTE: this is only valid while the points in_device are equal to the points being utilized
-        # so when the RTBM can run in the GPU it will need to be modified!
-        # mainly to carry the first limits to the rest of the calculation
-        epsilon = np.abs(np.max(xrand) / 4.0)
-        max_per_d = np.max(xrand, axis=0) + epsilon
-        min_per_d = np.min(xrand, axis=0) - epsilon
-        delta = max_per_d - min_per_d
-        new_rand = (xrand - min_per_d) / delta
-        xjac = xjac_raw / np.prod(delta)
-        print(delta)
-        print("")
-        return float_me(new_rand), None, xjac
+        """
+        Returns (xrand, original_r, xjac)
+        where xrand is the integration variable between 0 and 1
+        and xjac the correspondent jacobian factor.
+        original_r is the original random values sampled by the RTBM to be used at training
+        """
+        xrand, original_r, px = self._rtbm.make_sample_rho(n_events)
+        xjac = float_me(1.0/px)
+        return float_me(xrand), original_r, xjac
 
     def _train_machine(self, x, yraw):
+        """ Takes as input the random sample from the previous step
+        and the values of the calculation"""
         # Get a reference to the initial solution of the CMA
         x0 = copy.deepcopy(self._rtbm.get_parameters())
         bounds = self._rtbm.get_bounds()
@@ -134,19 +128,19 @@ class RTBMFlow(MonteCarloFlow):
             n_events = ncalls
 
         # Generate all random number for this iteration
-        rnds, _, xjac = self.generate_random_array(n_events)
+        rnds, original_r, xjac = self.generate_random_array(n_events)
         # Compute the integrand
         res = integrand(rnds, n_dim=self.n_dim, weight=xjac) * xjac
 
         # Clean up the array from numbers outside the 0-1 range
-        if not self._first_run:
+        if True: # They should always be between 0 and 1 anyway
             # Accept for now only random number between 0 and 1
             condition = tf.reduce_all(rnds >= 0.0, axis=1) & tf.reduce_all(rnds <= 1.0, axis=1)
             res = tf.where(condition, res, fzero)[0]
             if np.count_nonzero(res) != n_events:
                 logger.warning(f"Found only {np.count_nonzero(res)} of {n_events} valid values\n")
 
-        return res, rnds
+        return res, original_r
 
     def _run_iteration(self):
         all_res, rnds = self.run_event()
