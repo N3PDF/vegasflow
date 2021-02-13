@@ -13,6 +13,7 @@ import tensorflow as tf
 from vegasflow.configflow import DTYPE
 from vegasflow.vflow import VegasFlow
 from vegasflow.plain import PlainFlow
+from vegasflow.stratified import StratifiedFlow
 
 # Test setup
 dim = 2
@@ -108,4 +109,9 @@ def test_VegasFlow_load_grid():
 def test_PlainFlow():
     plain_instance = instance_and_compile(PlainFlow)
     result = plain_instance.run_integration(n_iter)
+    check_is_one(result)
+
+def test_StratifiedFlow():
+    stratified_instance = instance_and_compile(StratifiedFlow)
+    result = stratified_instance.run_integration(n_iter)
     check_is_one(result)

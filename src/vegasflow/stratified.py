@@ -147,7 +147,7 @@ class StratifiedFlow(MonteCarloFlow):
         return res, sigma
 
 
-def plain_wrapper(*args):
+def stratified_wrapper(*args):
     """ Wrapper around PlainFlow """
     return wrapper(StratifiedFlow, *args)
 
@@ -180,4 +180,3 @@ if __name__ == "__main__":
     result = vegas_instance.run_integration(n_iter)
     end = time.time()
     print(f"Vegas took: time (s): {end-start}")
-    
