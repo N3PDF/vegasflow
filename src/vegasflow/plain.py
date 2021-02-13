@@ -9,7 +9,7 @@ import tensorflow as tf
 
 class PlainFlow(MonteCarloFlow):
     """
-        Simple Monte Carlo integrator.
+    Simple Monte Carlo integrator.
     """
 
     def _run_event(self, integrand, ncalls=None):
@@ -18,10 +18,8 @@ class PlainFlow(MonteCarloFlow):
         else:
             n_events = ncalls
 
-        # Jacobian
-        xjac = 1.0 / self.n_events
         # Generate all random number for this iteration
-        rnds = tf.random.uniform((n_events, self.n_dim), minval=0, maxval=1, dtype=DTYPE)
+        rnds, _, xjac = self.generate_random_array(n_events)
         # Compute the integrand
         tmp = integrand(rnds, n_dim=self.n_dim, weight=xjac) * xjac
         tmp2 = tf.square(tmp)
