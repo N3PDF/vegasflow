@@ -10,6 +10,7 @@ from vegasflow.monte_carlo import MonteCarloFlow, wrapper
 N_STRAT_MIN = 4
 BETA = 0.75
 
+
 @tf.function
 def generate_random_array(rnds, n_strat, n_ev, hypercubes):
     """Receives an array of random numbers 0 and 1 and
@@ -150,33 +151,3 @@ class StratifiedFlow(MonteCarloFlow):
 def stratified_wrapper(*args):
     """ Wrapper around PlainFlow """
     return wrapper(StratifiedFlow, *args)
-
-
-@tf.function
-def symgauss(xarr, n_dim=None, **kwargs):
-    """symgauss test function"""
-    if n_dim is None:
-        n_dim = xarr.shape[-1]
-    a = tf.constant(0.1, dtype=DTYPE)
-    n100 = tf.cast(100 * n_dim, dtype=DTYPE)
-    pref = tf.pow(1.0 / a / np.sqrt(np.pi), n_dim)
-    coef = tf.reduce_sum(tf.range(n100 + 1))
-    coef += tf.reduce_sum(tf.square((xarr - 1.0 / 2.0) / a), axis=1)
-    coef -= (n100 + 1) * n100 / 2.0
-    return pref * tf.exp(-coef)
-
-
-if __name__ == "__main__":
-
-    import time
-    # MC integration setup
-    dim = 4
-    ncalls = int(1e3)
-    n_iter = 5
-
-    start = time.time()
-    vegas_instance = StratifiedFlow(dim, ncalls, simplify_signature=True)
-    vegas_instance.compile(symgauss)
-    result = vegas_instance.run_integration(n_iter)
-    end = time.time()
-    print(f"Vegas took: time (s): {end-start}")
