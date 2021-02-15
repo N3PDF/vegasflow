@@ -82,9 +82,9 @@ class StratifiedFlow(MonteCarloFlow):
         hypercube and recalculate the samples per hypercube according
         to VEGAS+ algorithm"""
         
-        damped_arr_var = tf.pow(arr_var, BETA)
+        damped_arr_sdev = tf.pow(arr_var, BETA/2)
         new_n_ev = tf.maximum(2,
-                              damped_arr_var * self.n_events/tf.reduce_sum(damped_arr_var))
+                              damped_arr_sdev * self.n_events/tf.reduce_sum(damped_arr_sdev))
         self.n_ev = tf.math.floor(new_n_ev)
     
     def _run_event(self, integrand, ncalls=None):
