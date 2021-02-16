@@ -114,6 +114,7 @@ class MonteCarloFlow(ABC):
         self._verbose = verbose
         self._history = []
         self.n_events = n_events
+        self._xjac = float_me(1.0/n_events)
         self._events_per_run = min(events_limit, n_events)
         self.distribute = False
         if list_devices:
@@ -177,8 +178,7 @@ class MonteCarloFlow(ABC):
             (n_events, self.n_dim), minval=TECH_CUT, maxval=1.0 - TECH_CUT, dtype=DTYPE
         )
         idx = 0
-        wgt = 1.0 / float_me(n_events)
-        return rnds, idx, wgt
+        return rnds, idx, self._xjac
 
     #### Abstract methods
     @abstractmethod
@@ -318,6 +318,7 @@ class MonteCarloFlow(ABC):
             result = result_future.result()
             # Liberate the client
             client.close()
+            self.cluster = cluster
             return result
         else:
             accumulators = []
