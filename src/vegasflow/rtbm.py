@@ -21,7 +21,7 @@ class RTBMFlow(MonteCarloFlow):
     RTBM based Monte Carlo integrator
     """
 
-    def __init__(self, n_hidden=2, rtbm=None, train=True, *args, **kwargs):
+    def __init__(self, n_hidden=3, rtbm=None, train=True, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._train = train
         self._first_run = True
@@ -76,6 +76,7 @@ class RTBMFlow(MonteCarloFlow):
         options = {
                 "bounds": bounds,
                 "maxiter": 250,
+                "popsize" : 50,
                 }
 
         xnp = x.numpy().T
@@ -90,6 +91,8 @@ class RTBMFlow(MonteCarloFlow):
                 if not self._rtbm.set_parameters(params):
                     return np.NaN
                 prob = self._rtbm(xnp)
+                if (prob <= 0.0).any():
+                    return np.NaN
                 return costfunctions.kullbackLeibler.cost(prob, ynp)
 
             es.optimize(target)
@@ -98,7 +101,10 @@ class RTBMFlow(MonteCarloFlow):
         n = 1
         while not sol_found:
             res = optimization(n)
-            sol_found = self._rtbm.set_parameters(res.xbest)
+            try:
+                sol_found = self._rtbm.set_parameters(res.xbest)
+            except TypeError:
+                sol_found = False
             if not sol_found:
                 logger.warning("Optimization failed, trying again!")
             n+=1
