@@ -96,6 +96,6 @@ TECH_CUT = float_me(1e-8)
 # Set up the logistics of the integration
 # Events Limit limits how many events are done in one single run of the event_loop
 # set it lower if hitting memory problems
-MAX_EVENTS_LIMIT = int(1e3)
+MAX_EVENTS_LIMIT = int(1e6)
 # Select the list of devices to look for
 DEFAULT_ACTIVE_DEVICES = ["GPU"]  # , 'CPU']
