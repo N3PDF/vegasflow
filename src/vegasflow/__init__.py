@@ -5,5 +5,6 @@ from vegasflow.configflow import int_me, float_me, run_eager
 from vegasflow.vflow import VegasFlow, vegas_wrapper
 from vegasflow.plain import PlainFlow, plain_wrapper
 from vegasflow.stratified import StratifiedFlow, stratified_wrapper
+from vegasflow.vflowplus import VegasFlowPlus, vegasflowplus_wrapper
 
 __version__ = "1.2.0"
