@@ -21,10 +21,11 @@ if __name__ == "__main__":
         cores=4,
         queue="<partition_name>",
         project="<accout_name>",
-        job_extra=["--get-user-env", "--nodes=1"],
+        job_extra=["--get-user-env"],
     )
 
-    mc_instance = VegasFlow(4, int(1e7), events_limit=int(1e6))
+    mc_instance = VegasFlow(4, int(1e6), events_limit=int(1e5))
+    cluster.scale(jobs=10)
     mc_instance.set_distribute(cluster)
     mc_instance.compile(integrand)
     mc_instance.run_integration(5)

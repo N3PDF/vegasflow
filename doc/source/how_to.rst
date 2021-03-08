@@ -21,7 +21,7 @@ Basic usage
 
 Integrating a function with ``VegasFlow`` is done in three basic steps:
 
-1. **Instating an integrator**: At the time of instantiation it is necessary to provide
+1. **Instantiating an integrator**: At the time of instantiation it is necessary to provide
    a number of dimensions and a number of calls per iteration.
    The reason for giving this information beforehand is to allow for optimization.
 

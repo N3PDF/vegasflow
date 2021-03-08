@@ -26,7 +26,7 @@ n_iter = 4
 def example_integrand(xarr, n_dim=None, weight=None):
     """ Example function that integrates to 1 """
     if n_dim is None:
-        n_dim = xarr.shape[-1]
+        n_dim = xarr.shape[0]
     a = tf.constant(0.1, dtype=DTYPE)
     n100 = tf.cast(100 * n_dim, dtype=DTYPE)
     pref = tf.pow(1.0 / a / np.sqrt(np.pi), n_dim)

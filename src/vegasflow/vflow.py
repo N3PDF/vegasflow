@@ -10,7 +10,6 @@ import json
 import numpy as np
 import tensorflow as tf
 
-from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me, ione, int_me
 from vegasflow.configflow import BINS_MAX, ALPHA
 from vegasflow.monte_carlo import MonteCarloFlow, wrapper
 from vegasflow.utils import consume_array_into_indices
@@ -47,7 +46,7 @@ def generate_random_array(rnds, divisions):
     #     reg_i = fzero
     #     reg_f = fone
     # Get the index of the division we are interested in
-    xn = FBINS * (fone - rnds)
+    xn = FBINS * (fone - tf.transpose(rnds))
 
     @tf.function
     def digest(xn):
@@ -287,6 +286,13 @@ class VegasFlow(MonteCarloFlow):
             new_divisions = refine_grid_per_dimension(arr_res2[j, :], self.divisions[j, :])
             self.divisions[j, :].assign(new_divisions)
 
+    def generate_random_array(self, n_events):
+        """Uses the internal array to generate ``n_events`` random numbers"""
+        rnds, _, xjac = super().generate_random_array(n_events)
+        # Pass them through the Vegas digestion
+        x, ind, w = generate_random_array(rnds, self.divisions)
+        return x, ind, w * xjac
+
     def _run_event(self, integrand, ncalls=None):
         """Runs one step of Vegas.
 
@@ -306,17 +312,10 @@ class VegasFlow(MonteCarloFlow):
         else:
             n_events = ncalls
 
-        tech_cut = 1e-8
         # Generate all random number for this iteration
-        rnds = tf.random.uniform(
-            (self.n_dim, n_events), minval=tech_cut, maxval=1.0 - tech_cut, dtype=DTYPE
-        )
-
-        # Pass them through the Vegas digestion
-        x, ind, w = generate_random_array(rnds, self.divisions)
+        x, ind, xjac = self.generate_random_array(n_events)
 
         # Now compute the integrand
-        xjac = self.xjac * w
         if self.simplify_signature:
             tmp = xjac * integrand(x)
         else:
