@@ -14,6 +14,7 @@ from vegasflow.configflow import DTYPE
 from vegasflow.vflow import VegasFlow
 from vegasflow.plain import PlainFlow
 from vegasflow.stratified import StratifiedFlow
+from vegasflow.vflowplus import VegasFlowPlus
 
 # Test setup
 dim = 2
@@ -111,7 +112,24 @@ def test_PlainFlow():
     result = plain_instance.run_integration(n_iter)
     check_is_one(result)
 
-def test_StratifiedFlow():
+def test_StratifiedFlow_ADAPTIVE_SAMPLING():
     stratified_instance = instance_and_compile(StratifiedFlow)
     result = stratified_instance.run_integration(n_iter)
+    check_is_one(result)
+
+def test_StratifiedFlow_NOT_ADAPTIVE_SAMPLING():
+    stratified_instance = StratifiedFlow(dim, ncalls, adaptive=False)
+    stratified_instance.compile(example_integrand)
+    result = stratified_instance.run_integration(n_iter)
+    check_is_one(result)
+
+def test_VegasFlowPlus_ADAPTIVE_SAMPLING():
+    vflowplus_instance = instance_and_compile(VegasFlowPlus)
+    result = vflowplus_instance.run_integration(n_iter)
+    check_is_one(result)
+
+def test_VegasFlowPlus_NOT_ADAPTIVE_SAMPLING():
+    vflowplus_instance = VegasFlowPlus(dim, ncalls, adaptive=False)
+    vflowplus_instance.compile(example_integrand)
+    result = vflowplus_instance.run_integration(n_iter)
     check_is_one(result)

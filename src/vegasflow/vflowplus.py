@@ -1,10 +1,11 @@
 #!/usr/env python
 """
     Implementation of vegas+ algorithm:
-        adaptive importance sampling + adaptive stratified sampling
-          
+   
+    adaptive importance sampling + adaptive stratified sampling
+         
 """
-from itertools import chain, repeat, product
+from itertools import product
 import tensorflow as tf
 import numpy as np
 from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me, ione, int_me, BINS_MAX
@@ -12,14 +13,16 @@ from vegasflow.monte_carlo import wrapper
 from vegasflow.vflow import VegasFlow
 from vegasflow.utils import consume_array_into_indices
 
-
-N_STRAT_MIN = 4
 BETA = 0.75
 FBINS = float_me(BINS_MAX)
 
 
 @tf.function
-def generate_samples_in_hypercubes(randoms, n_strat, n_ev, hypercubes, divisions):
+def generate_samples_in_hypercubes(randoms,
+                                   n_strat,
+                                   n_ev,
+                                   hypercubes,
+                                   divisions):
     """Receives an array of random numbers 0 and 1 and
     distribute them in each hypercube according to the
     number of sample in each hypercube specified by n_ev
@@ -39,7 +42,9 @@ def generate_samples_in_hypercubes(randoms, n_strat, n_ev, hypercubes, divisions
         div_index: division index in which each (n_dim) set of random numbers fall
         `segm` : segmentantion for later computations
     """
+
     points = tf.repeat(hypercubes, n_ev, axis=0)
+    n_evs = float_me(tf.repeat(n_ev, n_ev))
     xn = tf.transpose((points+tf.transpose(randoms))*FBINS/float_me(n_strat))
     segm = tf.cast(tf.repeat(tf.range(fzero,
                                       tf.shape(hypercubes)[0]),
@@ -72,9 +77,10 @@ def generate_samples_in_hypercubes(randoms, n_strat, n_ev, hypercubes, divisions
     #     x = reg_i + rand_x * (reg_f - reg_i)
     # and the weight
     weights = tf.reduce_prod(xdelta * FBINS, axis=0)
+    final_weights = weights/n_evs
     x_t = tf.transpose(x)
     int_xn = tf.transpose(ind_i)
-    return x_t, int_xn, weights, segm
+    return x_t, int_xn, final_weights, segm
 
 
 class VegasFlowPlus(VegasFlow):
@@ -85,10 +91,17 @@ class VegasFlowPlus(VegasFlow):
     def __init__(self, n_dim, n_events, train=True, adaptive=True, **kwargs):
         super().__init__(n_dim, n_events, train, **kwargs)
 
+        self.init_calls = n_events
         self.adaptive = adaptive
-
+       
         # Initialize stratifications
-        self.n_strat = tf.math.floor(tf.math.pow(self.n_events/N_STRAT_MIN, 1/n_dim))
+        if self.adaptive:
+            neval_eff = int(self.n_events/2)
+            self.n_strat = tf.math.floor(tf.math.pow(neval_eff/2, 1/n_dim))
+        else:
+            neval_eff = self.n_events
+            self.n_strat = tf.math.floor(tf.math.pow(neval_eff/2, 1/n_dim))
+
         self.n_strat = int_me(self.n_strat)
 
         # Initialize hypercubes
@@ -100,27 +113,28 @@ class VegasFlowPlus(VegasFlow):
         if len(hypercubes) != int(tf.math.pow(self.n_strat, n_dim)):
             raise ValueError("Hypercubes problem!")
 
-        # Initialize n_ev
-        n_ev = int_me(tf.math.floordiv(self.n_events, tf.math.pow(self.n_strat, n_dim)))
-        n_ev = tf.math.maximum(n_ev, 2)
-        self.n_ev = tf.fill([1, len(hypercubes)], n_ev)
+        self.min_neval_hcube = int(neval_eff // len(hypercubes))
+        if self.min_neval_hcube < 2:
+            self.min_neval_hcube = 2
+        
+        self.n_ev = tf.fill([1, len(hypercubes)], self.min_neval_hcube)
         self.n_ev = tf.reshape(self.n_ev, [-1])
-
         self.n_events = int(tf.reduce_sum(self.n_ev))
-        self.xjac = 1 / self.n_events
+        self.xjac = float_me(1/len(hypercubes))
 
     def redistribute_samples(self, arr_var):
         """Receives an array with the variance of the integrand in each
         hypercube and recalculate the samples per hypercube according
         to VEGAS+ algorithm"""
-        
-        # neval_eff = int(self.n_events/2)
+
         damped_arr_sdev = tf.pow(arr_var, BETA/2)
-        new_n_ev = tf.maximum(2,
-                              damped_arr_sdev * self.n_events/tf.reduce_sum(damped_arr_sdev)/2)
+        new_n_ev = tf.maximum(self.min_neval_hcube,
+                              damped_arr_sdev
+                              * self.init_calls / 2
+                              / tf.reduce_sum(damped_arr_sdev))
+
         self.n_ev = int_me(tf.math.floor(new_n_ev))
         self.n_events = int(tf.reduce_sum(self.n_ev))
-        self.xjac = 1 / self.n_events
     
     def _run_event(self, integrand, ncalls=None):
 
@@ -132,8 +146,10 @@ class VegasFlowPlus(VegasFlow):
         tech_cut = 1e-8
         # Generate all random number for this iteration
         rnds = tf.random.uniform(
-            (self.n_dim, n_events), minval=tech_cut, maxval=1.0 - tech_cut, dtype=DTYPE
-        )
+                                 (self.n_dim, n_events),
+                                 minval=tech_cut,
+                                 maxval=1.0 - tech_cut,
+                                 dtype=DTYPE)
 
         # Pass random numbers in hypercubes
         
@@ -156,7 +172,7 @@ class VegasFlowPlus(VegasFlow):
         ress2 = tf.math.segment_sum(tmp2, segm)
 
         Fn_ev = tf.cast(self.n_ev, DTYPE)
-        arr_var = (ress2 - tf.square(ress)/Fn_ev)/(Fn_ev - fone)
+        arr_var = ress2*Fn_ev - tf.square(ress)
 
         arr_res2 = []
         if self.train:
@@ -171,15 +187,12 @@ class VegasFlowPlus(VegasFlow):
     
     def _iteration_content(self):
         
-        # print("_iteration_content_vfp")
         ress, arr_var, arr_res2 = self.run_event()
-        Fn_ev = tf.cast(self.n_ev, DTYPE)
-        # compute variance for each hypercube
-        sigmas2 = tf.maximum(arr_var, fzero)
-       
-        res = tf.reduce_sum(ress)
 
-        sigma2 = tf.reduce_sum(sigmas2*Fn_ev)
+        Fn_ev = tf.cast(self.n_ev, DTYPE)
+        sigmas2 = tf.maximum(arr_var, fzero)
+        res = tf.reduce_sum(ress)
+        sigma2 = tf.reduce_sum(sigmas2/(Fn_ev-fone))
         sigma = tf.sqrt(sigma2)
 
         # If adaptive is active redistributes samples
