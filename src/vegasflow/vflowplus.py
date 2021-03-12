@@ -17,8 +17,16 @@ BETA = 0.75
 FBINS = float_me(BINS_MAX)
 
 
-@tf.function
-def generate_samples_in_hypercubes(randoms,
+@tf.function(input_signature=[
+    tf.TensorSpec(shape=[],dtype=np.int32),
+    tf.TensorSpec(shape=[],dtype=np.int32),
+    tf.TensorSpec(shape=[],dtype=DTYPEINT),
+    tf.TensorSpec(shape=[None],dtype=DTYPEINT),
+    tf.TensorSpec(shape=[None,None],dtype=DTYPE),
+    tf.TensorSpec(shape=[None,None],dtype=DTYPE)
+])
+def generate_samples_in_hypercubes(n_dim,
+                                   n_events,
                                    n_strat,
                                    n_ev,
                                    hypercubes,
@@ -42,10 +50,17 @@ def generate_samples_in_hypercubes(randoms,
         div_index: division index in which each (n_dim) set of random numbers fall
         `segm` : segmentantion for later computations
     """
+    tech_cut = 1e-8
+    # Generate all random number for this iteration
+    rnds = tf.random.uniform(
+                             (n_dim, n_events),
+                             minval=tech_cut,
+                             maxval=1.0 - tech_cut,
+                             dtype=DTYPE)
 
     points = tf.repeat(hypercubes, n_ev, axis=0)
     n_evs = float_me(tf.repeat(n_ev, n_ev))
-    xn = tf.transpose((points+tf.transpose(randoms))*FBINS/float_me(n_strat))
+    xn = tf.transpose((points+tf.transpose(rnds))*FBINS/float_me(n_strat))
     segm = tf.cast(tf.repeat(tf.range(fzero,
                                       tf.shape(hypercubes)[0]),
                              n_ev),
@@ -143,17 +158,17 @@ class VegasFlowPlus(VegasFlow):
         else:
             n_events = ncalls
 
-        tech_cut = 1e-8
+        #tech_cut = 1e-8
         # Generate all random number for this iteration
-        rnds = tf.random.uniform(
-                                 (self.n_dim, n_events),
-                                 minval=tech_cut,
-                                 maxval=1.0 - tech_cut,
-                                 dtype=DTYPE)
+        #rnds = tf.random.uniform(
+        #                         (self.n_dim, n_events),
+        #                         minval=tech_cut,
+        #                         maxval=1.0 - tech_cut,
+        #                         dtype=DTYPE)
 
         # Pass random numbers in hypercubes
-        
-        x, ind, w, segm = generate_samples_in_hypercubes(rnds,
+        x, ind, w, segm = generate_samples_in_hypercubes(self.n_dim,
+                                                         n_events,
                                                          self.n_strat,
                                                          self.n_ev,
                                                          self.hypercubes,
