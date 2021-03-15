@@ -13,24 +13,42 @@ from vegasflow.monte_carlo import wrapper
 from vegasflow.vflow import VegasFlow
 from vegasflow.utils import consume_array_into_indices
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 BETA = 0.75
 FBINS = float_me(BINS_MAX)
 
+@tf.function(input_signature=3 * [tf.TensorSpec(shape=[None, None], dtype=DTYPE)])
+def _compute_x(x_ini, xn, xdelta):
+    """ Helper function for ``generate_samples_in_hypercubes`` """
+    aux_rand = xn - tf.math.floor(xn)
+    return x_ini + xdelta * aux_rand
 
-@tf.function(input_signature=[
-    tf.TensorSpec(shape=[],dtype=np.int32),
-    tf.TensorSpec(shape=[],dtype=np.int32),
-    tf.TensorSpec(shape=[],dtype=DTYPEINT),
-    tf.TensorSpec(shape=[None],dtype=DTYPEINT),
-    tf.TensorSpec(shape=[None,None],dtype=DTYPE),
-    tf.TensorSpec(shape=[None,None],dtype=DTYPE)
-])
-def generate_samples_in_hypercubes(n_dim,
-                                   n_events,
-                                   n_strat,
-                                   n_ev,
-                                   hypercubes,
-                                   divisions):
+# same as vegasflow generate_random_array
+@tf.function(input_signature=2*[tf.TensorSpec(shape=[None, None], dtype=DTYPE)])
+def _digest(xn, divisions):
+    ind_i = tf.cast(xn, DTYPEINT)
+    # Get the value of the left and right sides of the bins
+    ind_f = ind_i + ione
+    x_ini = tf.gather(divisions, ind_i, batch_dims=1)
+    x_fin = tf.gather(divisions, ind_f, batch_dims=1)
+    # Compute the width of the bins
+    xdelta = x_fin - x_ini
+    return ind_i, x_ini, xdelta
+
+
+@tf.function(
+    input_signature=[
+        tf.TensorSpec(shape=[None, None], dtype=DTYPE),
+        tf.TensorSpec(shape=[], dtype=DTYPEINT),
+        tf.TensorSpec(shape=[None], dtype=DTYPEINT),
+        tf.TensorSpec(shape=[None, None], dtype=DTYPE),
+        tf.TensorSpec(shape=[None, None], dtype=DTYPE),
+    ]
+)
+def generate_samples_in_hypercubes(rnds, n_strat, n_ev, hypercubes, divisions):
     """Receives an array of random numbers 0 and 1 and
     distribute them in each hypercube according to the
     number of sample in each hypercube specified by n_ev
@@ -50,49 +68,22 @@ def generate_samples_in_hypercubes(n_dim,
         div_index: division index in which each (n_dim) set of random numbers fall
         `segm` : segmentantion for later computations
     """
-    tech_cut = 1e-8
-    # Generate all random number for this iteration
-    rnds = tf.random.uniform(
-                             (n_dim, n_events),
-                             minval=tech_cut,
-                             maxval=1.0 - tech_cut,
-                             dtype=DTYPE)
 
     points = tf.repeat(hypercubes, n_ev, axis=0)
     n_evs = float_me(tf.repeat(n_ev, n_ev))
-    xn = tf.transpose((points+tf.transpose(rnds))*FBINS/float_me(n_strat))
-    segm = tf.cast(tf.repeat(tf.range(fzero,
-                                      tf.shape(hypercubes)[0]),
-                             n_ev),
-                   DTYPEINT)
+    xn = tf.transpose((points + tf.transpose(rnds)) * FBINS / float_me(n_strat))
+    segm = tf.cast(tf.repeat(tf.range(fzero, tf.shape(hypercubes)[0]), n_ev), DTYPEINT)
 
-    # same as vegasflow generate_random_array
-    @tf.function
-    def digest(xn):
-        ind_i = tf.cast(xn, DTYPEINT)
-        # Get the value of the left and right sides of the bins
-        ind_f = ind_i + ione
-        x_ini = tf.gather(divisions, ind_i, batch_dims=1)
-        x_fin = tf.gather(divisions, ind_f, batch_dims=1)
-        # Compute the width of the bins
-        xdelta = x_fin - x_ini
-        return ind_i, x_ini, xdelta
-
-    ind_i, x_ini, xdelta = digest(xn)
+    ind_i, x_ini, xdelta = _digest(xn, divisions)
     # Compute the random number between 0 and 1
     # This is the heavy part of the calc
 
-    @tf.function
-    def compute_x(x_ini, xn, xdelta):
-        aux_rand = xn - tf.math.floor(xn)
-        return x_ini + xdelta * aux_rand
-
-    x = compute_x(x_ini, xn, xdelta)
+    x = _compute_x(x_ini, xn, xdelta)
     # Compute the random number between the limits
     #     x = reg_i + rand_x * (reg_f - reg_i)
     # and the weight
     weights = tf.reduce_prod(xdelta * FBINS, axis=0)
-    final_weights = weights/n_evs
+    final_weights = weights / n_evs
     x_t = tf.transpose(x)
     int_xn = tf.transpose(ind_i)
     return x_t, int_xn, final_weights, segm
@@ -108,21 +99,20 @@ class VegasFlowPlus(VegasFlow):
 
         self.init_calls = n_events
         self.adaptive = adaptive
-       
+
         # Initialize stratifications
         if self.adaptive:
-            neval_eff = int(self.n_events/2)
-            self.n_strat = tf.math.floor(tf.math.pow(neval_eff/2, 1/n_dim))
+            neval_eff = int(self.n_events / 2)
+            self.n_strat = tf.math.floor(tf.math.pow(neval_eff / 2, 1 / n_dim))
         else:
             neval_eff = self.n_events
-            self.n_strat = tf.math.floor(tf.math.pow(neval_eff/2, 1/n_dim))
+            self.n_strat = tf.math.floor(tf.math.pow(neval_eff / 2, 1 / n_dim))
 
         self.n_strat = int_me(self.n_strat)
 
         # Initialize hypercubes
         hypercubes_one_dim = np.arange(0, int(self.n_strat))
-        hypercubes = [list(p) for p in product(hypercubes_one_dim, 
-                                               repeat=int(n_dim))]
+        hypercubes = [list(p) for p in product(hypercubes_one_dim, repeat=int(n_dim))]
         self.hypercubes = tf.convert_to_tensor(hypercubes, dtype=DTYPE)
 
         if len(hypercubes) != int(tf.math.pow(self.n_strat, n_dim)):
@@ -131,83 +121,75 @@ class VegasFlowPlus(VegasFlow):
         self.min_neval_hcube = int(neval_eff // len(hypercubes))
         if self.min_neval_hcube < 2:
             self.min_neval_hcube = 2
-        
+
         self.n_ev = tf.fill([1, len(hypercubes)], self.min_neval_hcube)
         self.n_ev = tf.reshape(self.n_ev, [-1])
         self.n_events = int(tf.reduce_sum(self.n_ev))
-        self.xjac = float_me(1/len(hypercubes))
+        self.xjac = float_me(1 / len(hypercubes))
 
     def redistribute_samples(self, arr_var):
         """Receives an array with the variance of the integrand in each
         hypercube and recalculate the samples per hypercube according
         to VEGAS+ algorithm"""
 
-        damped_arr_sdev = tf.pow(arr_var, BETA/2)
-        new_n_ev = tf.maximum(self.min_neval_hcube,
-                              damped_arr_sdev
-                              * self.init_calls / 2
-                              / tf.reduce_sum(damped_arr_sdev))
+        damped_arr_sdev = tf.pow(arr_var, BETA / 2)
+        # TODO: what if arr_var is negative?
+        new_n_ev = tf.maximum(
+            self.min_neval_hcube,
+            damped_arr_sdev * self.init_calls / 2 / tf.reduce_sum(damped_arr_sdev),
+        )
 
         self.n_ev = int_me(tf.math.floor(new_n_ev))
         self.n_events = int(tf.reduce_sum(self.n_ev))
-    
-    def _run_event(self, integrand, ncalls=None):
 
-        if ncalls is None:
-            n_events = self.n_events
-        else:
-            n_events = ncalls
+    def _run_event(self, integrand, ncalls=None, n_ev=None):
+        # NOTE: needs to receive both ncalls and n_ev
+        n_events = ncalls
 
-        #tech_cut = 1e-8
+        tech_cut = 1e-8
         # Generate all random number for this iteration
-        #rnds = tf.random.uniform(
-        #                         (self.n_dim, n_events),
-        #                         minval=tech_cut,
-        #                         maxval=1.0 - tech_cut,
-        #                         dtype=DTYPE)
+        rnds = tf.random.uniform(
+            (self.n_dim, n_events), minval=tech_cut, maxval=1.0 - tech_cut, dtype=DTYPE
+        )
 
         # Pass random numbers in hypercubes
-        x, ind, w, segm = generate_samples_in_hypercubes(self.n_dim,
-                                                         n_events,
-                                                         self.n_strat,
-                                                         self.n_ev,
-                                                         self.hypercubes,
-                                                         self.divisions)
-        
+        x, ind, w, segm = generate_samples_in_hypercubes(
+            rnds, self.n_strat, n_ev, self.hypercubes, self.divisions
+        )
+
         # compute integrand
         xjac = self.xjac * w
         if self.simplify_signature:
             tmp = xjac * integrand(x)
         else:
             tmp = xjac * integrand(x, n_dim=self.n_dim, weight=xjac)
-        tmp2 = tf.square(tmp)    
+        tmp2 = tf.square(tmp)
 
         # tensor containing resummed component for each hypercubes
         ress = tf.math.segment_sum(tmp, segm)
         ress2 = tf.math.segment_sum(tmp2, segm)
 
         Fn_ev = tf.cast(self.n_ev, DTYPE)
-        arr_var = ress2*Fn_ev - tf.square(ress)
+        arr_var = ress2 * Fn_ev - tf.square(ress)
 
         arr_res2 = []
         if self.train:
             # If the training is active, save the result of the integral sq
             for j in range(self.n_dim):
                 arr_res2.append(
-                    consume_array_into_indices(tmp2, ind[ :, j : j + 1], int_me(self.grid_bins - 1))
+                    consume_array_into_indices(tmp2, ind[:, j : j + 1], int_me(self.grid_bins - 1))
                 )
             arr_res2 = tf.reshape(arr_res2, (self.n_dim, -1))
-        
+
         return ress, arr_var, arr_res2
-    
+
     def _iteration_content(self):
-        
-        ress, arr_var, arr_res2 = self.run_event()
+        ress, arr_var, arr_res2 = self.run_event(n_ev=self.n_ev)
 
         Fn_ev = tf.cast(self.n_ev, DTYPE)
         sigmas2 = tf.maximum(arr_var, fzero)
         res = tf.reduce_sum(ress)
-        sigma2 = tf.reduce_sum(sigmas2/(Fn_ev-fone))
+        sigma2 = tf.reduce_sum(sigmas2 / (Fn_ev - fone))
         sigma = tf.sqrt(sigma2)
 
         # If adaptive is active redistributes samples
@@ -217,6 +199,11 @@ class VegasFlowPlus(VegasFlow):
         if self.train:
             self.refine_grid(arr_res2)
         return res, sigma
+
+    def run_event(self, tensorize_events=True, **kwargs):
+        """ Tensorizes the number of events so they are not python or numpy primitives """
+        logger.warning("Variable number of events requires function signatures all across")
+        return super().run_event(tensorize_events=tensorize_events, **kwargs)
 
 
 def vegasflowplus_wrapper(integrand, n_dim, n_iter, total_n_events, **kwargs):
