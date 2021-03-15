@@ -169,7 +169,7 @@ class VegasFlowPlus(VegasFlow):
         ress = tf.math.segment_sum(tmp, segm)
         ress2 = tf.math.segment_sum(tmp2, segm)
 
-        Fn_ev = tf.cast(self.n_ev, DTYPE)
+        Fn_ev = tf.cast(n_ev, DTYPE)
         arr_var = ress2 * Fn_ev - tf.square(ress)
 
         arr_res2 = []
