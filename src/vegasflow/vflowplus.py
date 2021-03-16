@@ -127,13 +127,15 @@ class VegasFlowPlus(VegasFlow):
         self.n_events = int(tf.reduce_sum(self.n_ev))
         self.xjac = float_me(1 / len(hypercubes))
 
+        if self.adaptive:
+            logger.warning("Variable number of events requires function signatures all across")
+
     def redistribute_samples(self, arr_var):
         """Receives an array with the variance of the integrand in each
         hypercube and recalculate the samples per hypercube according
         to VEGAS+ algorithm"""
 
         damped_arr_sdev = tf.pow(arr_var, BETA / 2)
-        # TODO: what if arr_var is negative?
         new_n_ev = tf.maximum(
             self.min_neval_hcube,
             damped_arr_sdev * self.init_calls / 2 / tf.reduce_sum(damped_arr_sdev),
@@ -200,10 +202,9 @@ class VegasFlowPlus(VegasFlow):
             self.refine_grid(arr_res2)
         return res, sigma
 
-    def run_event(self, tensorize_events=True, **kwargs):
-        """ Tensorizes the number of events so they are not python or numpy primitives """
-        logger.warning("Variable number of events requires function signatures all across")
-        return super().run_event(tensorize_events=tensorize_events, **kwargs)
+    def run_event(self, tensorize_events=None, **kwargs):
+        """ Tensorizes the number of events so they are not python or numpy primitives if self.adaptive=True"""
+        return super().run_event(tensorize_events=self.adaptive, **kwargs)
 
 
 def vegasflowplus_wrapper(integrand, n_dim, n_iter, total_n_events, **kwargs):
