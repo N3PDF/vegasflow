@@ -18,7 +18,7 @@ from vegasflow.rtbm import RTBMFlow
 
 # MC integration setup
 dim = 3
-ncalls = np.int32(1e5)
+ncalls = np.int32(1e3)
 n_iter = 5
 tf_pi = float_me(np.pi)
 
