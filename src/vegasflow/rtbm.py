@@ -7,9 +7,9 @@ from vegasflow.configflow import DTYPE, fone, fzero, float_me
 from vegasflow.monte_carlo import MonteCarloFlow, wrapper
 import tensorflow as tf
 
-from theta.rtbm import RTBM # pylint:disable=import-error
-from theta import costfunctions # pylint:disable=import-error
-from cma import CMAEvolutionStrategy # pylint:disable=import-error
+from theta.rtbm import RTBM  # pylint:disable=import-error
+from theta import costfunctions  # pylint:disable=import-error
+from cma import CMAEvolutionStrategy  # pylint:disable=import-error
 
 import logging
 from joblib import Parallel, delayed
@@ -19,9 +19,11 @@ logger = logging.getLogger(__name__)
 
 # Cost functions for training
 def _kl(x, ytarget):
-    return ytarget*np.log(ytarget/x)
+    return ytarget * np.log(ytarget / x)
+
 
 _loss = _kl
+
 
 def _train_machine(rtbm, target_tf, original_r_tf):
 
@@ -30,9 +32,8 @@ def _train_machine(rtbm, target_tf, original_r_tf):
     target = target_tf.numpy()
     original_r = original_r_tf.numpy()
 
-    n_jobs = 8
-    max_iterations = 250
-
+    n_jobs = 32
+    max_iterations = 3000
 
     def target_loss(params):
         if not rtbm.set_parameters(params):
@@ -42,34 +43,35 @@ def _train_machine(rtbm, target_tf, original_r_tf):
 
     best_parameters = copy.deepcopy(rtbm.get_parameters())
     min_bound, max_bound = rtbm.get_bounds()
+    loss_val = target_loss(best_parameters)
 
     with Parallel(n_jobs=n_jobs) as parallel:
         prev = time()
         n_parameters = len(best_parameters)
 
-        # random hyperparameters
-        pop_per_rate = 32
+        # training hyperparameters
+        pop_per_rate = 256
         mutation_rates = np.array([0.2, 0.4, 0.6, 0.8])
-        rates = np.concatenate([np.ones(pop_per_rate)*mr for mr in mutation_rates])
+        rates = np.concatenate([np.ones(pop_per_rate) * mr for mr in mutation_rates])
         original_sigma = 0.25
         sigma = original_sigma
         repeats = 3
+        #######
 
         for it in range(max_iterations):
 
             # Get the best parameters from the previous iteration
             p0 = copy.deepcopy(best_parameters)
-            loss_val = target_loss(p0)
 
             def compute_mutant(mutation_rate):
-                number_of_mut = int(mutation_rate*n_parameters)
+                number_of_mut = int(mutation_rate * n_parameters)
                 mut_idx = np.random.choice(n_parameters, number_of_mut, replace=False)
-                r1, r2 = np.random.rand(2, number_of_mut)*sigma
+                r1, r2 = np.random.rand(2, number_of_mut) * sigma
 
                 mutant = copy.deepcopy(p0)
                 var_plus = max_bound - p0
                 var_minus = min_bound - p0
-                mutant[mut_idx] += var_plus[mut_idx]*r1 + var_minus[mut_idx]*r2
+                mutant[mut_idx] += var_plus[mut_idx] * r1 + var_minus[mut_idx] * r2
 
                 return target_loss(mutant), mutant
 
@@ -84,14 +86,25 @@ def _train_machine(rtbm, target_tf, original_r_tf):
             else:
                 sigma /= 2
 
-            if it % 10 == 0:
+            if it % 50 == 0:
                 current = time()
-                print(f"Iteration {it}, best loss: {loss_val:.2f}, time; {current-prev:.2f}s")
+                logger.info(
+                    "Iteration %d, best_loss: %.2f, (%2.fs)",
+                    it,
+                    loss_val,
+                    current - prev,
+                )
+                logger.debug(
+                    "NaNs in last iteration: %d/%d, sigma=%.4f",
+                    np.count_nonzero(np.isnan(losses)),
+                    len(losses),
+                    sigma,
+                )
                 prev = current
 
             if sigma < 1e-3:
                 sigma = original_sigma
-                print(f"Resetting sigma with loss: {loss_val:.2f}")
+                logger.debug("Resetting sigma with loss: %.2f", loss_val)
                 repeats -= 1
                 break
 
@@ -100,6 +113,7 @@ def _train_machine(rtbm, target_tf, original_r_tf):
 
         rtbm.set_parameters(best_parameters)
         return rtbm
+
 
 class RTBMFlow(MonteCarloFlow):
     """
@@ -112,7 +126,8 @@ class RTBMFlow(MonteCarloFlow):
         self._first_run = True
         if rtbm is None:
             logger.info(
-                "Generating a RTBM with %d visible nodes and %d hidden" % (self.n_dim, n_hidden)
+                "Generating a RTBM with %d visible nodes and %d hidden"
+                % (self.n_dim, n_hidden)
             )
             self._rtbm = RTBM(
                 self.n_dim,
@@ -121,8 +136,8 @@ class RTBMFlow(MonteCarloFlow):
                 gaussian_init=True,
                 positive_T=True,
                 positive_Q=True,
-                gaussian_parameters={"mean":0.0, "std": 0.55},
-                sampling_activation="tanh"
+                gaussian_parameters={"mean": 0.0, "std": 0.55},
+                sampling_activation="tanh",
             )
         else:
             # Check whether it is a valid rtbm model
@@ -135,7 +150,7 @@ class RTBMFlow(MonteCarloFlow):
         """ Stop the training """
         self.train = False
 
-    def unfreeze(self, reset_p0 = False):
+    def unfreeze(self, reset_p0=False):
         """ Restart the training """
         self.train = True
         if reset_p0:
@@ -157,7 +172,7 @@ class RTBMFlow(MonteCarloFlow):
         """
         xrand, px, original_r = self._rtbm.make_sample_rho(n_events)
         # Since we are using the tanh function, the integration limits are (-1,1), move:
-        xjac = 1.0/px/n_events
+        xjac = 1.0 / px / n_events
         return float_me(xrand), original_r, float_me(xjac)
 
     @staticmethod
@@ -167,14 +182,17 @@ class RTBMFlow(MonteCarloFlow):
         # In the accumulators we should receive a number of items with
         # (res, xrands) which have shape ( (n_events,), (n_events, n_dim) )
         all_res = []
+        all_unw = []
         all_rnd = []
-        for (
-            res,
-            rnds,
-        ) in accumulators:
+        for (res, unw, rnds) in accumulators:
             all_res.append(res)
+            all_unw.append(unw)
             all_rnd.append(rnds)
-        return tf.concat(all_res, axis=0), tf.concat(all_rnd, axis=0)
+        return (
+            tf.concat(all_res, axis=0),
+            tf.concat(all_unw, axis=0),
+            tf.concat(all_rnd, axis=0),
+        )
 
     def _run_event(self, integrand, ncalls=None):
         if ncalls is None:
@@ -185,16 +203,16 @@ class RTBMFlow(MonteCarloFlow):
         # Generate all random number for this iteration
         rnds, original_r, xjac = self.generate_random_array(n_events)
         # Compute the integrand
-        tmp = integrand(rnds, n_dim=self.n_dim, weight=xjac)
-        res = tmp*xjac
+        unw = integrand(rnds, n_dim=self.n_dim, weight=xjac)
+        res = unw * xjac
 
-        return res, original_r
+        return res, unw, original_r
 
     def _run_iteration(self):
-        all_res, original_r = self.run_event()
+        all_res, unw, original_r = self.run_event()
 
         if self.train:
-            _train_machine(self._rtbm, all_res, original_r)
+            _train_machine(self._rtbm, unw, original_r)
 
         res = tf.reduce_sum(all_res)
         all_res2 = all_res ** 2

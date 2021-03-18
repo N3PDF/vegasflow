@@ -7,7 +7,7 @@ import os
 import numpy as np
 
 # Set TF to only log errors
-os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "1")
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 import tensorflow as tf
 
 # uncomment this line for debugging to avoid compiling any tf.function
