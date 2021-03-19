@@ -88,7 +88,7 @@ def _train_machine(rtbm, target_tf, original_r_tf):
 
             if it % 50 == 0:
                 current = time()
-                logger.info(
+                logger.debug(
                     "Iteration %d, best_loss: %.2f, (%2.fs)",
                     it,
                     loss_val,
@@ -136,7 +136,7 @@ class RTBMFlow(MonteCarloFlow):
                 gaussian_init=True,
                 positive_T=True,
                 positive_Q=True,
-                gaussian_parameters={"mean": 0.0, "std": 0.55},
+                gaussian_parameters={"mean": 0.0, "std": 0.75},
                 sampling_activation="tanh",
             )
         else:
