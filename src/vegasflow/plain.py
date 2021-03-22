@@ -3,7 +3,7 @@
 """
 
 from vegasflow.configflow import DTYPE, fone, fzero
-from vegasflow.monte_carlo import MonteCarloFlow, wrapper
+from vegasflow.monte_carlo import MonteCarloFlow, wrapper, sampler
 import tensorflow as tf
 
 
@@ -37,6 +37,10 @@ class PlainFlow(MonteCarloFlow):
         return res, sigma
 
 
-def plain_wrapper(*args):
+def plain_wrapper(*args, **kwargs):
     """ Wrapper around PlainFlow """
-    return wrapper(PlainFlow, *args)
+    return wrapper(PlainFlow, *args, **kwargs)
+
+def plain_sampler(*args, **kwargs):
+    """ Wrapper sampler around PlainFlow """
+    return sampler(PlainFlow, *args, **kwargs)

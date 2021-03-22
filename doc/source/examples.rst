@@ -85,6 +85,26 @@ we can ignore that.
 Finally, ``generate_random_array`` returns also the probability distribution
 of the random points (i.e., the weight they carry).
 
+For convenience we include sampler wrappers which directly return a trained
+reference to the `generate_random_array` method:
+
+.. code-block:: python
+  
+  from vegasflow import vegas_sampler
+  
+  sampler = vegas_sampler(my_complicated_fun, n_dim, n_events)
+  rnds, _, px = sampler(100)
+
+
+It is possible to change the number of training steps (default 5) or to retrieve
+a reference to the sampler class instead to the sampler method by using keyword
+arguments.
+
+.. code-block:: python
+  
+  sampler_class = vegas_sampler(my_complicated_fun, n_dim, n_events, training_steps=1, return_class=True)
+  rnds, _, px = sampler_class.generate_random_array(100)
+
 
 Integrating a numpy function
 ============================
