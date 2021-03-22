@@ -39,7 +39,7 @@ from abc import abstractmethod, ABC
 import joblib
 import numpy as np
 import tensorflow as tf
-from vegasflow.configflow import MAX_EVENTS_LIMIT, DEFAULT_ACTIVE_DEVICES, DTYPE, TECH_CUT, float_me
+from vegasflow.configflow import MAX_EVENTS_LIMIT, DEFAULT_ACTIVE_DEVICES, DTYPE, TECH_CUT, float_me, fone
 
 import logging
 
@@ -177,7 +177,7 @@ class MonteCarloFlow(ABC):
             (n_events, self.n_dim), minval=TECH_CUT, maxval=1.0 - TECH_CUT, dtype=DTYPE
         )
         idx = 0
-        xjac = 1.0/n_events
+        xjac = fone/float_me(n_events)
         return rnds, idx, xjac
 
     #### Abstract methods
