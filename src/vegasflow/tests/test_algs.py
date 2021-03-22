@@ -109,3 +109,15 @@ def test_PlainFlow():
     plain_instance = instance_and_compile(PlainFlow)
     result = plain_instance.run_integration(n_iter)
     check_is_one(result)
+
+
+def test_rng_generation(n_events=100):
+    plain_sampler = instance_and_compile(PlainFlow)
+    rnds, _, px = plain_sampler.generate_random_array(n_events)
+    np.testing.assert_equal(rnds.shape, (100,2))
+    np.testing.assert_equal(px.numpy(), 1.0/n_events)
+    vegas_sampler = instance_and_compile(VegasFlow)
+    vegas_sampler.run_integration(2)
+    rnds, _, px = vegas_sampler.generate_random_array(n_events)
+    np.testing.assert_equal(rnds.shape, (100,2))
+    np.testing.assert_equal(px.shape, (100,))
