@@ -39,7 +39,7 @@ from abc import abstractmethod, ABC
 import joblib
 import numpy as np
 import tensorflow as tf
-from vegasflow.configflow import MAX_EVENTS_LIMIT, DEFAULT_ACTIVE_DEVICES, DTYPE, TECH_CUT, float_me
+from vegasflow.configflow import MAX_EVENTS_LIMIT, DEFAULT_ACTIVE_DEVICES, DTYPE, TECH_CUT, float_me, fone
 
 import logging
 
@@ -114,7 +114,6 @@ class MonteCarloFlow(ABC):
         self._verbose = verbose
         self._history = []
         self.n_events = n_events
-        self._xjac = float_me(1.0/n_events)
         self._events_per_run = min(events_limit, n_events)
         self.distribute = False
         if list_devices:
@@ -178,7 +177,8 @@ class MonteCarloFlow(ABC):
             (n_events, self.n_dim), minval=TECH_CUT, maxval=1.0 - TECH_CUT, dtype=DTYPE
         )
         idx = 0
-        return rnds, idx, self._xjac
+        xjac = fone/float_me(n_events)
+        return rnds, idx, xjac
 
     #### Abstract methods
     @abstractmethod
@@ -467,7 +467,7 @@ class MonteCarloFlow(ABC):
 
 
 def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events, compilable=True):
-    """Convenience wrapper
+    """Convenience wrapper for integration
 
     Parameters
     ----------
@@ -485,3 +485,27 @@ def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events, compilab
     mc_instance = integrator_class(n_dim, total_n_events)
     mc_instance.compile(integrand, compilable=compilable)
     return mc_instance.run_integration(n_iter)
+
+
+def sampler(integrator_class, integrand, n_dim, total_n_events, training_steps=5, compilable=True, return_class=False):
+    """Convenience wrapper for sampling random numbers
+
+    Parameters
+    ----------
+        `integrator_class`: MonteCarloFlow inherited class
+        `integrand`: tf.function
+        `n_dim`: number of dimensions
+        `n_events`: number of events per iteration
+        `training_steps`: number of training_iterations
+        `return_class`: whether to return the full instance of the class or only the random method
+
+    Returns
+    -------
+        `sampler`: a reference to the generate_random_array method of the integrator class
+    """
+    mc_instance = integrator_class(n_dim, total_n_events, verbose=False)
+    mc_instance.compile(integrand, compilable=compilable)
+    _ = mc_instance.run_integration(training_steps, log_time=False)
+    if return_class:
+        return mc_instance
+    return mc_instance.generate_random_array
