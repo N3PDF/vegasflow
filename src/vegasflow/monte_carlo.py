@@ -480,7 +480,7 @@ class MonteCarloFlow(ABC):
         return final_result.numpy(), sigma
 
 
-def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events, compilable=True):
+def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events, compilable=True, return_instance=False):
     """Convenience wrapper
 
     Parameters
@@ -498,4 +498,8 @@ def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events, compilab
     """
     mc_instance = integrator_class(n_dim = n_dim, n_events=total_n_events)
     mc_instance.compile(integrand, compilable=compilable)
-    return mc_instance.run_integration(n_iter)
+    if return_instance:
+        r = mc_instance.run_integration(n_iter)
+        return r, mc_instance
+    else:
+        return mc_instance.run_integration(n_iter)

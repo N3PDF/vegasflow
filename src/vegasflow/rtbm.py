@@ -2,14 +2,21 @@
     Plain implementation of the plainest possible MonteCarlo
 """
 import copy
+import itertools
 import numpy as np
-from vegasflow.configflow import DTYPE, fone, fzero, float_me
+from vegasflow.configflow import DTYPE, fone, fzero, float_me, run_eager
 from vegasflow.monte_carlo import MonteCarloFlow, wrapper
 import tensorflow as tf
 
-from theta.rtbm import RTBM  # pylint:disable=import-error
-from theta import costfunctions  # pylint:disable=import-error
-from cma import CMAEvolutionStrategy  # pylint:disable=import-error
+run_eager(True)
+
+try:
+    from theta.rtbm import RTBM  # pylint:disable=import-error
+    from theta import costfunctions  # pylint:disable=import-error
+except ImportError as e:
+    raise ValueError(
+        "Cannot use the RTBM based integrator without installing the appropiate libraries"
+    ) from e
 
 import logging
 from joblib import Parallel, delayed
@@ -25,21 +32,40 @@ def _kl(x, ytarget):
 _loss = _kl
 
 
-def _train_machine(rtbm, target_tf, original_r_tf):
-
-    logger.info("Training RTBM")
-
-    target = target_tf.numpy()
-    original_r = original_r_tf.numpy()
-
-    n_jobs = 32
-    max_iterations = 3000
-
+def _generate_target_loss(rtbm, original_r, target):
     def target_loss(params):
         if not rtbm.set_parameters(params):
             return np.NaN
         _, prob = rtbm.get_transformation(original_r)
         return np.sum(_loss(prob, target))
+
+    return target_loss
+
+
+def _train_machine(
+    rtbm,
+    target_tf,
+    original_r_tf,
+    n_jobs=32,
+    max_iterations=3000,
+    pop_per_rate=256,
+    verbose=True,
+):
+
+    if verbose:
+        logger.info("Training RTBM")
+
+    if isinstance(target_tf, np.ndarray):
+        target = target_tf
+    else:
+        target = target_tf.numpy()
+
+    if isinstance(original_r_tf, np.ndarray):
+        original_r = original_r_tf
+    else:
+        original_r = original_r_tf.numpy()
+
+    target_loss = _generate_target_loss(rtbm, original_r, target)
 
     best_parameters = copy.deepcopy(rtbm.get_parameters())
     min_bound, max_bound = rtbm.get_bounds()
@@ -50,7 +76,6 @@ def _train_machine(rtbm, target_tf, original_r_tf):
         n_parameters = len(best_parameters)
 
         # training hyperparameters
-        pop_per_rate = 256
         mutation_rates = np.array([0.2, 0.4, 0.6, 0.8])
         rates = np.concatenate([np.ones(pop_per_rate) * mr for mr in mutation_rates])
         original_sigma = 0.25
@@ -86,7 +111,7 @@ def _train_machine(rtbm, target_tf, original_r_tf):
             else:
                 sigma /= 2
 
-            if it % 50 == 0:
+            if it % 50 == 0 and verbose:
                 current = time()
                 logger.debug(
                     "Iteration %d, best_loss: %.2f, (%2.fs)",
@@ -112,7 +137,7 @@ def _train_machine(rtbm, target_tf, original_r_tf):
                 print(f"No more repeats allowed, iteration: {it}, loss: {loss_val:2.f}")
 
         rtbm.set_parameters(best_parameters)
-        return rtbm
+        return loss_val
 
 
 class RTBMFlow(MonteCarloFlow):
@@ -124,37 +149,36 @@ class RTBMFlow(MonteCarloFlow):
         super().__init__(*args, **kwargs)
         self._train = train
         self._first_run = True
+        self._n_hidden = n_hidden
+        self._ga_generations = 3000
         if rtbm is None:
             logger.info(
-                "Generating a RTBM with %d visible nodes and %d hidden"
-                % (self.n_dim, n_hidden)
+                "Generating a RTBM with %d visible nodes and %d hidden" % (self.n_dim, n_hidden)
             )
-            self._rtbm = RTBM(
-                self.n_dim,
-                n_hidden,
-                minimization_bound=50,
-                gaussian_init=True,
-                positive_T=True,
-                positive_Q=True,
-                gaussian_parameters={"mean": 0.0, "std": 0.75},
-                sampling_activation="tanh",
-            )
+        #             self._rtbm = RTBM(
+        #                 self.n_dim,
+        #                 n_hidden,
+        #                 minimization_bound=50,
+        #                 gaussian_init=True,
+        #                 positive_T=True,
+        #                 positive_Q=True,
+        #                 gaussian_parameters={"mean": 0.0, "std": 0.75},
+        #                 sampling_activations="tanh",
+        #             )
         else:
             # Check whether it is a valid rtbm model
             if not hasattr(rtbm, "make_sample"):
                 raise TypeError(f"{rtbm} is not a valid boltzman machine")
             self._rtbm = rtbm
-        self._p0 = self._rtbm.get_parameters()
+            self._first_run = False
 
     def freeze(self):
         """ Stop the training """
         self.train = False
 
-    def unfreeze(self, reset_p0=False):
+    def unfreeze(self):
         """ Restart the training """
         self.train = True
-        if reset_p0:
-            self._p0 = self._rtbm.get_parameters()
 
     def compile(self, integrand, compilable=False, **kwargs):
         if compilable:
@@ -170,6 +194,10 @@ class RTBMFlow(MonteCarloFlow):
 
         The return dimension of the random variables is (n_events,n_dim) and the jacobian (n_events)
         """
+        if self._first_run:
+            rnds, _, xjac = super().generate_random_array(n_events)
+            return rnds, rnds, xjac
+
         xrand, px, original_r = self._rtbm.make_sample_rho(n_events)
         # Since we are using the tanh function, the integration limits are (-1,1), move:
         xjac = 1.0 / px / n_events
@@ -210,9 +238,15 @@ class RTBMFlow(MonteCarloFlow):
 
     def _run_iteration(self):
         all_res, unw, original_r = self.run_event()
+        generations = self._ga_generations
+
+        if self.train and self._first_run:
+            original_r = self._run_first_run(unw, original_r)
+            self._first_run = False
+            generations = 250
 
         if self.train:
-            _train_machine(self._rtbm, unw, original_r)
+            _train_machine(self._rtbm, unw, original_r, max_iterations=generations)
 
         res = tf.reduce_sum(all_res)
         all_res2 = all_res ** 2
@@ -222,6 +256,71 @@ class RTBMFlow(MonteCarloFlow):
         err_tmp2 = (res2 - tf.square(res)) / (self.n_events - fone)
         sigma = tf.sqrt(tf.maximum(err_tmp2, fzero))
         return res, sigma
+
+    def _run_first_run(self, unweighted_events, tf_rnds):
+        """
+        Run the first iteration of the RTBM
+        """
+        rnds = tf_rnds.numpy()
+        configurations_raw = [
+            ("tanh", 0.0, 0.75),
+            ("sigmoid", 0.0, 1.5),
+#             ("softmax", 0.0, 0.75),
+        ]
+        names = ("name", "mean", "std")
+
+        configuration_per_d = []
+        for rnd in rnds.T:
+            vals, lims = np.histogram(rnd, bins=3, weights=unweighted_events, density=True)
+            mean = None
+            if vals[0] > 2 * vals[-1]:
+                mean = -0.5
+            elif vals[-1] > 2 * vals[0]:
+                mean = 0.5
+            tmp_list = copy.copy(configurations_raw)
+            if mean is not None:
+                tmp_list.append(("tanh", mean, 0.75))
+#                 tmp_list.append(("sigmoid", mean, 1.5))
+            configuration_per_d.append([dict(zip(names, tup)) for tup in tmp_list])
+
+        # TODO:
+        # The number of combinations will intractably grow with the number of dimensions
+        # put some limits to this
+        all_configs = list(itertools.product(*configuration_per_d))
+        logger.info(f"Generating {len(all_configs)} configurations")
+
+        best_loss = 1e9
+        best_params = None
+        winner_config = None
+        for configuration in all_configs:
+            acts, means, stds = zip(*[i.values() for i in configuration])
+            rtbm = RTBM(
+                self.n_dim,
+                self._n_hidden,
+                minimization_bound=50,
+                gaussian_init=True,
+                positive_T=True,
+                positive_Q=True,
+                gaussian_parameters={"mean": means, "std": stds},
+                sampling_activations=acts,
+            )
+            guessed_original_r = rtbm.undo_transformation(rnds)
+            loss = _train_machine(
+                rtbm,
+                unweighted_events,
+                guessed_original_r,
+                max_iterations=10,
+                pop_per_rate=64,
+                verbose=False,
+            )
+            if loss < best_loss:
+                best_loss = loss
+                best_params = rtbm.get_parameters()
+                winner_config = configuration
+        self._rtbm = rtbm
+        rtbm.set_parameters(best_params)
+        logger.info(f"And the winner is: {configuration}")
+        return rtbm.undo_transformation(rnds)
 
 
 def rtbm_wrapper(integrand, n_dim, n_iter, total_n_events, **kwargs):

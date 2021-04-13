@@ -6,7 +6,6 @@
 
 from vegasflow import run_eager, float_me
 import tensorflow as tf
-run_eager(True)
 
 import time
 import numpy as np
@@ -35,7 +34,8 @@ if __name__ == "__main__":
     print(f"VEGAS MC, ncalls={ncalls}:")
     start = time.time()
     ncalls = ncalls
-    r = vegas_wrapper(integrand, dim, n_iter, ncalls)
+    _, vegas_instance = vegas_wrapper(integrand, dim, n_iter, ncalls, return_instance=True)
+    vegas_instance.freeze_grid()
     end = time.time()
     print(f"Vegas took: time (s): {end-start}")
 
@@ -43,10 +43,14 @@ if __name__ == "__main__":
     start = time.time()
     rtbm = RTBMFlow(n_dim=dim, n_events=ncalls, train=True, n_hidden=2)
     rtbm.compile(integrand)
-    rt = rtbm.run_integration(n_iter)
+    _ = rtbm.run_integration(n_iter)
+    rtbm.freeze()
     end = time.time()
     print(f"RTBM took: time (s): {end-start}")
 
+    print("Results with frozen grids")
+    vegas_instance.run_integration(5)
+    rt = rtbm.run_integration(5)
     print(f"Result computed by Vegas: {r[0]:.5f} +- {r[1]:.6f}")
     print(f"Result computed by RTBM:  {rt[0]:.5f} +- {rt[1]:.6f}")
 
