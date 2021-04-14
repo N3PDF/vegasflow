@@ -102,7 +102,7 @@ class VegasFlowPlus(VegasFlow):
         self.init_calls = n_events
 
         # naive check not to use adaptive if n_dim > 13
-        if n_dim > 13 and self.adaptive == None:
+        if n_dim > 13 and adaptive == None:
             self.adaptive = False
         else:
             self.adaptive = adaptive
