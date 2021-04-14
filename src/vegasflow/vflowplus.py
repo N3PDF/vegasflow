@@ -96,11 +96,17 @@ class VegasFlowPlus(VegasFlow):
     Implementation of the VEGAS+ algorithm
     """
 
-    def __init__(self, n_dim, n_events, train=True, adaptive=True, **kwargs):
+    def __init__(self, n_dim, n_events, train=True, adaptive=None, **kwargs):
         super().__init__(n_dim, n_events, train, **kwargs)
 
         self.init_calls = n_events
-        self.adaptive = adaptive
+
+        # naive check not to use adaptive if n_dim > 13
+        if n_dim > 13 and self.adaptive == None:
+            self.adaptive = False
+        else:
+            self.adaptive = adaptive
+
         # Initialize stratifications
         if self.adaptive:
             neval_eff = int(self.n_events / 2)
