@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     print(f"RTBM MC, ncalls={ncalls}:")
     start = time.time()
-    rtbm = RTBMFlow(n_dim=dim, n_events=ncalls, train=True, n_hidden=2)
+    rtbm = RTBMFlow(n_dim=dim, n_events=ncalls, train=True, n_hidden=3)
     rtbm.compile(integrand)
     _ = rtbm.run_integration(n_iter)
     rtbm.freeze()
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     print(f"RTBM took: time (s): {end-start}")
 
     print("Results with frozen grids")
-    vegas_instance.run_integration(5)
+    r = vegas_instance.run_integration(5)
     rt = rtbm.run_integration(5)
     print(f"Result computed by Vegas: {r[0]:.5f} +- {r[1]:.6f}")
     print(f"Result computed by RTBM:  {rt[0]:.5f} +- {rt[1]:.6f}")

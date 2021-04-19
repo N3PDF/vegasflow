@@ -23,10 +23,11 @@ from joblib import Parallel, delayed
 from time import time
 
 logger = logging.getLogger(__name__)
+TOL = 1e-9
 
 # Cost functions for training
 def _kl(x, ytarget):
-    return ytarget * np.log(ytarget / x)
+    return ytarget * np.log(ytarget / (x+TOL))
 
 
 _loss = _kl
@@ -50,6 +51,10 @@ def _train_machine(
     max_iterations=3000,
     pop_per_rate=256,
     verbose=True,
+    resets=True,
+    timeout=5*60, # dont wait more than 5 minutes per iteration
+    fail_ontimeout=False,
+    skip_on_nan=True,
 ):
 
     if verbose:
@@ -71,7 +76,7 @@ def _train_machine(
     min_bound, max_bound = rtbm.get_bounds()
     loss_val = target_loss(best_parameters)
 
-    with Parallel(n_jobs=n_jobs) as parallel:
+    with Parallel(n_jobs=n_jobs, timeout=timeout) as parallel:
         prev = time()
         n_parameters = len(best_parameters)
 
@@ -101,10 +106,18 @@ def _train_machine(
                 return target_loss(mutant), mutant
 
             parallel_runs = [delayed(compute_mutant)(rate) for rate in rates]
-            result = parallel(parallel_runs)
+            try:
+                result = parallel(parallel_runs)
+            except: # TODO control better
+                logger.debug("Time'd out, skip me")
+                if fail_ontimeout:
+                    raise ValueError
+                result = [(np.nan, None)]
             losses, mutants = zip(*result)
 
-            best_loss = np.nanmin(losses)
+
+            # Insert the last best to avoid runtime errors
+            best_loss = np.nanmin(list(losses) + [loss_val+1.0])
             if best_loss < loss_val:
                 loss_val = best_loss
                 best_parameters = mutants[losses.index(best_loss)]
@@ -130,7 +143,10 @@ def _train_machine(
             if sigma < 1e-3:
                 sigma = original_sigma
                 logger.debug("Resetting sigma with loss: %.2f", loss_val)
-                repeats -= 1
+                if resets:
+                    repeats -= 1
+                else:
+                    repeats = 0
                 break
 
             if not repeats:
@@ -292,7 +308,9 @@ class RTBMFlow(MonteCarloFlow):
         best_loss = 1e9
         best_params = None
         winner_config = None
+
         for configuration in all_configs:
+            logger.info(f"Testing {configuration}")
             acts, means, stds = zip(*[i.values() for i in configuration])
             rtbm = RTBM(
                 self.n_dim,
@@ -305,14 +323,20 @@ class RTBMFlow(MonteCarloFlow):
                 sampling_activations=acts,
             )
             guessed_original_r = rtbm.undo_transformation(rnds)
-            loss = _train_machine(
-                rtbm,
-                unweighted_events,
-                guessed_original_r,
-                max_iterations=10,
-                pop_per_rate=64,
-                verbose=False,
-            )
+            try:
+                loss = _train_machine(
+                    rtbm,
+                    unweighted_events,
+                    guessed_original_r,
+                    max_iterations=32,
+                    pop_per_rate=32,
+                    resets=False,
+                    verbose=False,
+                    fail_ontimeout=True,
+                    timeout=10 # TODO if any initial iteration takes more than 10 seconds, get out
+                )
+            except ValueError:
+                loss = 1e9
             if loss < best_loss:
                 best_loss = loss
                 best_params = rtbm.get_parameters()
