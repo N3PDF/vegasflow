@@ -2,12 +2,11 @@
     Retracing example in VegasFlowPlus
 """
 
-from vegasflow import VegasFlowPlus, VegasFlow, StratifiedFlow, PlainFlow
-from vegasflow.configflow import DTYPE, DTYPEINT,run_eager, float_me
+from vegasflow import VegasFlowPlus, VegasFlow, PlainFlow
+from vegasflow.configflow import DTYPE, DTYPEINT, run_eager, float_me
 import time
 import numpy as np
 import tensorflow as tf
-#import pineappl
 
 # MC integration setup
 dim = 2

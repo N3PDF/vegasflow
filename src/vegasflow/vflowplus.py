@@ -8,7 +8,7 @@ from itertools import product
 import logging
 import tensorflow as tf
 import numpy as np
-from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me, ione, int_me, BINS_MAX, BETA
+from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me, ione, int_me, BINS_MAX, BETA, MAX_NEVAL_HCUBE
 from vegasflow.monte_carlo import wrapper
 from vegasflow.vflow import VegasFlow
 from vegasflow.utils import consume_array_into_indices
@@ -115,7 +115,7 @@ class VegasFlowPlus(VegasFlow):
             neval_eff = self.n_events
             self.n_strat = tf.math.floor(tf.math.pow(neval_eff / 2, 1 / n_dim))
 
-        if tf.math.pow(self.n_strat, n_dim) > 1e4:
+        if tf.math.pow(self.n_strat, n_dim) > MAX_NEVAL_HCUBE:
             self.n_strat = tf.math.floor(tf.math.pow(1e4, 1/n_dim))
 
         self.n_strat = int_me(self.n_strat)
