@@ -19,8 +19,7 @@ You can find the full code in the repository alongside more complicated versions
 Basic Integral
 ==============
 
-The most general usage of ``Vegasflow`` is the integration of a tensorflow-based
-integrand.
+The most general usage of ``Vegasflow`` is the integration of a tensorflow-based integrand.
 
 .. code-block:: python
 
@@ -115,7 +114,7 @@ In this case, however, it is necessary to activate ``eager-mode``, see :ref:`eag
 .. code-block:: python
 
     import numpy as np
-    from VegasFlow import vegas_wrapper, run_eager
+    from vegasflow import vegas_wrapper, run_eager
     run_eager()
 
     def my_integrand(xarr, **kwargs):
