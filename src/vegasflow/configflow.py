@@ -35,6 +35,9 @@ if log_level_idx not in log_dict:
     log_level_idx = DEFAULT_LOG_LEVEL
 log_level = log_dict[log_level_idx]
 
+# Set the TF logger to a level compatible with vegas
+tf.get_logger().setLevel(log_level)
+
 # Set level debug for development
 logger.setLevel(log_level)
 # Create a handler and format it
