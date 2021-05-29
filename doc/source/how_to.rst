@@ -4,9 +4,12 @@
 Usage
 =====
 
-``vegasflow`` is a python library that provides a number of functions to perform Monte Carlo integration of some functions.
-In this guide we do our best to explain the steps to follow in order to perform a successful calculation with VegasFlow.
-If, after reading this, you have any doubts, questions (or ideas for improvements!) please, don't hesistate to contact us [opening an issue](https://github.com/N3PDF/vegasflow/issues/new?assignees=&body=I%20have%20a%20question%20about%20VegasFlow...&labels=question) in Github.
+``VegasFlow`` is a python library that provides a number of functions to perform Monte Carlo integration of some functions.
+In this guide we do our best to explain the steps to follow in order to perform a successful calculation with ``VegasFlow``.
+If, after reading this, you have any doubts, questions (or ideas for
+improvements!) please, don't hesitate to contact us by `opening an issue on GitHub
+<https://github.com/N3PDF/vegasflow/issues/new?assignees=&body=I%20have%20a%20question%20about%20VegasFlow...&labels=question>`_.
+
 
 .. contents::
    :local:
@@ -41,7 +44,7 @@ using the ``tf.function`` decorator.
 
     import tensorflow as tf
     
-    def example_integrand(xarr, n_dim=none, weight=none):
+    def example_integrand(xarr, n_dim=None, weight=None):
       s = tf.reduce_sum(xarr, axis=1)
       result = tf.pow(0.1/s, 2)
       return result
@@ -54,17 +57,17 @@ using the ``tf.function`` decorator.
 .. code-block:: python
 
     n_iter = 5
-    result = vegas_instance.run_integration(n_iter)Q
+    result = vegas_instance.run_integration(n_iter)
 
 
 Constructing the integrand
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 Note that the ``example_integrand`` contained only ``TensorFlow`` operations.
-All ``VegasFlow`` integrands such, in principle, depend only on python primitives
+All ``VegasFlow`` integrands as such, in principle, depend only on python primitives
 and ``TensorFlow`` operations, otherwise the code cannot be compiled and as a result it cannot
-run on GPU u other ``TensorFlow``-supported hardware accelerators.
+run on GPU or other ``TensorFlow``-supported hardware accelerators.
 
-It is possible, however (and often useful when prototyping) integrate functions not
+It is possible, however (and often useful when prototyping) to integrate functions not
 based on ``TensorFlow``, by passing the ``compilable`` flag at compile time.
 This will spare the compilation of the integrand (while maintaining the compilation of
 the integration algorithm).
@@ -150,7 +153,7 @@ these extra argument can harm the performance of the integration when they are n
 It is possible to instantiate ``VegasFlow`` algorithms with ``simplify_signature``.
 In this case the integrand will only receive the array of random numbers and, in exchange for this
 loss of flexibility, the function will be retraced less often.
-For more details in what function retracing entails we direct to the `TensorFlow documentation <https://www.tensorflow.org/api_docs/python/tf/function>`_.
+For more details in what function retracing entails we direct you to the `TensorFlow documentation <https://www.tensorflow.org/api_docs/python/tf/function>`_.
 
 .. code-block:: python
 
@@ -178,7 +181,7 @@ Seeding the random number generator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Seeding operations in ``TensorFlow`` is not always trivial.
-We include in all integrator the method ``set_seed`` which is a wrapper to
+We include in all integrators the method ``set_seed`` which is a wrapper to
 ``TensorFlow``'s own `seed method <https://www.tensorflow.org/api_docs/python/tf/random/set_seed>`_.
 
 .. code-block:: python
@@ -201,11 +204,11 @@ This is equivalent to:
     
 
 This seed is what ``TensorFlow`` calls a global seed and is then used to generate operation-level seeds.
-In graph mode (:ref:`eager-label`) all top level ``tf.functions`` branch out
+In graph mode (see :ref:`eager-label`) all top level ``tf.functions`` branch out
 of the same initial state.
 As a consequence, if we were to run two separate instances of ``VegasFlow``,
 despite running sequentially, they would both run with the same seed.
-Note that it only occurs if the seed is manually set.
+Note that this only occurs if the seed is manually set.
 
 .. code-block:: python
 
@@ -228,13 +231,13 @@ Running in distributed systems
 
 ``vegasflow`` implements an easy interface to distributed system via
 the `dask <https://dask.org/>`_ library.
-In order to enable it is enough by calling the ``set_distribute`` method
+In order to enable it, it is enough to call the ``set_distribute`` method
 of the instantiated integrator class.
 This method takes a `dask_jobqueue <https://jobqueue.dask.org/en/latest/>`_
 to send the jobs to.
 
 An example can be found in the `examples/cluster_dask.py <https://github.com/N3PDF/vegasflow/blob/master/examples/cluster_dask.py>`_ file where
-the `SLURM <https://slurm.schedmd.com/documentation.html>`_ cluster is used as an example
+a `SLURM <https://slurm.schedmd.com/documentation.html>`_ cluster is used as an example
 
 .. note:: When the distributing capabilities of dask are being useful, ``VegasFlow`` "forfeits" control of the devices in which to run, trusting ``TensorFlow``'s defaults. To run, for instance, two GPUs in one single node while using dask the user should send two separate dask jobs, each targetting a different GPU.
 
@@ -245,7 +248,7 @@ Verbosity
 ^^^^^^^^^
 
 ``VegasFlow`` uses the internal logging capabilities of python by
-creating a new logger handled named ``vegasflow``.
+creating a new logger handle named ``vegasflow``.
 You can modify the behavior of the logger as with any sane python library with the following lines:
 
 .. code-block:: python
@@ -263,7 +266,7 @@ You can modify the behavior of the logger as with any sane python library with t
   
 Where the log level can be any level defined in the ``log_dict`` dictionary.
 
-Since ``VegasFlow`` is to be interfaced with non-python code it is also
+Since ``VegasFlow`` is meant. to be interfaced with non-python code it is also
 possible to control the behaviour through the environment variable ``VEGASFLOW_LOG_LEVEL``, in that case any of the keys in ``log_dict`` can be used. For instance:
 
 .. code-block:: bash
@@ -279,11 +282,11 @@ will suppress all logger information other than ``WARNING`` and ``ERROR``.
 Environment
 ^^^^^^^^^^^
 
-``VegasFlow`` is based on ``TensorFlow`` and as such all environment variable that
-have an effect on ``TensorFlow``s behavior will also have an effect on ``VegasFlow``.
+``VegasFlow`` is based on ``TensorFlow`` and as such all environment variables that
+have an effect on ``TensorFlow``'s behavior will also have an effect on ``VegasFlow``.
 
 Here we describe only some of what we found to be the most useful variables.
-For a complete description on the variables controlling the GPU-behavior of ``TensorFlow`` please refer to
+For a complete description of the variables controlling the GPU-behavior of ``TensorFlow`` please refer to
 the `nvidia official documentation <https://docs.nvidia.com/deeplearning/frameworks/tensorflow-user-guide/index.html#variablestf>`_.
 
 - ``TF_CPP_MIN_LOG_LEVEL``: controls the ``TensorFlow`` logging level. It is set to 1 by default so that only errors are printed.
@@ -295,17 +298,15 @@ the `nvidia official documentation <https://docs.nvidia.com/deeplearning/framewo
 Choosing integration device
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``CUDA_VISIBLE_DEVICES`` environment variable will tell Tensorflow
-(and thus VegasFlow) in which device it should run.
-If the variable is not set, it will default to use all (and only) GPUs available.
+The ``CUDA_VISIBLE_DEVICES`` environment variable will tell ``Tensorflow``
+(and thus ``VegasFlow``) on which device(s) it should run.
+If this variable is not set, it will default to using all available GPUs and avoid running on the CPU.
 In order to use the CPU you can hide the GPU by setting
 ``export CUDA_VISIBLE_DEVICES=""``.
 
-If you have a set-up with more than one GPU you can select which one you will
+If you have a set-up with more than one GPU you can select which one you
 want to use for the integration by setting the environment variable to the
 right device, e.g., ``export CUDA_VISIBLE_DEVICES=0``.
-
-
 
 
 
@@ -314,15 +315,15 @@ right device, e.g., ``export CUDA_VISIBLE_DEVICES=0``.
 Eager Vs Graph-mode
 ^^^^^^^^^^^^^^^^^^^
 
-When performing computational expensive tasks Tensorflow's graph mode is preferred.
-When compiling you will notice the first iteration of the integration takes a bit longer, this is normal
-and it's due to the creation of the graph.
+When performing computationally expensive tasks ``Tensorflow``'s graph mode is preferred.
+When compiling you will notice the first iteration of the integration takes a
+bit longer, this is normal and it's due to the creation of the graph.
 Subsequent iterations will be faster.
 
-Graph-mode however is not debugger friendly as the code is read only once, when compiling the graph.
-You can however enable ``Tensorflow``'s `eager execution <https://www.tensorflow.org/guide/eager>`_.
+Graph-mode, however, is not debugger friendly, as the code is read only once, when compiling the graph.
+You can, however, enable ``Tensorflow``'s `eager execution <https://www.tensorflow.org/guide/eager>`_.
 With eager mode the code is run sequentially as you would expect with normal python code,
-this will allow you for instance throw in instances of ``pdb.set_trace()``.
+this will allow you, for instance, to throw in instances of ``pdb.set_trace()``.
 In order to use eager execution we provide the ``run_eager`` wrapper.
 
 .. code-block:: python
@@ -358,8 +359,8 @@ Histograms
 ==========
 
 A commonly used feature in Monte Carlo calculations is the generation of histograms.
-In order to generate them while at the same time keeping all the features of ``vegasflow``,
-such as GPU computing, it is necessary to ensure the histogram generation is also wrapped with the ``@tf.function`` directive.
+In order to generate them while at the same time keeping all the features of ``VegasFlow``,
+such as GPU computing, it is necessary to ensure that the histogram generation is also wrapped with the ``@tf.function`` directive.
 
 Below we show one such example (how the histogram is actually generated and saved is up to the user).
 The first step is to create a ``Variable`` tensor which will be used to fill the histograms.
@@ -403,8 +404,8 @@ This is a crucial step (and the only fixed step) as this tensor will be accumula
         histogram_collector(final_result * weight, histogram_values)
         return final_result
 
-Finally we can normally call ``vegasflow``, remembering to pass down the accumulator tensor, which will be filled in with the histograms.
-Note that here we are only filling one histograms and so the histogram tuple contains only one element, but any number of histograms can be filled.
+Finally we can call ``VegasFlow``, remembering to pass down the accumulator tensor, which will be filled in with the histograms.
+Note that here we are only filling in one histogram and so the histogram tuple contains only one element, but any number of histograms may be filled.
 
 
 .. code-block:: python
@@ -413,21 +414,21 @@ Note that here we are only filling one histograms and so the histogram tuple con
     results = mc_instance.run_integration(n_iter, histograms=histogram_tuple)
 
 
-We ship an example of an integrand which generates histograms in the github repository: `here <https://github.com/N3PDF/vegasflow/blob/master/examples/histogram_ex.py>`_.
+We include an example of an integrand which generates histograms in `examples/histogram.py <https://github.com/N3PDF/vegasflow/blob/master/examples/histogram_ex.py>`_
 
 Generate conditions
 ===================
 
 A very common case when integrating using Monte Carlo method is to add non trivial cuts to the
 integration space.
-It is not obvious how to implement cuts in a consistent manner in GPU or using ``TensorFlow``
+It is not obvious how to implement cuts in a consistent manner on a GPU or using ``TensorFlow``
 routines when we have to combine several conditions.
 We provide the ``generate_condition_function``  auxiliary function which generates
 a ``TensorFlow``-compiled function for the necessary number of conditions.
 
 For instance, let's take the case of a parton collision simulation, in which
-we want to constraint the phase space of the two final state particles to the region
-in which the two particles have a transverse momentum above 15 GeV or any of them
+we want to constrain the phase space of the two final state particles to the region
+in which the two particles have a transverse momentum above 15 GeV, or any of them have
 a rapidity below 4.
 
 We first generate the condition we want to apply using ``generate_condition_function``.
