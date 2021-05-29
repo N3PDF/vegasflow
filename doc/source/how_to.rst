@@ -266,7 +266,7 @@ You can modify the behavior of the logger as with any sane python library with t
   
 Where the log level can be any level defined in the ``log_dict`` dictionary.
 
-Since ``VegasFlow`` is meant. to be interfaced with non-python code it is also
+Since ``VegasFlow`` is meant to be interfaced with non-python code it is also
 possible to control the behaviour through the environment variable ``VEGASFLOW_LOG_LEVEL``, in that case any of the keys in ``log_dict`` can be used. For instance:
 
 .. code-block:: bash
@@ -341,7 +341,7 @@ This is a wrapper around the following lines of code:
     import tensorflow as tf
     tf.config.run_functions_eagerly(True)
     
-or if you are using versions of Tensorflow older than 2.3:
+or if you are using versions of ``TensorFlow`` older than 2.3:
 
 .. code-block:: python
 
@@ -351,7 +351,7 @@ or if you are using versions of Tensorflow older than 2.3:
 
 Eager mode also enables the usage of the library as a `standard` python library
 allowing you to integrate non-tensorflow integrands.
-These integrands, as they are not understood by tensorflow, are not run using
+These integrands, as they are not understood by ``TensorFlow``, are not run using
 GPU kernels while the rest of ``VegasFlow`` will still be run on GPU if possible.
 
 
