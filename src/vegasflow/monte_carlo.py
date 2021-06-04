@@ -75,7 +75,7 @@ def _accumulate(accumulators):
     results = []
     len_acc = len(accumulators[0])
     for i in range(len_acc):
-        total = tf.reduce_sum([acc[i] for acc in accumulators], axis=0)
+        total = tf.reduce_mean([acc[i] for acc in accumulators], axis=0)
         results.append(total)
     return results
 
