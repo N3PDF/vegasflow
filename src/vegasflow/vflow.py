@@ -22,7 +22,7 @@ FBINS = float_me(BINS_MAX)
 
 # Auxiliary functions for Vegas
 @tf.function
-def generate_random_array(rnds, divisions):
+def _generate_random_array(rnds, divisions):
     """
     Generates the Vegas random array for any number of events
 
@@ -286,11 +286,11 @@ class VegasFlow(MonteCarloFlow):
             new_divisions = refine_grid_per_dimension(arr_res2[j, :], self.divisions[j, :])
             self.divisions[j, :].assign(new_divisions)
 
-    def generate_random_array(self, n_events):
+    def _generate_random_array(self, n_events):
         """Uses the internal array to generate ``n_events`` random numbers"""
-        rnds, _, xjac = super().generate_random_array(n_events)
+        rnds, _, xjac = super()._generate_random_array(n_events)
         # Pass them through the Vegas digestion
-        x, ind, w = generate_random_array(rnds, self.divisions)
+        x, ind, w = _generate_random_array(rnds, self.divisions)
         return x, ind, w * xjac
 
     def _run_event(self, integrand, ncalls=None):
@@ -313,7 +313,7 @@ class VegasFlow(MonteCarloFlow):
             n_events = ncalls
 
         # Generate all random number for this iteration
-        x, ind, xjac = self.generate_random_array(n_events)
+        x, ind, xjac = self._generate_random_array(n_events)
 
         # Now compute the integrand
         if self.simplify_signature:

@@ -39,7 +39,14 @@ from abc import abstractmethod, ABC
 import joblib
 import numpy as np
 import tensorflow as tf
-from vegasflow.configflow import MAX_EVENTS_LIMIT, DEFAULT_ACTIVE_DEVICES, DTYPE, TECH_CUT, float_me, fone
+from vegasflow.configflow import (
+    MAX_EVENTS_LIMIT,
+    DEFAULT_ACTIVE_DEVICES,
+    DTYPE,
+    TECH_CUT,
+    float_me,
+    fone,
+)
 
 import logging
 
@@ -75,7 +82,7 @@ def _accumulate(accumulators):
     results = []
     len_acc = len(accumulators[0])
     for i in range(len_acc):
-        total = tf.reduce_mean([acc[i] for acc in accumulators], axis=0)
+        total = tf.reduce_sum([acc[i] for acc in accumulators], axis=0)
         results.append(total)
     return results
 
@@ -114,6 +121,7 @@ class MonteCarloFlow(ABC):
         self._verbose = verbose
         self._history = []
         self.n_events = n_events
+        self._xjac = float_me(1.0 / n_events)
         self._events_per_run = min(events_limit, n_events)
         self.distribute = False
         if list_devices:
@@ -140,7 +148,7 @@ class MonteCarloFlow(ABC):
 
     @events_per_run.setter
     def events_per_run(self, val):
-        """ Set the number of events per single step """
+        """Set the number of events per single step"""
         self._events_per_run = min(val, self.n_events)
         if self.n_events % self._events_per_run != 0:
             logger.warning(
@@ -162,7 +170,32 @@ class MonteCarloFlow(ABC):
         return self._history
 
     def generate_random_array(self, n_events):
+        """External interface for the generation of random
+        points as a 2D array of (n_events, n_dim).
+        It calls the internal version of ``_generate_random_array``
+
+        Parameters
+        ----------
+            `n_events`: number of events to generate
+
+
+        Returns
+        -------
+            `rnds`: array of (n_events, n_dim) random points
+            `idx` : index associated to each random point
+            `p(x)` : p(x) associated to the random points
+        """
+        rnds, idx, xjac_raw = self._generate_random_array(n_events)
+        # returns a p(x) corresponding to the number of events
+        # the algorithm was trained with, reweight
+        xjac = xjac_raw / self._xjac / n_events
+        return rnds, idx, xjac
+
+    def _generate_random_array(self, n_events):
         """Generate a 2D array of (n_events, n_dim) points
+        For the weight of the given point, this function is considered
+        as part of an integration with ``self.n_events`` calls.
+
         Parameters
         ----------
             `n_events`: number of events to generate
@@ -177,8 +210,7 @@ class MonteCarloFlow(ABC):
             (n_events, self.n_dim), minval=TECH_CUT, maxval=1.0 - TECH_CUT, dtype=DTYPE
         )
         idx = 0
-        xjac = fone/float_me(n_events)
-        return rnds, idx, xjac
+        return rnds, idx, self._xjac
 
     #### Abstract methods
     @abstractmethod
@@ -195,7 +227,7 @@ class MonteCarloFlow(ABC):
 
     #### Integration management
     def set_seed(self, seed):
-        """ Sets the interation seed """
+        """Sets the interation seed"""
         tf.random.set_seed(seed)
 
     #### Device management methods
@@ -216,7 +248,7 @@ class MonteCarloFlow(ABC):
         return use_dev
 
     def release_device(self, device):
-        """ Makes `device` available again """
+        """Makes `device` available again"""
         self.lock.acquire()
         try:
             self.devices[device] = True
@@ -487,7 +519,15 @@ def wrapper(integrator_class, integrand, n_dim, n_iter, total_n_events, compilab
     return mc_instance.run_integration(n_iter)
 
 
-def sampler(integrator_class, integrand, n_dim, total_n_events, training_steps=5, compilable=True, return_class=False):
+def sampler(
+    integrator_class,
+    integrand,
+    n_dim,
+    total_n_events,
+    training_steps=5,
+    compilable=True,
+    return_class=False,
+):
     """Convenience wrapper for sampling random numbers
 
     Parameters
