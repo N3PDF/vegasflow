@@ -3,15 +3,15 @@ import argparse
 import random as rn
 from multiprocessing.pool import ThreadPool as Pool
 from functools import partial
+from vegasflow.configflow import DTYPE, MAX_EVENTS_LIMIT, run_eager
+run_eager(True)
 from pdfflow.pflow import mkPDF
 import pineappl
 from vegasflow.utils import generate_condition_function
 from vegasflow.vflow import VegasFlow
-from vegasflow.configflow import DTYPE, MAX_EVENTS_LIMIT
 import time
 import numpy as np
 import tensorflow as tf
-tf.config.run_functions_eagerly(True)
 
 
 parser = argparse.ArgumentParser()
@@ -82,7 +82,7 @@ def fill(grid, x1, x2, q2, yll, weight):
     grid.fill_array(x1, x2, q2, zeros, yll, zeros, weight)
 
 
-def fill_grid(xarr, n_dim=None, **kwargs):
+def fill_grid(xarr, n_dim=None, weight=1, **kwargs):
     s, t, u, x1, x2, jacobian = hadronic_pspgen(xarr, 10.0, 7000.0)
 
     ptl = tf.sqrt((t * u / s))
@@ -102,18 +102,18 @@ def fill_grid(xarr, n_dim=None, **kwargs):
     t_6 = mll <= 120.0
     full_mask, indices = cuts(t_1, t_2, t_3, t_4, t_5, t_6)
 
-    weight = tf.boolean_mask(jacobian * int_photo(s, u, t), full_mask, axis=0)
+    wgt = tf.boolean_mask(jacobian * int_photo(s, u, t), full_mask, axis=0)
     x1 = tf.boolean_mask(x1, full_mask, axis=0)
     x2 = tf.boolean_mask(x2, full_mask, axis=0)
     yll = tf.boolean_mask(yll, full_mask, axis=0)
-    vweight = weight * tf.boolean_mask(kwargs.get('weight'), full_mask, axis=0)
+    vweight = wgt  * tf.boolean_mask(weight, full_mask, axis=0)
 
     if kwargs.get('fill_pineappl'):
         q2 = 90.0 * 90.0 * tf.ones(weight.shape, dtype=tf.float64)
         kwargs.get('pool').apply_async(fill, [kwargs.get('grid'), x1.numpy(), x2.numpy(),
                                               q2.numpy(), tf.abs(yll).numpy(), vweight.numpy()])
 
-    return tf.scatter_nd(indices, weight, shape=xarr.shape[0:1])
+    return tf.scatter_nd(indices, wgt, shape=xarr.shape[0:1])
 
 
 if __name__ == "__main__":

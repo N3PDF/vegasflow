@@ -33,7 +33,6 @@
 """
 
 import inspect
-import functools
 import time
 import copy
 import threading
@@ -121,7 +120,7 @@ class MonteCarloFlow(ABC):
         self._verbose = verbose
         self._history = []
         self.n_events = n_events
-        self._xjac = float_me(1.0 / n_events)
+        self._xjac = float_me([1.0 / n_events])
         self._events_per_run = min(events_limit, n_events)
         self.distribute = False
         # If any of the pass variables below is set to true
@@ -363,7 +362,19 @@ class MonteCarloFlow(ABC):
                 accumulators.append(res)
         return _accumulate(accumulators)
 
-    def compile(self, integrand, compilable=True, signature=None):
+    def trace(self, n_events=50):
+        """Run a mock integration with just 50 events to trigger compilation"""
+        true_events = self.n_events
+        true_verbosity = self._verbose
+        # Change the integration options
+        self.n_events = n_events
+        self._verbose = False
+        self.run_integration(1, log_time=False)
+        # Recover the actual values
+        self.n_events = true_events
+        self._verbose = true_verbosity
+
+    def compile(self, integrand, compilable=True, signature=None, trace=False):
         """Receives an integrand, prepares it for integration
         and tries to compile unless told otherwise.
 
@@ -383,7 +394,7 @@ class MonteCarloFlow(ABC):
         In other words, the integrand must take at least one argument
         and the integrator will always pass the array of random numbers.
         For legacy compatibility, the keyword argument `n_dim` will be accepted
-        but it will fixed with `functools.partial` to be equal to `self.n_dim`
+        but it will fixed to be equal to `self.n_dim`
 
         This function will try to understand the signature of the function and compile
         it accordingly, this means:
@@ -415,48 +426,58 @@ class MonteCarloFlow(ABC):
             signature = tf_integrand.input_signature
 
         # LEGACY: check whether the integrand includes n_dim
-        arguments = inspect.getfullargspec(integrand)
-        if "n_dim" in arguments.args:
-            integrand = functools.partial(integrand, n_dim=self.n_dim)
-            arguments = inspect.getfullargspec(
-                integrand
-            )  # If after this we need to recompile and it was _already_ compiled, warn the user
+        args = inspect.getfullargspec(integrand).args
+        if "n_dim" in args:
+            raw_integrand = integrand
+            if "weight" in args:
+
+                def integrand(xarr, weight=None, **kwargs):
+                    return raw_integrand(xarr, n_dim=self.n_dim, weight=weight)
+
+            else:
+
+                def integrand(xarr, **kwargs):
+                    return raw_integrand(xarr, n_dim=self.n_dim, **kwargs)
+
+            # Remove n_dim
+            args.remove("n_dim")
+            # If after this we need to recompile and it was _already_ compiled, warn the user
             if tf_integrand is not None:
                 logger.warning("The function included `n_dim` so a recompile was triggered")
                 tf_integrand = None
                 signature = None
 
-        if compilable and tf_integrand is None:
-            # Autodiscover the signature
-            compile_options = {
-                "experimental_autograph_options": tf.autograph.experimental.Feature.ALL,
-                "input_signature": [tf.TensorSpec(shape=[None, self.n_dim], dtype=DTYPE)],
-            }
-            if signature is None:
-                # The first argument should be the random array, the second (if any)
-                # should be the weight, anything else is not allowed
-                # The first argument is the random array, anthing else is not allowed
-                args = arguments.args[1:]
-                for arg in args:
-                    if arg not in ("weight"):
-                        logger.warning(
-                            "The signature could not be autodiscovered due to argument %s", arg
-                        )
-                        logger.warning(
-                            "Provide a `signature` if you want to compile with an specific signature"
-                        )
-                        # Drop signature
-                        compile_options.pop("input_signature")
-                        break
-                    if arg == "weight":
-                        compile_options["input_signature"].append(
-                            tf.TensorSpec(shape=[None], dtype=DTYPE)
-                        )
-                        self._pass_weight = True
+        # Autodiscover the signature to check whether the weight needs to be passed down
+        compile_options = {
+            "experimental_autograph_options": tf.autograph.experimental.Feature.ALL,
+        }
 
-                logger.debug(
-                    "Compiling with signature: %s", str(compile_options["input_signature"])
+        # if signature is None, then we want to autodiscover
+        # if it is False, we don't want to use it at all
+        if signature is None:
+            signature = [tf.TensorSpec(shape=[None, self.n_dim], dtype=DTYPE)]
+
+        # The first argument should be the random array, the second (if any)
+        # should be the weight, anything else is not allowed
+        # The first argument is the random array, anthing else is not allowed
+        for arg in args[1:]:
+            # If we want to compile and there's something we cannot understand, drop the signature
+            if arg not in ("weight") and compilable:
+                logger.warning("The signature could not be autodiscovered due to argument %s", arg)
+                logger.warning(
+                    "Provide a `signature` if you want to compile with an specific signature"
                 )
+                # Drop signature completely
+                signature_content = False
+            if arg == "weight":
+                if signature:
+                    signature.append(tf.TensorSpec(shape=[None], dtype=DTYPE))
+                self._pass_weight = True
+
+        if compilable and tf_integrand is None:
+            if signature:
+                compile_options["input_signature"] = signature
+                logger.debug("Compiling with signature: %s", str(signature))
             tf_integrand = tf.function(integrand, **compile_options)
         else:
             tf_integrand = integrand
@@ -469,6 +490,9 @@ class MonteCarloFlow(ABC):
             self.event = tf.function(run_event)
         else:
             self.event = run_event
+
+        if trace:
+            self.trace()
 
     def run_integration(self, n_iter, log_time=True, histograms=None):
         """Runs the integrator for the chosen number of iterations.
@@ -527,7 +551,8 @@ class MonteCarloFlow(ABC):
                 time_str = f"(took {end-start:.5f} s)"
             else:
                 time_str = ""
-            print_iteration(i, res, error, extra=time_str)
+            if self._verbose:
+                print_iteration(i, res, error, extra=time_str)
 
         # Once all iterations are finished, print out
         aux_res = 0.0
@@ -550,7 +575,8 @@ class MonteCarloFlow(ABC):
 
         final_result = aux_res / weight_sum
         sigma = np.sqrt(1.0 / weight_sum)
-        logger.info(f" > Final results: {final_result.numpy():g} +/- {sigma:g}")
+        if self._verbose:
+            logger.info(f" > Final results: {final_result.numpy():g} +/- {sigma:g}")
         return final_result.numpy(), sigma
 
 

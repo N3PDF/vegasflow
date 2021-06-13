@@ -182,8 +182,7 @@ class VegasFlow(MonteCarloFlow):
         # If training is True, the grid will be changed after every iteration
         # otherwise it will be frozen
         self.train = train
-        self.iteration_content = None
-        self.compile_args = None
+        self._compilation_arguments = None
 
         # Initialize grid
         self.grid_bins = BINS_MAX + 1
@@ -194,12 +193,12 @@ class VegasFlow(MonteCarloFlow):
     def freeze_grid(self):
         """Stops the grid from refining any more"""
         self.train = False
-        self.recompile()
+        self._recompile()
 
     def unfreeze_grid(self):
         """Enable the refining of the grid"""
         self.train = True
-        self.recompile()
+        self._recompile()
 
     def save_grid(self, file_name):
         """Save the `divisions` array in a json file
@@ -356,23 +355,23 @@ class VegasFlow(MonteCarloFlow):
             self.refine_grid(arr_res2)
         return res, sigma
 
-    def compile(self, integrand, compilable=True, **kwargs):
-        self.compile_args = (integrand, compilable, kwargs)
-        super().compile(integrand, compilable=compilable, **kwargs)
-        self.iteration_content = self._iteration_content
+    def compile(self, integrand, **kwargs):
+        """Save the compilation arguments, if the grid is frozen at any point
+        a recompilaton will be triggered
+        """
+        self._compilation_arguments = (integrand, kwargs)
+        super().compile(integrand, **kwargs)
 
-    def recompile(self):
+    def _recompile(self):
         """Forces recompilation with the same arguments that have
         previously been used for compilation"""
-        if self.compile_args is None:
+        if self._compilation_arguments is None:
             raise RuntimeError("recompile was called without ever having called compile")
-        a = self.compile_args
-        self.compile(a[0], a[1], **a[2])
+        self.compile(self._compilation_arguments[0], **self._compilation_arguments[1])
 
     def _run_iteration(self):
         """Runs one iteration of the Vegas integrator"""
-        res, sigma = self.iteration_content()
-        return res, sigma
+        return self._iteration_content()
 
 
 def vegas_wrapper(integrand, n_dim, n_iter, total_n_events, **kwargs):
