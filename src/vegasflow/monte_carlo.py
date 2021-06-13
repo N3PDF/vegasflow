@@ -36,6 +36,7 @@ import inspect
 import time
 import copy
 import threading
+import logging
 from abc import abstractmethod, ABC
 import joblib
 import numpy as np
@@ -44,13 +45,10 @@ from vegasflow.configflow import (
     MAX_EVENTS_LIMIT,
     DEFAULT_ACTIVE_DEVICES,
     DTYPE,
-    DTYPEINT,
     TECH_CUT,
     float_me,
-    fone,
 )
 
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +108,7 @@ class MonteCarloFlow(ABC):
         n_dim,
         n_events,
         events_limit=MAX_EVENTS_LIMIT,
-        list_devices=DEFAULT_ACTIVE_DEVICES,
+        list_devices=DEFAULT_ACTIVE_DEVICES,  # pylint: disable=dangerous-default-value
         verbose=True,
     ):
         # Save some parameters
@@ -293,8 +291,8 @@ class MonteCarloFlow(ABC):
         """
         try:
             import dask.distributed  # pylint: disable=import-error
-        except ImportError:
-            raise ImportError("Install dask and distributed to use `set_distribute`")
+        except ImportError as e:
+            raise ImportError("Install dask and distributed to use `set_distribute`") from e
         if self.devices is not None:
             logger.warning("`set_distribute` overrides any previous device configuration")
         self.list_devices = None
@@ -436,7 +434,7 @@ class MonteCarloFlow(ABC):
 
             else:
 
-                def integrand(xarr, **kwargs):
+                def integrand(xarr, **kwargs):  # pylint: disable=function-redefined
                     return raw_integrand(xarr, n_dim=self.n_dim, **kwargs)
 
             # Remove n_dim
@@ -468,7 +466,7 @@ class MonteCarloFlow(ABC):
                     "Provide a `signature` if you want to compile with an specific signature"
                 )
                 # Drop signature completely
-                signature_content = False
+                signature = False
             if arg == "weight":
                 if signature:
                     signature.append(tf.TensorSpec(shape=[None], dtype=DTYPE))
