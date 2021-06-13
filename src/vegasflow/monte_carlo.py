@@ -429,7 +429,7 @@ class MonteCarloFlow(ABC):
             raw_integrand = integrand
             if "weight" in args:
 
-                def integrand(xarr, weight=None, **kwargs):
+                def integrand(xarr, weight=None, **kwargs):  # pylint: disable=function-redefined
                     return raw_integrand(xarr, n_dim=self.n_dim, weight=weight)
 
             else:
