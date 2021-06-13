@@ -32,6 +32,8 @@
     as it is the first one found idle.
 """
 
+import inspect
+import functools
 import time
 import copy
 import threading
@@ -43,6 +45,7 @@ from vegasflow.configflow import (
     MAX_EVENTS_LIMIT,
     DEFAULT_ACTIVE_DEVICES,
     DTYPE,
+    DTYPEINT,
     TECH_CUT,
     float_me,
     fone,
@@ -101,7 +104,6 @@ class MonteCarloFlow(ABC):
             Note: for a better performance, when n_events is greater than the event limit,
             `n_events` should be exactly divisible by `events_limit`
         `list_devices`: list of device type to use (use `None` to do the tensorflow default)
-        `simplify_signature`: if true only the array of random numbers will be passed to the integrand
     """
 
     def __init__(
@@ -111,19 +113,21 @@ class MonteCarloFlow(ABC):
         events_limit=MAX_EVENTS_LIMIT,
         list_devices=DEFAULT_ACTIVE_DEVICES,
         verbose=True,
-        simplify_signature=False,
     ):
         # Save some parameters
         self.n_dim = n_dim
-        self.integrand = None
+        self._integrand = None
         self.event = None
-        self.simplify_signature = simplify_signature
         self._verbose = verbose
         self._history = []
         self.n_events = n_events
         self._xjac = float_me(1.0 / n_events)
         self._events_per_run = min(events_limit, n_events)
         self.distribute = False
+        # If any of the pass variables below is set to true
+        # the integrand will be expecting them so the integrator
+        # should pass them through
+        self._pass_weight = False
         if list_devices:
             self.lock = threading.Lock()
             # List all devices from the list that can be found by tensorflow
@@ -359,54 +363,106 @@ class MonteCarloFlow(ABC):
                 accumulators.append(res)
         return _accumulate(accumulators)
 
-    def compile(self, integrand, compilable=True):
+    def compile(self, integrand, compilable=True, signature=None):
         """Receives an integrand, prepares it for integration
         and tries to compile unless told otherwise.
 
         The input integrand must receive, as an input, an array of random numbers.
-        There are also two optional arguments that will be passed to the function:
-
-        - `n_dim`: number of dimensions,
+        There are also one optional arguments that will be passed to the function:
 
         - `weight`: weight of each event,
 
         so that the most general signature for the integrand is:
 
-        - `integrand(array_random, n_dim = None, weight = None)`,
+        - `integrand(array_random, weight = None)`,
 
         the minimal working signature fo the integrand will be
 
-        - `integrand(array_random, **kwargs)`.
+        - `integrand(array_random)`.
 
-        if the integrator is instantiated with the ``simplify_signature`` argument
-        the signature will be:
+        In other words, the integrand must take at least one argument
+        and the integrator will always pass the array of random numbers.
+        For legacy compatibility, the keyword argument `n_dim` will be accepted
+        but it will fixed with `functools.partial` to be equal to `self.n_dim`
 
-        - `integrand(array_random)`
+        This function will try to understand the signature of the function and compile
+        it accordingly, this means:
+            <1> array_random: DTYPE of shape [None, n_dim]
+            <2> weight: DTYPE of shape [None]
+
+        if the function posses any kewyword arguments not included in this list,
+        it will be compiled with a generic `tf.function` call.
+        This will work most of the time but could trigger retracing on shape-shifting
+        calculations.
+
+        For more complex situations, a signature can be given to this function
 
         Parameters
         ----------
             `integrand`: the function to integrate
             `compilable`: (default True) if False, the integration
                 is not passed through `tf.function`
-        """
-        self.integrand = integrand
-        compile_options = {"experimental_autograph_options": tf.autograph.experimental.Feature.ALL}
+            `signature`: (default: autodiscover)
+                signature for the compilation of the integrand, if false no signature is used
 
-        if compilable:
-            if self.simplify_signature:
-                compile_options["input_signature"] = [
-                    tf.TensorSpec(shape=[None, self.n_dim], dtype=DTYPE)
-                ]
-            # Don't override user own compilation
-            try:
-                integrand.function_spec
-                tf_integrand = integrand
-            except AttributeError:
-                tf_integrand = tf.function(integrand, **compile_options)
+        """
+        tf_integrand = None
+        self._integrand = integrand
+        # First check whether the function is already compiled
+        if hasattr(integrand, "function_spec"):
+            tf_integrand = integrand
+            integrand = tf_integrand.python_function
+            signature = tf_integrand.input_signature
+
+        # LEGACY: check whether the integrand includes n_dim
+        arguments = inspect.getfullargspec(integrand)
+        if "n_dim" in arguments.args:
+            integrand = functools.partial(integrand, n_dim=self.n_dim)
+            arguments = inspect.getfullargspec(
+                integrand
+            )  # If after this we need to recompile and it was _already_ compiled, warn the user
+            if tf_integrand is not None:
+                logger.warning("The function included `n_dim` so a recompile was triggered")
+                tf_integrand = None
+                signature = None
+
+        if compilable and tf_integrand is None:
+            # Autodiscover the signature
+            compile_options = {
+                "experimental_autograph_options": tf.autograph.experimental.Feature.ALL,
+                "input_signature": [tf.TensorSpec(shape=[None, self.n_dim], dtype=DTYPE)],
+            }
+            if signature is None:
+                # The first argument should be the random array, the second (if any)
+                # should be the weight, anything else is not allowed
+                # The first argument is the random array, anthing else is not allowed
+                args = arguments.args[1:]
+                for arg in args:
+                    if arg not in ("weight"):
+                        logger.warning(
+                            "The signature could not be autodiscovered due to argument %s", arg
+                        )
+                        logger.warning(
+                            "Provide a `signature` if you want to compile with an specific signature"
+                        )
+                        # Drop signature
+                        compile_options.pop("input_signature")
+                        break
+                    if arg == "weight":
+                        compile_options["input_signature"].append(
+                            tf.TensorSpec(shape=[None], dtype=DTYPE)
+                        )
+                        self._pass_weight = True
+
+                logger.debug(
+                    "Compiling with signature: %s", str(compile_options["input_signature"])
+                )
+            tf_integrand = tf.function(integrand, **compile_options)
         else:
             tf_integrand = integrand
 
         def run_event(**kwargs):
+            """Pass any arguments to the underlying integrand"""
             return self._run_event(tf_integrand, **kwargs)
 
         if compilable:
