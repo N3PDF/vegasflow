@@ -97,6 +97,7 @@ class VegasFlowPlus(VegasFlow):
     """
 
     def __init__(self, n_dim, n_events, train=True, adaptive=None, **kwargs):
+        _ = kwargs.setdefault("events_limit", n_events)
         super().__init__(n_dim, n_events, train, **kwargs)
 
         self.init_calls = n_events
