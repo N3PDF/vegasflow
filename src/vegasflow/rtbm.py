@@ -23,21 +23,32 @@ from joblib import Parallel, delayed
 from time import time
 
 logger = logging.getLogger(__name__)
-TOL = 1e-9
+TOL = 1e-6
 
 # Cost functions for training
-def _kl(x, ytarget):
-    return ytarget * np.log(ytarget / (x+TOL))
+def _kl(x, ytarget_raw):
+    ytarget = ( ytarget_raw + TOL )
 
+    ytarget /= np.sum(ytarget)
+    x /= np.sum(x)
+
+    return ytarget * np.log(ytarget / x)
+
+def _mse(x, y):
+    integral = np.sum(y)
+    x /= np.sum(x)
+    y /= integral
+    return integral*pow(x-y,2)
 
 _loss = _kl
-
 
 def _generate_target_loss(rtbm, original_r, target):
     def target_loss(params):
         if not rtbm.set_parameters(params):
             return np.NaN
         _, prob = rtbm.get_transformation(original_r)
+        if (prob <= 0.0).any():
+            return np.NaN
         return np.sum(_loss(prob, target))
 
     return target_loss
@@ -49,13 +60,18 @@ def _train_machine(
     original_r_tf,
     n_jobs=32,
     max_iterations=3000,
-    pop_per_rate=256,
+    pop_per_rate=512,
     verbose=True,
     resets=True,
     timeout=5*60, # dont wait more than 5 minutes per iteration
+    timeout_repeat=3,
     fail_ontimeout=False,
     skip_on_nan=True,
 ):
+
+    # note that if between 2 timeout there are severaliterations
+    # but they do not produce a better esult it doesn't count
+    timeout_original = timeout_repeat
 
     if verbose:
         logger.info("Training RTBM")
@@ -81,9 +97,9 @@ def _train_machine(
         n_parameters = len(best_parameters)
 
         # training hyperparameters
-        mutation_rates = np.array([0.2, 0.4, 0.6, 0.8])
+        mutation_rates = np.array([0.1, 0.2, 0.4, 0.6, 0.8, 0.96])
         rates = np.concatenate([np.ones(pop_per_rate) * mr for mr in mutation_rates])
-        original_sigma = 0.25
+        original_sigma = 0.55
         sigma = original_sigma
         repeats = 3
         #######
@@ -110,8 +126,12 @@ def _train_machine(
                 result = parallel(parallel_runs)
             except: # TODO control better
                 logger.debug("Time'd out, skip me")
+                timeout_repeat -= 1
                 if fail_ontimeout:
                     raise ValueError
+                if timeout_repeat == 0:
+                    logger.debug("Full timeout, out")
+                    break
                 result = [(np.nan, None)]
             losses, mutants = zip(*result)
 
@@ -119,15 +139,16 @@ def _train_machine(
             # Insert the last best to avoid runtime errors
             best_loss = np.nanmin(list(losses) + [loss_val+1.0])
             if best_loss < loss_val:
+                timeout_repeat = timeout_original # reset the timeouts
                 loss_val = best_loss
                 best_parameters = mutants[losses.index(best_loss)]
             else:
-                sigma /= 2
+                sigma *= 0.9
 
             if it % 50 == 0 and verbose:
                 current = time()
                 logger.debug(
-                    "Iteration %d, best_loss: %.2f, (%2.fs)",
+                    "Iteration %d, best_loss: %.4f, (%2.fs)",
                     it,
                     loss_val,
                     current - prev,
@@ -140,17 +161,17 @@ def _train_machine(
                 )
                 prev = current
 
-            if sigma < 1e-3:
+            if sigma < 1e-2:
                 sigma = original_sigma
-                logger.debug("Resetting sigma with loss: %.2f", loss_val)
+                logger.debug("Resetting sigma with loss: %.4f after %d iterations", loss_val, it)
                 if resets:
                     repeats -= 1
                 else:
                     repeats = 0
-                break
 
             if not repeats:
-                print(f"No more repeats allowed, iteration: {it}, loss: {loss_val:2.f}")
+                print(f"No more repeats allowed, iteration: {it}, loss: {loss_val:.4f}")
+                break
 
         rtbm.set_parameters(best_parameters)
         return loss_val
@@ -164,23 +185,23 @@ class RTBMFlow(MonteCarloFlow):
     def __init__(self, n_hidden=3, rtbm=None, train=True, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._train = train
-        self._first_run = True
+        self._first_run = False
         self._n_hidden = n_hidden
         self._ga_generations = 3000
         if rtbm is None:
             logger.info(
                 "Generating a RTBM with %d visible nodes and %d hidden" % (self.n_dim, n_hidden)
             )
-        #             self._rtbm = RTBM(
-        #                 self.n_dim,
-        #                 n_hidden,
-        #                 minimization_bound=50,
-        #                 gaussian_init=True,
-        #                 positive_T=True,
-        #                 positive_Q=True,
-        #                 gaussian_parameters={"mean": 0.0, "std": 0.75},
-        #                 sampling_activations="tanh",
-        #             )
+            self._rtbm = RTBM(
+                self.n_dim,
+                n_hidden,
+                minimization_bound=50,
+                gaussian_init=True,
+                positive_T=True,
+                positive_Q=True,
+                gaussian_parameters={"mean": 0.0, "std": 0.75},
+                sampling_activations="tanh",
+            )
         else:
             # Check whether it is a valid rtbm model
             if not hasattr(rtbm, "make_sample"):
