@@ -27,20 +27,23 @@ TOL = 1e-6
 
 # Cost functions for training
 def _kl(x, ytarget_raw):
-    ytarget = ( ytarget_raw + TOL )
+    ytarget = ytarget_raw + TOL
 
     ytarget /= np.sum(ytarget)
     x /= np.sum(x)
 
     return ytarget * np.log(ytarget / x)
 
+
 def _mse(x, y):
     integral = np.sum(y)
     x /= np.sum(x)
     y /= integral
-    return integral*pow(x-y,2)
+    return integral * pow(x - y, 2)
+
 
 _loss = _kl
+
 
 def _generate_target_loss(rtbm, original_r, target):
     def target_loss(params):
@@ -63,7 +66,7 @@ def _train_machine(
     pop_per_rate=512,
     verbose=True,
     resets=True,
-    timeout=5*60, # dont wait more than 5 minutes per iteration
+    timeout=5 * 60,  # dont wait more than 5 minutes per iteration
     timeout_repeat=3,
     fail_ontimeout=False,
     skip_on_nan=True,
@@ -124,7 +127,7 @@ def _train_machine(
             parallel_runs = [delayed(compute_mutant)(rate) for rate in rates]
             try:
                 result = parallel(parallel_runs)
-            except: # TODO control better
+            except:  # TODO control better
                 logger.debug("Time'd out, skip me")
                 timeout_repeat -= 1
                 if fail_ontimeout:
@@ -135,11 +138,10 @@ def _train_machine(
                 result = [(np.nan, None)]
             losses, mutants = zip(*result)
 
-
             # Insert the last best to avoid runtime errors
-            best_loss = np.nanmin(list(losses) + [loss_val+1.0])
+            best_loss = np.nanmin(list(losses) + [loss_val + 1.0])
             if best_loss < loss_val:
-                timeout_repeat = timeout_original # reset the timeouts
+                timeout_repeat = timeout_original  # reset the timeouts
                 loss_val = best_loss
                 best_parameters = mutants[losses.index(best_loss)]
             else:
@@ -182,12 +184,12 @@ class RTBMFlow(MonteCarloFlow):
     RTBM based Monte Carlo integrator
     """
 
-    def __init__(self, n_hidden=3, rtbm=None, train=True, *args, **kwargs):
+    def __init__(self, n_hidden=3, rtbm=None, train=True, generations=3000, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._train = train
         self._first_run = False
         self._n_hidden = n_hidden
-        self._ga_generations = 3000
+        self._ga_generations = generations
         if rtbm is None:
             logger.info(
                 "Generating a RTBM with %d visible nodes and %d hidden" % (self.n_dim, n_hidden)
@@ -210,11 +212,11 @@ class RTBMFlow(MonteCarloFlow):
             self._first_run = False
 
     def freeze(self):
-        """ Stop the training """
+        """Stop the training"""
         self.train = False
 
     def unfreeze(self):
-        """ Restart the training """
+        """Restart the training"""
         self.train = True
 
     def compile(self, integrand, compilable=False, **kwargs):
@@ -302,7 +304,7 @@ class RTBMFlow(MonteCarloFlow):
         configurations_raw = [
             ("tanh", 0.0, 0.75),
             ("sigmoid", 0.0, 1.5),
-#             ("softmax", 0.0, 0.75),
+            #             ("softmax", 0.0, 0.75),
         ]
         names = ("name", "mean", "std")
 
@@ -317,7 +319,7 @@ class RTBMFlow(MonteCarloFlow):
             tmp_list = copy.copy(configurations_raw)
             if mean is not None:
                 tmp_list.append(("tanh", mean, 0.75))
-#                 tmp_list.append(("sigmoid", mean, 1.5))
+            #                 tmp_list.append(("sigmoid", mean, 1.5))
             configuration_per_d.append([dict(zip(names, tup)) for tup in tmp_list])
 
         # TODO:
@@ -354,7 +356,7 @@ class RTBMFlow(MonteCarloFlow):
                     resets=False,
                     verbose=False,
                     fail_ontimeout=True,
-                    timeout=10 # TODO if any initial iteration takes more than 10 seconds, get out
+                    timeout=10,  # TODO if any initial iteration takes more than 10 seconds, get out
                 )
             except ValueError:
                 loss = 1e9

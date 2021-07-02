@@ -14,10 +14,10 @@ from vegasflow.rtbm import RTBMFlow
 
 
 # MC integration setup
-dim = 5
-ncalls = np.int32(5e4)
+dim = 2
+ncalls = np.int32(1e2)
 n_iter = 5
-n_hidden = 2
+n_hidden = 1
 tf_pi = float_me(np.pi)
 npeaks = 2.0
 
@@ -25,14 +25,15 @@ npeaks = 2.0
 @tf.function
 def sin_fun(xarr, **kwargs):
     """symgauss test function"""
-    res = tf.pow(tf.sin(npeaks*xarr*tf_pi),2)
+    res = tf.pow(tf.sin(npeaks * xarr * tf_pi), 2)
     return tf.reduce_prod(res, axis=1)
 
+
 integrand = sin_fun
-#from simgauss_tf import symgauss as integrand
+# from simgauss_tf import symgauss as integrand
 
 if __name__ == "__main__":
-    """Testing several different integrations"""
+    # Testing several different integrations
     print(f"VEGAS MC, ncalls={ncalls}:")
     start = time.time()
     ncalls = ncalls
@@ -43,7 +44,7 @@ if __name__ == "__main__":
 
     print(f"RTBM MC, ncalls={ncalls}:")
     start = time.time()
-    rtbm = RTBMFlow(n_dim=dim, n_events=ncalls, train=True, n_hidden=n_hidden)
+    rtbm = RTBMFlow(n_dim=dim, n_events=ncalls, train=True, n_hidden=n_hidden, generations=500)
     rtbm.compile(integrand)
     _ = rtbm.run_integration(n_iter)
     rtbm.freeze()
