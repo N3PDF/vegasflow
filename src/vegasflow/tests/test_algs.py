@@ -17,15 +17,13 @@ from vegasflow import plain_sampler, vegas_sampler
 
 # Test setup
 dim = 2
-ncalls = np.int32(1e5)
+ncalls = np.int32(1e4)
 n_iter = 4
 
 
-@tf.function
-def example_integrand(xarr, n_dim=None, weight=None):
+def example_integrand(xarr, weight=None):
     """ Example function that integrates to 1 """
-    if n_dim is None:
-        n_dim = xarr.shape[0]
+    n_dim = xarr.shape[-1]
     a = tf.constant(0.1, dtype=DTYPE)
     n100 = tf.cast(100 * n_dim, dtype=DTYPE)
     pref = tf.pow(1.0 / a / np.sqrt(np.pi), n_dim)
@@ -35,10 +33,22 @@ def example_integrand(xarr, n_dim=None, weight=None):
     return pref * tf.exp(-coef)
 
 
-def instance_and_compile(Integrator):
+def instance_and_compile(Integrator, mode=0):
     """ Wrapper for convenience """
+    if mode == 0:
+        integrand = example_integrand
+    elif mode == 1:
+        def integrand(xarr, n_dim=None):
+            return example_integrand(xarr)
+    elif mode == 2:
+        def integrand(xarr):
+            return example_integrand(xarr)
+    elif mode == 3:
+        def integrand(xarr, n_dim=None, weight=None):
+            return example_integrand(xarr, weight=None)
+
     int_instance = Integrator(dim, ncalls)
-    int_instance.compile(example_integrand)
+    int_instance.compile(integrand)
     return int_instance
 
 
@@ -51,11 +61,12 @@ def check_is_one(result, sigmas=3):
 
 
 def test_VegasFlow():
-    vegas_instance = instance_and_compile(VegasFlow)
-    _ = vegas_instance.run_integration(n_iter)
-    vegas_instance.freeze_grid()
-    result = vegas_instance.run_integration(n_iter)
-    check_is_one(result)
+    for mode in range(4):
+        vegas_instance = instance_and_compile(VegasFlow, mode)
+        _ = vegas_instance.run_integration(n_iter)
+        vegas_instance.freeze_grid()
+        result = vegas_instance.run_integration(n_iter)
+        check_is_one(result)
 
 
 def test_VegasFlow_save_grid():
@@ -107,9 +118,10 @@ def test_VegasFlow_load_grid():
 
 
 def test_PlainFlow():
-    plain_instance = instance_and_compile(PlainFlow)
-    result = plain_instance.run_integration(n_iter)
-    check_is_one(result)
+    for mode in range(4):
+        plain_instance = instance_and_compile(PlainFlow, mode)
+        result = plain_instance.run_integration(n_iter)
+        check_is_one(result)
 
 
 def helper_rng_tester(sampling_function, n_events):
