@@ -14,7 +14,7 @@ def integrand(xarr, **kwargs):
     return tf.reduce_sum(xarr, axis=1)
 
 
-if __name__ == "__main__":
+if __name__ == "__main_aa_":
     cluster = SLURMCluster(
         memory="2g",
         processes=1,

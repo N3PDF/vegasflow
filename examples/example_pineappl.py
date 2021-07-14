@@ -82,7 +82,7 @@ def fill(grid, x1, x2, q2, yll, weight):
     grid.fill_array(x1, x2, q2, zeros, yll, zeros, weight)
 
 
-def fill_grid(xarr, n_dim=None, weight=1, **kwargs):
+def fill_grid(xarr, weight=1, **kwargs):
     s, t, u, x1, x2, jacobian = hadronic_pspgen(xarr, 10.0, 7000.0)
 
     ptl = tf.sqrt((t * u / s))

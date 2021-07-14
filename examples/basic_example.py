@@ -37,3 +37,6 @@ if __name__ == "__main__":
     result = vegas_instance.run_integration(n_iter)
     end = time.time()
     print(f"Vegas took: time (s): {end-start}")
+    print("Change the number of events and freeze the grid...")
+    vegas_instance.freeze_grid()
+    vegas_instance.run_integration(n_iter)

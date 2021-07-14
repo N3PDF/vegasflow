@@ -121,8 +121,8 @@ class MonteCarloFlow(ABC):
         self.event = None
         self._verbose = verbose
         self._history = []
-        self.n_events = n_events
-        self._xjac = float_me([1.0 / n_events])
+        self._n_events = n_events
+        self._events_limit = events_limit
         self._events_per_run = min(events_limit, n_events)
         self.distribute = False
         # If any of the pass variables below is set to true
@@ -144,6 +144,23 @@ class MonteCarloFlow(ABC):
             self.pool = joblib.Parallel(n_jobs=len(devices), prefer="threads")
         else:
             self.devices = None
+
+    # Note:
+    # The number of events to run in a single iteration is `n_events`
+    # while the total number of events to be run per step (so, for instance, per GPU call)
+    # is `events_per_run`
+
+    @property
+    def n_events(self):
+        """Number of events to run in a single iteration"""
+        return self._n_events
+
+    @n_events.setter
+    def n_events(self, val):
+        """Number of events to run in a single iteration"""
+        self._n_events = val
+        # Reset `events_per_run` if needed
+        self.event = self._events_limit
 
     @property
     def events_per_run(self):
@@ -174,6 +191,11 @@ class MonteCarloFlow(ABC):
         """
         return self._history
 
+    @property
+    def xjac(self):
+        """The default jacobian is 1 / total number of events"""
+        return float_me([1.0 / self.n_events])
+
     def generate_random_array(self, n_events):
         """External interface for the generation of random
         points as a 2D array of (n_events, n_dim).
@@ -193,7 +215,7 @@ class MonteCarloFlow(ABC):
         rnds, idx, xjac_raw = self._generate_random_array(n_events)
         # returns a p(x) corresponding to the number of events
         # the algorithm was trained with, reweight
-        xjac = xjac_raw / self._xjac / n_events
+        xjac = xjac_raw / self.xjac / n_events
         return rnds, idx, xjac
 
     def _generate_random_array(self, n_events):
@@ -215,7 +237,7 @@ class MonteCarloFlow(ABC):
             (n_events, self.n_dim), minval=TECH_CUT, maxval=1.0 - TECH_CUT, dtype=DTYPE
         )
         idx = 0
-        return rnds, idx, self._xjac
+        return rnds, idx, self.xjac
 
     #### Abstract methods
     @abstractmethod
@@ -429,7 +451,7 @@ class MonteCarloFlow(ABC):
             integrand = tf_integrand.python_function
             signature = tf_integrand.input_signature
 
-        args = inspect.getfullargspec(integrand).args
+        args = inspect.getfullargspec(integrand).args[1:]
         # Loop over the argument to see whether it can be compiled
         if tf_integrand is None and compilable:
             autodiscover_signature = [tf.TensorSpec(shape=[None, self.n_dim], dtype=DTYPE)]

@@ -49,9 +49,8 @@ ffibuilder.compile(verbose=True)
 
 from _symgauss_cffi import ffi, lib
 
-def symgauss(xarr, n_dim=None, **kwargs):
-    if n_dim is None:
-        n_dim = xarr.shape[-1]
+def symgauss(xarr, **kwargs):
+    n_dim = xarr.shape[-1]
     n_events = xarr.shape[0]
 
     res = np.empty(n_events, dtype = DTYPE.as_numpy_dtype)

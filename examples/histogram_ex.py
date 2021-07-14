@@ -19,24 +19,22 @@ HISTO_BINS = 2
 
 
 def generate_integrand(cummulator_tensor):
-    """ 
+    """
     This function will generate an integrand function
     which will already hold a reference to the tensor to accumulate
     """
 
     @tf.function
     def histogram_collector(results, variables):
-        """ This function will receive a tensor (result)
-        and the variables corresponding to those integrand results 
-        In the example integrand below, these corresponds to 
+        """This function will receive a tensor (result)
+        and the variables corresponding to those integrand results
+        In the example integrand below, these corresponds to
             `final_result` and `histogram_values` respectively.
         `current_histograms` instead is the current value of the histogram
-        which will be overwritten """
+        which will be overwritten"""
         # Fill a histogram with HISTO_BINS (2) bins, (0 to 0.5, 0.5 to 1)
         # First generate the indices with TF
-        indices = tf.histogram_fixed_width_bins(
-            variables, [fzero, fone], nbins=HISTO_BINS
-        )
+        indices = tf.histogram_fixed_width_bins(variables, [fzero, fone], nbins=HISTO_BINS)
         t_indices = tf.transpose(indices)
         # Then consume the results with the utility we provide
         partial_hist = consume_array_into_indices(results, t_indices, HISTO_BINS)
@@ -44,16 +42,11 @@ def generate_integrand(cummulator_tensor):
         new_histograms = partial_hist + current_histograms
         cummulator_tensor.assign(new_histograms)
 
-    def integrand_example(xarr, n_dim=None, weight=fone):
-        """ Example of function which saves histograms """
-        if n_dim is None:
-            n_dim = xarr.shape[-1]
-        if n_dim < hst_dim:
-            raise ValueError(
-                f"The number of dimensions has to be greater than {hst_dim} for this example"
-            )
+    def integrand_example(xarr, weight=fone):
+        """Example of function which saves histograms"""
+        n_dim = xarr.shape[-1]
         a = tf.constant(0.1, dtype=DTYPE)
-        n100 = tf.cast(100 * n_dim, dtype=DTYPE)
+        n100 = tf.cast(100 * dim, dtype=DTYPE)
         pref = tf.pow(1.0 / a / np.sqrt(np.pi), n_dim)
         coef = tf.reduce_sum(tf.range(n100 + 1))
         coef += tf.reduce_sum(tf.square((xarr - 1.0 / 2.0) / a), axis=1)
@@ -69,6 +62,10 @@ def generate_integrand(cummulator_tensor):
 
 if __name__ == "__main__":
     """Testing histogram generation"""
+    if dim < hst_dim:
+        raise ValueError(
+            f"The number of dimensions has to be greater than {hst_dim} for this example"
+        )
     print(f"Plain MC, ncalls={ncalls}:")
     start = time.time()
     # First we create the tensor in which to accumulate the histogra

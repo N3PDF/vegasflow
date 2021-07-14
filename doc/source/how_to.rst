@@ -111,7 +111,7 @@ These functions are wrappers around ``tf.cast`` `🔗 <https://www.tensorflow.or
     
     constant = float_me(0.1)
     
-    def example_integrand(xarr, n_dim=None, weight=None):
+    def example_integrand(xarr, weight=None):
       s = tf.reduce_sum(xarr, axis=1)
       result = tf.pow(constant/s, 2)
       return result
@@ -359,7 +359,7 @@ This is a crucial step (and the only fixed step) as this tensor will be accumula
         cummulator_tensor.assign(new_histograms)
 
     @tf.function
-    def integrand_example(xarr, n_dim=None, weight=fone):
+    def integrand_example(xarr, weight=fone):
         # some complicated calculation that generates 
         # a final_result and some histogram values:
         final_result = tf.constant(42, dtype=tf.float64)
