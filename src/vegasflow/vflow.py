@@ -323,10 +323,7 @@ class VegasFlow(MonteCarloFlow):
         x, ind, xjac = self._generate_random_array(n_events)
 
         # Now compute the integrand
-        if self._pass_weight:
-            tmp = xjac * integrand(x, weight=xjac)
-        else:
-            tmp = xjac * integrand(x)
+        tmp = xjac * integrand(x, weight=xjac)
         tmp2 = tf.square(tmp)
 
         # Compute the final result for this step

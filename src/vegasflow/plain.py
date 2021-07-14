@@ -21,10 +21,7 @@ class PlainFlow(MonteCarloFlow):
         # Generate all random number for this iteration
         rnds, _, xjac = self._generate_random_array(n_events)
         # Compute the integrand
-        if self._pass_weight:
-            tmp = integrand(rnds, weight=xjac) * xjac
-        else:
-            tmp = integrand(rnds) * xjac
+        tmp = integrand(rnds, weight=xjac) * xjac
         tmp2 = tf.square(tmp)
         # Accumulate the current result
         res = tf.reduce_sum(tmp)

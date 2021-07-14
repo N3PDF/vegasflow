@@ -1,7 +1,7 @@
 """
     Example: basic integration
 
-    Very basic example with a simple integrand, uses simplify_signature
+    Very basic example with a simple integrand
 """
 
 from vegasflow import VegasFlow, float_me, run_eager
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     """Testing several different integrations"""
     print(f"VEGAS MC, ncalls={ncalls}:")
     start = time.time()
-    vegas_instance = VegasFlow(dim, ncalls, simplify_signature=True, events_limit=int(7e4))
+    vegas_instance = VegasFlow(dim, ncalls, events_limit=int(7e4))
     vegas_instance.compile(symgauss)
     result = vegas_instance.run_integration(n_iter)
     end = time.time()

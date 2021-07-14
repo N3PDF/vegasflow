@@ -45,6 +45,7 @@ from vegasflow.configflow import (
     MAX_EVENTS_LIMIT,
     DEFAULT_ACTIVE_DEVICES,
     DTYPE,
+    DTYPEINT,
     TECH_CUT,
     float_me,
 )
@@ -110,7 +111,10 @@ class MonteCarloFlow(ABC):
         events_limit=MAX_EVENTS_LIMIT,
         list_devices=DEFAULT_ACTIVE_DEVICES,  # pylint: disable=dangerous-default-value
         verbose=True,
+        **kwargs,
     ):
+        if "simplify_signature" in kwargs:
+            logger.warning("simplify_signature is deprecated and will be removed")
         # Save some parameters
         self.n_dim = n_dim
         self._integrand = None
@@ -404,75 +408,51 @@ class MonteCarloFlow(ABC):
         This will work most of the time but could trigger retracing on shape-shifting
         calculations.
 
-        For more complex situations, a signature can be given to this function
+        If the signature is not to be used, it can be set to false
+
 
         Parameters
         ----------
             `integrand`: the function to integrate
             `compilable`: (default True) if False, the integration
                 is not passed through `tf.function`
-            `signature`: (default: autodiscover)
-                signature for the compilation of the integrand, if false no signature is used
+            `signature`: (default: True)
+                whether to autodiscover the signature of the integrand
 
         """
         tf_integrand = None
         self._integrand = integrand
-        # First check whether the function is already compiled
+
+        # Check whether the function is already compiled
         if hasattr(integrand, "function_spec"):
             tf_integrand = integrand
             integrand = tf_integrand.python_function
             signature = tf_integrand.input_signature
 
-        # LEGACY: check whether the integrand includes n_dim
         args = inspect.getfullargspec(integrand).args
-        if "n_dim" in args:
-            raw_integrand = integrand
-            if "weight" in args:
+        # Loop over the argument to see whether it can be compiled
+        if tf_integrand is None and compilable:
+            autodiscover_signature = [tf.TensorSpec(shape=[None, self.n_dim], dtype=DTYPE)]
 
-                def integrand(xarr, weight=None, **kwargs):  # pylint: disable=function-redefined
-                    return raw_integrand(xarr, n_dim=self.n_dim, weight=weight)
+            for arg in args:
+                if arg == "n_dim":
+                    autodiscover_signature.append(tf.TensorSpec(shape=[], dtype=DTYPEINT))
+                elif arg == "weight":
+                    autodiscover_signature.append(tf.TensorSpec(shape=[None], dtype=DTYPE))
+                elif signature is None and compilable:
+                    logger.warning(
+                        "The signature could not be autodiscovered due to argument %s", arg
+                    )
+                    logger.warning(
+                        "Provide a signature argument to compile with a non-std signature"
+                    )
+                    signature = False
 
-            else:
-
-                def integrand(xarr, **kwargs):  # pylint: disable=function-redefined
-                    return raw_integrand(xarr, n_dim=self.n_dim, **kwargs)
-
-            # Remove n_dim
-            args.remove("n_dim")
-            # If after this we need to recompile and it was _already_ compiled, warn the user
-            if tf_integrand is not None:
-                logger.warning("The function included `n_dim` so a recompile was triggered")
-                tf_integrand = None
-                signature = None
-
-        # Autodiscover the signature to check whether the weight needs to be passed down
-        compile_options = {
-            "experimental_autograph_options": tf.autograph.experimental.Feature.ALL,
-        }
-
-        # if signature is None, then we want to autodiscover
-        # if it is False, we don't want to use it at all
-        if signature is None:
-            signature = [tf.TensorSpec(shape=[None, self.n_dim], dtype=DTYPE)]
-
-        # The first argument should be the random array, the second (if any)
-        # should be the weight, anything else is not allowed
-        # The first argument is the random array, anthing else is not allowed
-        for arg in args[1:]:
-            # If we want to compile and there's something we cannot understand, drop the signature
-            if arg not in ("weight") and compilable:
-                logger.warning("The signature could not be autodiscovered due to argument %s", arg)
-                logger.warning(
-                    "Provide a `signature` if you want to compile with an specific signature"
-                )
-                # Drop signature completely
-                signature = False
-            if arg == "weight":
-                if signature:
-                    signature.append(tf.TensorSpec(shape=[None], dtype=DTYPE))
-                self._pass_weight = True
-
-        if compilable and tf_integrand is None:
+            compile_options = {
+                "experimental_autograph_options": tf.autograph.experimental.Feature.ALL,
+            }
+            if signature is None:
+                signature = autodiscover_signature
             if signature:
                 compile_options["input_signature"] = signature
                 logger.debug("Compiling with signature: %s", str(signature))
@@ -480,9 +460,24 @@ class MonteCarloFlow(ABC):
         else:
             tf_integrand = integrand
 
+        # The algorithms will always call the function with
+        # (xrand, weight=)
+        # therefore create a wrapper withi whatever integrand to become this
+        # n_dim was an option there during development and needs to be left because of legacy code
+
+        def new_integrand(xarr, weight=None, **kwargs):
+            """Wrapper to account for n_dim/weights"""
+            if "weight" in args and "n_dim" in args:
+                return tf_integrand(xarr, n_dim=self.n_dim, weight=weight, **kwargs)
+            if "weight" in args:
+                return tf_integrand(xarr, weight=weight, **kwargs)
+            if "n_dim" in args:
+                return tf_integrand(xarr, n_dim=self.n_dim, **kwargs)
+            return tf_integrand(xarr, **kwargs)
+
         def run_event(**kwargs):
             """Pass any arguments to the underlying integrand"""
-            return self._run_event(tf_integrand, **kwargs)
+            return self._run_event(new_integrand, **kwargs)
 
         if compilable:
             self.event = tf.function(run_event)
