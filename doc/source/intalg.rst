@@ -35,7 +35,10 @@ Once that is generated it is possible to register an integrand by calling the ``
 .. code-block:: python
 
     def example_integrand(x, **kwargs):
-        return x
+        y = 0.0
+        for d in range(dims):
+            y += x[:,d]
+        return y
 
     vegas_instance.compile(example_integrand)
 
@@ -44,6 +47,7 @@ After each iteration the grid will be refined, producing more points (and hence 
 
 .. code-block:: python
 
+    n_iter = 3
     result = vegas_instance.run_integration(n_iter)
 
 The output variable, in this example named ``result``, is a tuple variable where the first element is the result of the integration while the second element is the error of the integration.
@@ -103,7 +107,7 @@ The usage pattern is similar to :ref:`vegas-label`.
 .. code-block:: python
 
     from vegasflow import PlainFlow
-    plain_instance = PlainFlow(dimensions, ncalls)
+    plain_instance = PlainFlow(dims, n_calls)
     plain_instance.compile(example_integrand)
     plain_instance.run_integration(n_iter)
 

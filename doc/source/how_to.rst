@@ -77,7 +77,7 @@ the integration algorithm).
     import numpy as np
     
     def example_integrand(xarr, weight=None):
-      s = np.pow(xarr, axis=1)
+      s = np.sum(xarr, axis=1)
       result = np.square(0.1/s)
       return result
       
