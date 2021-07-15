@@ -160,7 +160,7 @@ class MonteCarloFlow(ABC):
         """Number of events to run in a single iteration"""
         self._n_events = val
         # Reset `events_per_run` if needed
-        self.event = self._events_limit
+        self.events_per_run = self._events_limit
 
     @property
     def events_per_run(self):

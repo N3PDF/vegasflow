@@ -22,7 +22,7 @@ n_iter = 4
 
 
 def example_integrand(xarr, weight=None):
-    """ Example function that integrates to 1 """
+    """Example function that integrates to 1"""
     n_dim = xarr.shape[-1]
     a = tf.constant(0.1, dtype=DTYPE)
     n100 = tf.cast(100 * n_dim, dtype=DTYPE)
@@ -34,16 +34,21 @@ def example_integrand(xarr, weight=None):
 
 
 def instance_and_compile(Integrator, mode=0):
-    """ Wrapper for convenience """
+    """Wrapper for convenience"""
     if mode == 0:
         integrand = example_integrand
     elif mode == 1:
+
         def integrand(xarr, n_dim=None):
             return example_integrand(xarr)
+
     elif mode == 2:
+
         def integrand(xarr):
             return example_integrand(xarr)
+
     elif mode == 3:
+
         def integrand(xarr, n_dim=None, weight=None):
             return example_integrand(xarr, weight=None)
 
@@ -53,7 +58,7 @@ def instance_and_compile(Integrator, mode=0):
 
 
 def check_is_one(result, sigmas=3):
-    """ Wrapper for convenience """
+    """Wrapper for convenience"""
     res = result[0]
     err = result[1] * sigmas
     # Check that it passes by {sigmas} number of sigmas
@@ -68,6 +73,9 @@ def test_VegasFlow():
         result = vegas_instance.run_integration(n_iter)
         check_is_one(result)
 
+    vegas_instance.n_events = 2 * ncalls
+    new_result = vegas_instance.run_integration(n_iter)
+    check_is_one(new_result)
 
 def test_VegasFlow_save_grid():
     tmp_filename = tempfile.mktemp()
@@ -118,10 +126,17 @@ def test_VegasFlow_load_grid():
 
 
 def test_PlainFlow():
+    # TODO: move the loop to hypothesis...
     for mode in range(4):
         plain_instance = instance_and_compile(PlainFlow, mode)
         result = plain_instance.run_integration(n_iter)
         check_is_one(result)
+
+    # Use the last instance to check that changing the number of events
+    # don't change the result
+    plain_instance.n_events = 2 * ncalls
+    new_result = plain_instance.run_integration(n_iter)
+    check_is_one(new_result)
 
 
 def helper_rng_tester(sampling_function, n_events):
@@ -133,7 +148,7 @@ def helper_rng_tester(sampling_function, n_events):
 
 
 def test_rng_generation(n_events=100):
-    """ Test that the random generation genrates the correct type of arrays """
+    """Test that the random generation genrates the correct type of arrays"""
     plain_sampler_instance = instance_and_compile(PlainFlow)
     _, px = helper_rng_tester(plain_sampler_instance.generate_random_array, n_events)
     np.testing.assert_equal(px.numpy(), 1.0 / n_events)
