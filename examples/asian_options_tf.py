@@ -29,7 +29,7 @@ zero = tf.constant(0.0, dtype=DTYPE)
 
 
 @tf.function
-def example_integrand(xarr, n_dim=None, **kwargs):
+def example_integrand(xarr, **kwargs):
     """Asian options test function"""
     sum1 = tf.reduce_sum(ndtri(xarr), axis=1)
     a = S0 * tf.exp((r-sigma2/2) + sigma*sqrtdt*sum1)

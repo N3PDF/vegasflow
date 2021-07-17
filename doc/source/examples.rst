@@ -174,7 +174,8 @@ by using the CFFI library as you can see in `this <https://github.com/N3PDF/vega
     # Now you can read up the compiled C code as a python library
     from _integrand_cffi import ffi, lib
     
-    def integrand(xarr, n_dim, **kwargs):
+    def integrand(xarr, **kwargs):
+        n_dim = xarr.shape[-1]
         result = np.empty(n_events, dtype=DTYPE.as_numpy_dtype)
         x_flat = xarr.numpy().flatten()
         

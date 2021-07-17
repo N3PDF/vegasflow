@@ -44,7 +44,7 @@ using the ``tf.function`` decorator.
 
     import tensorflow as tf
     
-    def example_integrand(xarr, n_dim=None, weight=None):
+    def example_integrand(xarr, weight=None):
       s = tf.reduce_sum(xarr, axis=1)
       result = tf.pow(0.1/s, 2)
       return result
@@ -76,17 +76,16 @@ the integration algorithm).
 
     import numpy as np
     
-    def example_integrand(xarr, n_dim=None, weight=None):
-      s = np.pow(xarr, axis=1)
+    def example_integrand(xarr, weight=None):
+      s = np.sum(xarr, axis=1)
       result = np.square(0.1/s)
       return result
       
     vegas_instance.compile(example_integrand, compilable=False)
 
-
-.. note:: Integrands must accept the keyword arguments ``n_dim`` and ``weight``, as the integrators
-   will try to pass those argument when convenient. It is however possible to construct integrands
-   that accept only the array of random number ``xarr``, see :ref:`simple-label`
+.. note:: Integrands must always accept as first argument the random number (``xarr``)
+  and can also accept the keyword argument ``weight``. The ``compile`` method of the integration
+   will try to find the most adequate signature in each situation.
 
 
 It is also possible to completely avoid compilation,
@@ -112,7 +111,7 @@ These functions are wrappers around ``tf.cast`` `🔗 <https://www.tensorflow.or
     
     constant = float_me(0.1)
     
-    def example_integrand(xarr, n_dim=None, weight=None):
+    def example_integrand(xarr, weight=None):
       s = tf.reduce_sum(xarr, axis=1)
       result = tf.pow(constant/s, 2)
       return result
@@ -140,42 +139,6 @@ The full list of integration algorithms and wrappers can be consulted at: :ref:`
 
 Tips and Tricks
 ===============
-
-.. _simple-label:
-
-Improving results by simplifying the integrand
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-In the above example the integrand receives the keyword arguments `n_dim` and `xjac`.
-Although these are useful for instance for filling histograms or dimensional-dependent integrands,
-these extra argument can harm the performance of the integration when they are not being used.
-
-It is possible to instantiate ``VegasFlow`` algorithms with ``simplify_signature``.
-In this case the integrand will only receive the array of random numbers and, in exchange for this
-loss of flexibility, the function will be retraced less often.
-For more details in what function retracing entails we direct you to the `TensorFlow documentation <https://www.tensorflow.org/api_docs/python/tf/function>`_.
-
-.. code-block:: python
-
-    from vegasflow import VegasFlow, float_me
-    import tensorflow as tf
-
-    def example_integrand(xarr):
-        c = float_me(0.1)
-        s = tf.reduce_sum(xarr)
-        result = tf.pow(c/s)
-        return result
-
-    dimensions = 3
-    n_calls = int(1e7)
-    # Create an instance of the VegasFlow class
-    vegas_instance = VegasFlow(dimensions, n_calls, simplify_signature = True)
-    # Compile the function to be integrated
-    vegas_instance.compile(example_integrand)
-    # Compute the result after a number of iterations
-    n_iter = 5
-    result = vegas_instance.run_integration(n_iter)
-    
 
 Seeding the random number generator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -396,7 +359,7 @@ This is a crucial step (and the only fixed step) as this tensor will be accumula
         cummulator_tensor.assign(new_histograms)
 
     @tf.function
-    def integrand_example(xarr, n_dim=None, weight=fone):
+    def integrand_example(xarr, weight=fone):
         # some complicated calculation that generates 
         # a final_result and some histogram values:
         final_result = tf.constant(42, dtype=tf.float64)
