@@ -182,7 +182,6 @@ class VegasFlow(MonteCarloFlow):
         # If training is True, the grid will be changed after every iteration
         # otherwise it will be frozen
         self.train = train
-        self._compilation_arguments = None
 
         # Initialize grid
         self.grid_bins = BINS_MAX + 1
@@ -351,20 +350,6 @@ class VegasFlow(MonteCarloFlow):
         if self.train:
             self.refine_grid(arr_res2)
         return res, sigma
-
-    def compile(self, integrand, **kwargs):
-        """Save the compilation arguments, if the grid is frozen at any point
-        a recompilaton will be triggered
-        """
-        self._compilation_arguments = (integrand, kwargs)
-        super().compile(integrand, **kwargs)
-
-    def _recompile(self):
-        """Forces recompilation with the same arguments that have
-        previously been used for compilation"""
-        if self._compilation_arguments is None:
-            raise RuntimeError("recompile was called without ever having called compile")
-        self.compile(self._compilation_arguments[0], **self._compilation_arguments[1])
 
     def _run_iteration(self):
         """Runs one iteration of the Vegas integrator"""

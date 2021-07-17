@@ -124,6 +124,7 @@ class MonteCarloFlow(ABC):
         self._n_events = n_events
         self._events_limit = events_limit
         self._events_per_run = min(events_limit, n_events)
+        self._compilation_arguments = None
         self.distribute = False
         # If any of the pass variables below is set to true
         # the integrand will be expecting them so the integrator
@@ -157,10 +158,11 @@ class MonteCarloFlow(ABC):
 
     @n_events.setter
     def n_events(self, val):
-        """Number of events to run in a single iteration"""
+        """Number of events to run in a single iteration, triggers a recompile"""
         self._n_events = val
         # Reset `events_per_run` if needed
         self.events_per_run = self._events_limit
+        self._recompile()
 
     @property
     def events_per_run(self):
@@ -442,6 +444,8 @@ class MonteCarloFlow(ABC):
                 whether to autodiscover the signature of the integrand
 
         """
+        kwargs = {"compilable": compilable, "signature": signature, "trace": trace}
+        self._compilation_arguments = (integrand, kwargs)
         tf_integrand = None
         self._integrand = integrand
 
@@ -508,6 +512,13 @@ class MonteCarloFlow(ABC):
 
         if trace:
             self.trace()
+
+    def _recompile(self):
+        """Forces recompilation with the same arguments that have
+        previously been used for compilation"""
+        if self._compilation_arguments is None:
+            raise RuntimeError("recompile was called without ever having called compile")
+        self.compile(self._compilation_arguments[0], **self._compilation_arguments[1])
 
     def run_integration(self, n_iter, log_time=True, histograms=None):
         """Runs the integrator for the chosen number of iterations.

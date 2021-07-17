@@ -73,9 +73,21 @@ def test_VegasFlow():
         result = vegas_instance.run_integration(n_iter)
         check_is_one(result)
 
+    # Change the number of events
     vegas_instance.n_events = 2 * ncalls
     new_result = vegas_instance.run_integration(n_iter)
     check_is_one(new_result)
+
+    # Unfreeze the grid
+    vegas_instance.unfreeze_grid()
+    new_result = vegas_instance.run_integration(n_iter)
+    check_is_one(new_result)
+
+    # And change the number of calls again
+    vegas_instance.n_events = 3 * ncalls
+    new_result = vegas_instance.run_integration(n_iter)
+    check_is_one(new_result)
+
 
 def test_VegasFlow_save_grid():
     tmp_filename = tempfile.mktemp()
