@@ -21,9 +21,9 @@ references:
     - family-names: "Cruz-Martinez"
       given-names: "Juan M."
       orcid: "https://orcid.org/0000-0002-8061-1965"    
-    title: VegasFlow: accelerating Monte Carlo simulation across multiple hardware platforms
-    doi: "10.1016/j.cpc.2020.107376",
-    journal: "Comput. Phys. Commun.",
-    volume: "254",
-    pages: "107376",
+    title: "VegasFlow: accelerating Monte Carlo simulation across multiple hardware platforms"
+    doi: "10.1016/j.cpc.2020.107376"
+    journal: "Comput. Phys. Commun."
+    volume: "254"
+    pages: "107376"
     year: "2020"
