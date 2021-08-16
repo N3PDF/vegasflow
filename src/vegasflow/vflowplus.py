@@ -135,8 +135,8 @@ class VegasFlowPlus(VegasFlow):
 
         self.n_ev = tf.fill([1, len(hypercubes)], self.min_neval_hcube)
         self.n_ev = tf.cast(tf.reshape(self.n_ev, [-1]), dtype=DTYPEINT)
-        self.n_events = int(tf.reduce_sum(self.n_ev))
-        self.xjac = float_me(1 / len(hypercubes))
+        self._n_events = int(tf.reduce_sum(self.n_ev))
+        self.my_xjac = float_me(1 / len(hypercubes))
 
         if self.adaptive:
             logger.warning("Variable number of events requires function signatures all across")
@@ -170,11 +170,8 @@ class VegasFlowPlus(VegasFlow):
         )
 
         # compute integrand
-        xjac = self.xjac * w
-        if self.simplify_signature:
-            tmp = xjac * integrand(x)
-        else:
-            tmp = xjac * integrand(x, n_dim=self.n_dim, weight=xjac)
+        xjac = self.my_xjac * w
+        tmp = xjac * integrand(x, weight=xjac)
         tmp2 = tf.square(tmp)
 
         # tensor containing resummed component for each hypercubes

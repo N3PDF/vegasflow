@@ -41,7 +41,7 @@ def test_generate_condition_function():
     """ Tests generate_condition_function and its errors """
     masks = 4 # Always > 2
     vals = 15
-    np_masks = np.random.randint(2, size=(masks, vals), dtype=np.bool)
+    np_masks = np.random.randint(2, size=(masks, vals), dtype=bool)
     tf_masks = [tf.constant(i, dtype=tf.bool) for i in np_masks]
     # Generate the functions for and and or
     f_and = generate_condition_function(masks, 'and')

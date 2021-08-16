@@ -19,12 +19,11 @@ You can find the full code in the repository alongside more complicated versions
 Basic Integral
 ==============
 
-The most general usage of ``Vegasflow`` is the integration of a tensorflow-based
-integrand.
+The most general usage of ``Vegasflow`` is the integration of a tensorflow-based integrand.
 
 .. code-block:: python
 
-    from VegasFlow import vegas_wrapper
+    from vegasflow import vegas_wrapper
     import tensorflow as tf
 
     @tf.function
@@ -40,6 +39,72 @@ integrand.
 You can find a `runnable example of such a basic example in the repository <https://github.com/N3PDF/vegasflow/blob/master/examples/simgauss_tf.py>`_.
 
 
+Using VegasFlow as a clever Random Number Generator
+===================================================
+
+A possible use case for ``VegasFlow`` is to have an function that we don't necessarily
+want to integrate, but that we want to sample from.
+In general, sampling from a function can be very complicated and instead we just want
+to *approximately* sample from it. For that we can use the ``vegasflow`` package
+which instantly give access to all integrator algorithms as function approximators.
+
+In the example below we use importance sampling, from ``VegasFlow`` to approximate
+the function and sample from it, but  the same code will work for any of the
+other implemented integrators.
+
+.. code-block:: python
+      
+    from vegasflow import VegasFlow, run_eager
+    import tensorflow as tf
+
+    run_eager(True)
+    
+    def my_complicated_fun(xarr, **kwargs):
+      return tf.reduce_sum(xarr, axis=1)
+    
+    n_dim = 10
+    n_events = int(1e5)
+    sampler = VegasFlow(n_dim, n_events, verbose=False)
+    sampler.compile(my_complicated_fun)
+    
+    # Now let's train the integrator for 10 iterations
+    _ = sampler.run_integration(10)
+    
+    # Now we can use sampler to generate random numbers
+    rnds, _, px = sampler.generate_random_array(100)
+    
+The first object returned by ``generate_random_array`` are the random points,
+in the case in the example an array of shape ``(100, 10)``, i.e., the first axis
+is the number of requested events and the second axis the number of dimensions.
+
+The second object, ignored in this example, is whatever information the algorithm
+need to train. Since we are just generating random numbers and not training anymore
+we can ignore that.
+
+Finally, ``generate_random_array`` returns also the probability distribution
+of the random points (i.e., the weight they carry).
+
+For convenience we include sampler wrappers which directly return a trained
+reference to the `generate_random_array` method:
+
+.. code-block:: python
+  
+  from vegasflow import vegas_sampler
+  
+  sampler = vegas_sampler(my_complicated_fun, n_dim, n_events)
+  rnds, _, px = sampler(100)
+
+
+It is possible to change the number of training steps (default 5) or to retrieve
+a reference to the sampler class instead to the sampler method by using keyword
+arguments.
+
+.. code-block:: python
+  
+  sampler_class = vegas_sampler(my_complicated_fun, n_dim, n_events, training_steps=1, return_class=True)
+  rnds, _, px = sampler_class.generate_random_array(100)
+
+
 Integrating a numpy function
 ============================
 
@@ -49,7 +114,7 @@ In this case, however, it is necessary to activate ``eager-mode``, see :ref:`eag
 .. code-block:: python
 
     import numpy as np
-    from VegasFlow import vegas_wrapper, run_eager
+    from vegasflow import vegas_wrapper, run_eager
     run_eager()
 
     def my_integrand(xarr, **kwargs):
@@ -109,7 +174,8 @@ by using the CFFI library as you can see in `this <https://github.com/N3PDF/vega
     # Now you can read up the compiled C code as a python library
     from _integrand_cffi import ffi, lib
     
-    def integrand(xarr, n_dim, **kwargs):
+    def integrand(xarr, **kwargs):
+        n_dim = xarr.shape[-1]
         result = np.empty(n_events, dtype=DTYPE.as_numpy_dtype)
         x_flat = xarr.numpy().flatten()
         

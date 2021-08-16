@@ -14,18 +14,17 @@ from vegasflow.configflow import DTYPE
 from vegasflow.vflow import VegasFlow
 from vegasflow.plain import PlainFlow
 from vegasflow.vflowplus import VegasFlowPlus
+from vegasflow import plain_sampler, vegas_sampler
 
 # Test setup
 dim = 2
-ncalls = np.int32(1e5)
+ncalls = np.int32(1e4)
 n_iter = 4
 
 
-@tf.function
-def example_integrand(xarr, n_dim=None, weight=None):
-    """ Example function that integrates to 1 """
-    if n_dim is None:
-        n_dim = xarr.shape[0]
+def example_integrand(xarr, weight=None):
+    """Example function that integrates to 1"""
+    n_dim = xarr.shape[-1]
     a = tf.constant(0.1, dtype=DTYPE)
     n100 = tf.cast(100 * n_dim, dtype=DTYPE)
     pref = tf.pow(1.0 / a / np.sqrt(np.pi), n_dim)
@@ -35,15 +34,32 @@ def example_integrand(xarr, n_dim=None, weight=None):
     return pref * tf.exp(-coef)
 
 
-def instance_and_compile(Integrator):
-    """ Wrapper for convenience """
+def instance_and_compile(Integrator, mode=0):
+    """Wrapper for convenience"""
+    if mode == 0:
+        integrand = example_integrand
+    elif mode == 1:
+
+        def integrand(xarr, n_dim=None):
+            return example_integrand(xarr)
+
+    elif mode == 2:
+
+        def integrand(xarr):
+            return example_integrand(xarr)
+
+    elif mode == 3:
+
+        def integrand(xarr, n_dim=None, weight=None):
+            return example_integrand(xarr, weight=None)
+
     int_instance = Integrator(dim, ncalls)
-    int_instance.compile(example_integrand)
+    int_instance.compile(integrand)
     return int_instance
 
 
 def check_is_one(result, sigmas=3):
-    """ Wrapper for convenience """
+    """Wrapper for convenience"""
     res = result[0]
     err = result[1] * sigmas
     # Check that it passes by {sigmas} number of sigmas
@@ -51,11 +67,27 @@ def check_is_one(result, sigmas=3):
 
 
 def test_VegasFlow():
-    vegas_instance = instance_and_compile(VegasFlow)
-    _ = vegas_instance.run_integration(n_iter)
-    vegas_instance.freeze_grid()
-    result = vegas_instance.run_integration(n_iter)
-    check_is_one(result)
+    for mode in range(4):
+        vegas_instance = instance_and_compile(VegasFlow, mode)
+        _ = vegas_instance.run_integration(n_iter)
+        vegas_instance.freeze_grid()
+        result = vegas_instance.run_integration(n_iter)
+        check_is_one(result)
+
+    # Change the number of events
+    vegas_instance.n_events = 2 * ncalls
+    new_result = vegas_instance.run_integration(n_iter)
+    check_is_one(new_result)
+
+    # Unfreeze the grid
+    vegas_instance.unfreeze_grid()
+    new_result = vegas_instance.run_integration(n_iter)
+    check_is_one(new_result)
+
+    # And change the number of calls again
+    vegas_instance.n_events = 3 * ncalls
+    new_result = vegas_instance.run_integration(n_iter)
+    check_is_one(new_result)
 
 
 def test_VegasFlow_save_grid():
@@ -107,9 +139,41 @@ def test_VegasFlow_load_grid():
 
 
 def test_PlainFlow():
-    plain_instance = instance_and_compile(PlainFlow)
-    result = plain_instance.run_integration(n_iter)
-    check_is_one(result)
+    # TODO: move the loop to hypothesis...
+    for mode in range(4):
+        plain_instance = instance_and_compile(PlainFlow, mode)
+        result = plain_instance.run_integration(n_iter)
+        check_is_one(result)
+
+    # Use the last instance to check that changing the number of events
+    # don't change the result
+    plain_instance.n_events = 2 * ncalls
+    new_result = plain_instance.run_integration(n_iter)
+    check_is_one(new_result)
+
+
+def helper_rng_tester(sampling_function, n_events):
+    """Ensure the random number generated have the correct shape
+    Return the random numbers and the jacobian"""
+    rnds, _, px = sampling_function(n_events)
+    np.testing.assert_equal(rnds.shape, (n_events, dim))
+    return rnds, px
+
+
+def test_rng_generation(n_events=100):
+    """Test that the random generation genrates the correct type of arrays"""
+    plain_sampler_instance = instance_and_compile(PlainFlow)
+    _, px = helper_rng_tester(plain_sampler_instance.generate_random_array, n_events)
+    np.testing.assert_equal(px.numpy(), 1.0 / n_events)
+    vegas_sampler_instance = instance_and_compile(VegasFlow)
+    vegas_sampler_instance.run_integration(2)
+    _, px = helper_rng_tester(vegas_sampler_instance.generate_random_array, n_events)
+    np.testing.assert_equal(px.shape, (n_events,))
+    # Test the wrappers
+    p = plain_sampler(example_integrand, dim, n_events, training_steps=2, return_class=True)
+    _ = helper_rng_tester(p.generate_random_array, n_events)
+    v = vegas_sampler(example_integrand, dim, n_events, training_steps=2)
+    _ = helper_rng_tester(v, n_events)
 
 def test_VegasFlowPlus_ADAPTIVE_SAMPLING():
     vflowplus_instance = instance_and_compile(VegasFlowPlus)

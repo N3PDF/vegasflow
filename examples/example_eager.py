@@ -20,10 +20,9 @@ n_iter = 5
 
 
 @tf.function
-def symgauss_sigmoid(xarr, n_dim=None, **kwargs):
+def symgauss_sigmoid(xarr, **kwargs):
     """symgauss test function"""
-    if n_dim is None:
-        n_dim = xarr.shape[-1]
+    n_dim = xarr.shape[-1]
     a = 0.1
     pref = pow(1.0 / a / np.sqrt(np.pi), n_dim)
     coef = np.sum(np.arange(1, 101))

@@ -3,7 +3,7 @@
 """
 
 from vegasflow.configflow import DTYPE, fone, fzero
-from vegasflow.monte_carlo import MonteCarloFlow, wrapper
+from vegasflow.monte_carlo import MonteCarloFlow, wrapper, sampler
 import tensorflow as tf
 
 
@@ -19,9 +19,9 @@ class PlainFlow(MonteCarloFlow):
             n_events = ncalls
 
         # Generate all random number for this iteration
-        rnds, _, xjac = self.generate_random_array(n_events)
+        rnds, _, xjac = self._generate_random_array(n_events)
         # Compute the integrand
-        tmp = integrand(rnds, n_dim=self.n_dim, weight=xjac) * xjac
+        tmp = integrand(rnds, weight=xjac) * xjac
         tmp2 = tf.square(tmp)
         # Accumulate the current result
         res = tf.reduce_sum(tmp)
@@ -37,6 +37,10 @@ class PlainFlow(MonteCarloFlow):
         return res, sigma
 
 
-def plain_wrapper(*args):
+def plain_wrapper(*args, **kwargs):
     """ Wrapper around PlainFlow """
-    return wrapper(PlainFlow, *args)
+    return wrapper(PlainFlow, *args, **kwargs)
+
+def plain_sampler(*args, **kwargs):
+    """ Wrapper sampler around PlainFlow """
+    return sampler(PlainFlow, *args, **kwargs)

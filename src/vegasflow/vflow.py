@@ -11,7 +11,7 @@ import numpy as np
 import tensorflow as tf
 
 from vegasflow.configflow import BINS_MAX, ALPHA
-from vegasflow.monte_carlo import MonteCarloFlow, wrapper
+from vegasflow.monte_carlo import MonteCarloFlow, wrapper, sampler
 from vegasflow.utils import consume_array_into_indices
 
 import logging
@@ -21,8 +21,13 @@ logger = logging.getLogger(__name__)
 FBINS = float_me(BINS_MAX)
 
 # Auxiliary functions for Vegas
-@tf.function
-def generate_random_array(rnds, divisions):
+@tf.function(
+    input_signature=[
+        tf.TensorSpec(shape=[None, None], dtype=DTYPE),
+        tf.TensorSpec(shape=[None, BINS_MAX + 1], dtype=DTYPE),
+    ]
+)
+def _generate_random_array(rnds, divisions):
     """
     Generates the Vegas random array for any number of events
 
@@ -48,7 +53,11 @@ def generate_random_array(rnds, divisions):
     # Get the index of the division we are interested in
     xn = FBINS * (fone - tf.transpose(rnds))
 
-    @tf.function
+    @tf.function(
+        input_signature=[
+            tf.TensorSpec(shape=[None, None], dtype=DTYPE),
+        ]
+    )
     def digest(xn):
         ind_i = tf.cast(xn, DTYPEINT)
         # Get the value of the left and right sides of the bins
@@ -61,13 +70,9 @@ def generate_random_array(rnds, divisions):
 
     ind_i, x_ini, xdelta = digest(xn)
     # Compute the random number between 0 and 1
-    # This is the heavy part of the calc
-    @tf.function
-    def compute_x(x_ini, xn, xdelta):
-        aux_rand = xn - tf.math.floor(xn)
-        return x_ini + xdelta * aux_rand
+    aux_rand = xn - tf.math.floor(xn)
+    x = x_ini + xdelta * aux_rand
 
-    x = compute_x(x_ini, xn, xdelta)
     # Compute the random number between the limits
     #     x = reg_i + rand_x * (reg_f - reg_i)
     # and the weight
@@ -77,7 +82,12 @@ def generate_random_array(rnds, divisions):
     return x_t, int_xn, weights
 
 
-@tf.function
+@tf.function(
+    input_signature=[
+        tf.TensorSpec(shape=[BINS_MAX], dtype=DTYPE),
+        tf.TensorSpec(shape=[BINS_MAX + 1], dtype=DTYPE),
+    ]
+)
 def refine_grid_per_dimension(t_res_sq, subdivisions):
     """
     Modifies the boundaries for the vegas grid for a given dimension
@@ -95,17 +105,8 @@ def refine_grid_per_dimension(t_res_sq, subdivisions):
             array with the new boundaries of the grid
     """
     # Define some constants
-    paddings = tf.constant(
-        [
-            [1, 1],
-        ]
-    )
-    tmp_meaner = tf.fill(
-        [
-            BINS_MAX - 2,
-        ],
-        float_me(3.0),
-    )
+    paddings = int_me([[1, 1]])
+    tmp_meaner = tf.fill([BINS_MAX - 2], float_me(3.0))
     meaner = tf.pad(tmp_meaner, paddings, constant_values=2.0)
     # Pad the vector of results
     res_padded = tf.pad(t_res_sq, paddings)
@@ -127,7 +128,14 @@ def refine_grid_per_dimension(t_res_sq, subdivisions):
         to beat the average"""
         return bin_weight < ave_t
 
-    @tf.function
+    @tf.function(
+        input_signature=[
+            tf.TensorSpec(shape=[], dtype=DTYPE),
+            tf.TensorSpec(shape=[], dtype=DTYPEINT),
+            tf.TensorSpec(shape=[], dtype=DTYPE),
+            tf.TensorSpec(shape=[], dtype=DTYPE),
+        ]
+    )
     def while_body(bin_weight, n_bin, cur, prev):
         """Fills the bin weight until it surpassed the avg
         once it's done, returns the limits of the last bin"""
@@ -174,8 +182,6 @@ class VegasFlow(MonteCarloFlow):
         # If training is True, the grid will be changed after every iteration
         # otherwise it will be frozen
         self.train = train
-        self.iteration_content = None
-        self.compile_args = None
 
         # Initialize grid
         self.grid_bins = BINS_MAX + 1
@@ -184,14 +190,14 @@ class VegasFlow(MonteCarloFlow):
         self.divisions = tf.Variable(divisions_np, dtype=DTYPE)
 
     def freeze_grid(self):
-        """ Stops the grid from refining any more """
+        """Stops the grid from refining any more"""
         self.train = False
-        self.recompile()
+        self._recompile()
 
     def unfreeze_grid(self):
-        """ Enable the refining of the grid """
+        """Enable the refining of the grid"""
         self.train = True
-        self.recompile()
+        self._recompile()
 
     def save_grid(self, file_name):
         """Save the `divisions` array in a json file
@@ -202,8 +208,8 @@ class VegasFlow(MonteCarloFlow):
             Filename in which to save the checkpoint
         """
         div_np = self.divisions.numpy()
-        if self.integrand:
-            int_name = self.integrand.__name__
+        if self._integrand:
+            int_name = self._integrand.__name__
         else:
             int_name = ""
         json_dict = {
@@ -241,8 +247,8 @@ class VegasFlow(MonteCarloFlow):
             grid_dim = json_dict.get("dimensions")
             grid_bins = json_dict.get("BINS")
             # Check that the integrand is the same one
-            if self.integrand:
-                integrand_name = self.integrand.__name__
+            if self._integrand:
+                integrand_name = self._integrand.__name__
                 integrand_grid = json_dict.get("integrand")
                 if integrand_name != integrand_grid:
                     logger.warning(
@@ -286,11 +292,11 @@ class VegasFlow(MonteCarloFlow):
             new_divisions = refine_grid_per_dimension(arr_res2[j, :], self.divisions[j, :])
             self.divisions[j, :].assign(new_divisions)
 
-    def generate_random_array(self, n_events):
+    def _generate_random_array(self, n_events):
         """Uses the internal array to generate ``n_events`` random numbers"""
-        rnds, _, xjac = super().generate_random_array(n_events)
+        rnds, _, xjac = super()._generate_random_array(n_events)
         # Pass them through the Vegas digestion
-        x, ind, w = generate_random_array(rnds, self.divisions)
+        x, ind, w = _generate_random_array(rnds, self.divisions)
         return x, ind, w * xjac
 
     def _run_event(self, integrand, ncalls=None):
@@ -313,13 +319,10 @@ class VegasFlow(MonteCarloFlow):
             n_events = ncalls
 
         # Generate all random number for this iteration
-        x, ind, xjac = self.generate_random_array(n_events)
+        x, ind, xjac = self._generate_random_array(n_events)
 
         # Now compute the integrand
-        if self.simplify_signature:
-            tmp = xjac * integrand(x)
-        else:
-            tmp = xjac * integrand(x, n_dim=self.n_dim, weight=xjac)
+        tmp = xjac * integrand(x, weight=xjac)
         tmp2 = tf.square(tmp)
 
         # Compute the final result for this step
@@ -348,23 +351,9 @@ class VegasFlow(MonteCarloFlow):
             self.refine_grid(arr_res2)
         return res, sigma
 
-    def compile(self, integrand, compilable=True, **kwargs):
-        self.compile_args = (integrand, compilable, kwargs)
-        super().compile(integrand, compilable=compilable, **kwargs)
-        self.iteration_content = self._iteration_content
-
-    def recompile(self):
-        """Forces recompilation with the same arguments that have
-        previously been used for compilation"""
-        if self.compile_args is None:
-            raise RuntimeError("recompile was called without ever having called compile")
-        a = self.compile_args
-        self.compile(a[0], a[1], **a[2])
-
     def _run_iteration(self):
-        """ Runs one iteration of the Vegas integrator """
-        res, sigma = self.iteration_content()
-        return res, sigma
+        """Runs one iteration of the Vegas integrator"""
+        return self._iteration_content()
 
 
 def vegas_wrapper(integrand, n_dim, n_iter, total_n_events, **kwargs):
@@ -383,3 +372,20 @@ def vegas_wrapper(integrand, n_dim, n_iter, total_n_events, **kwargs):
         `sigma`: monte carlo error
     """
     return wrapper(VegasFlow, integrand, n_dim, n_iter, total_n_events, **kwargs)
+
+
+def vegas_sampler(*args, **kwargs):
+    """Convenience wrapper for sampling random numbers
+
+    Parameters
+    ----------
+        `integrand`: tf.function
+        `n_dim`: number of dimensions
+        `n_events`: number of events per iteration
+        `training_steps`: number of training_iterations
+
+    Returns
+    -------
+        `sampler`: a reference to the generate_random_array method of the integrator class
+    """
+    return sampler(VegasFlow, *args, **kwargs)
