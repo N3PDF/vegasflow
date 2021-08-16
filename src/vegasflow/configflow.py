@@ -9,11 +9,17 @@ import numpy as np
 # Some global parameters
 BINS_MAX = 50
 ALPHA = 1.5
+BETA = 0.75 # Vegas +
 TECH_CUT = 1e-8
+
 # Set up the logistics of the integration
+# set the limits lower if hitting memory problems
+
 # Events Limit limits how many events are done in one single run of the event_loop
-# set it lower if hitting memory problems
 MAX_EVENTS_LIMIT = int(1e6)
+# Maximum number of evaluation per hypercube for VegasFlowPlus
+MAX_NEVAL_HCUBE = int(1e4)
+
 # Select the list of devices to look for
 DEFAULT_ACTIVE_DEVICES = ["GPU"]  # , 'CPU']
 
@@ -103,20 +109,3 @@ ione = int_me(1)
 izero = int_me(0)
 fone = float_me(1)
 fzero = float_me(0)
-
-
-# TODO: everything below should be moved to the right classes
-# Define some default parameters for the MC algorithms
-BINS_MAX = 50
-ALPHA = 1.5
-TECH_CUT = float_me(1e-8)
-BETA = 0.75
-
-# Set up the logistics of the integration
-# Events Limit limits how many events are done in one single run of the event_loop
-# set it lower if hitting memory problems
-MAX_EVENTS_LIMIT = int(1e6)
-# Maximum number of evaluation per hypercube for the class VegasFlowPlus
-MAX_NEVAL_HCUBE = int(1e4)
-# Select the list of devices to look for
-DEFAULT_ACTIVE_DEVICES = ["GPU"] # , 'CPU']

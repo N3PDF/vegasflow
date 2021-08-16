@@ -67,6 +67,7 @@ def check_is_one(result, sigmas=3):
 
 
 def test_VegasFlow():
+    """ Test VegasFlow class, importance sampling algorithm"""
     for mode in range(4):
         vegas_instance = instance_and_compile(VegasFlow, mode)
         _ = vegas_instance.run_integration(n_iter)
@@ -91,6 +92,7 @@ def test_VegasFlow():
 
 
 def test_VegasFlow_save_grid():
+    """ Test the grid saving feature of vegasflow """
     tmp_filename = tempfile.mktemp()
     vegas_instance = instance_and_compile(VegasFlow)
     # Run an iteration so the grid is not trivial
@@ -176,11 +178,14 @@ def test_rng_generation(n_events=100):
     _ = helper_rng_tester(v, n_events)
 
 def test_VegasFlowPlus_ADAPTIVE_SAMPLING():
-    vflowplus_instance = instance_and_compile(VegasFlowPlus)
-    result = vflowplus_instance.run_integration(n_iter)
-    check_is_one(result)
+    """ Test Vegasflow with Adaptive Sampling on (the default) """
+    for mode in range(4):
+        vflowplus_instance = instance_and_compile(VegasFlowPlus, mode)
+        result = vflowplus_instance.run_integration(n_iter)
+        check_is_one(result)
 
 def test_VegasFlowPlus_NOT_ADAPTIVE_SAMPLING():
+    """ Test Vegasflow with Adaptive Sampling off (non-default) """
     vflowplus_instance = VegasFlowPlus(dim, ncalls, adaptive=False)
     vflowplus_instance.compile(example_integrand)
     result = vflowplus_instance.run_integration(n_iter)

@@ -230,3 +230,19 @@ def vegasflowplus_wrapper(integrand, n_dim, n_iter, total_n_events, **kwargs):
         `sigma`: monte carlo error
     """
     return wrapper(VegasFlowPlus, integrand, n_dim, n_iter, total_n_events, **kwargs)
+
+def vegasflowplus_sampler(*args, **kwargs):
+    """Convenience wrapper for sampling random numbers
+
+    Parameters
+    ----------
+        `integrand`: tf.function
+        `n_dim`: number of dimensions
+        `n_events`: number of events per iteration
+        `training_steps`: number of training_iterations
+
+    Returns
+    -------
+        `sampler`: a reference to the generate_random_array method of the integrator class
+    """
+    return sampler(VegasFlowPlus, *args, **kwargs)
