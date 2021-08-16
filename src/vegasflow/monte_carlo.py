@@ -48,7 +48,7 @@ from vegasflow.configflow import (
     DTYPEINT,
     TECH_CUT,
     float_me,
-    int_me
+    int_me,
 )
 
 

@@ -9,7 +9,7 @@ import numpy as np
 # Some global parameters
 BINS_MAX = 50
 ALPHA = 1.5
-BETA = 0.75 # Vegas +
+BETA = 0.75 # Vegas+
 TECH_CUT = 1e-8
 
 # Set up the logistics of the integration

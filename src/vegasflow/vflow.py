@@ -1,4 +1,3 @@
-#!/usr/env python
 """
     This module contains the VegasFlow class and all its auxuliary functions
 
@@ -341,6 +340,7 @@ class VegasFlow(MonteCarloFlow):
         return res, res2, arr_res2
 
     def _iteration_content(self):
+        """Steps to follow per iteration"""
         # Compute the result
         res, res2, arr_res2 = self.run_event()
         # Compute the error
