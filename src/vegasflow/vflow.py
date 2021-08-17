@@ -5,6 +5,7 @@
     `vegas_wrapper`
 """
 from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me, ione, int_me
+import json
 import numpy as np
 import tensorflow as tf
 
