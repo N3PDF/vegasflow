@@ -22,7 +22,7 @@ from vegasflow.configflow import (
     BETA,
     MAX_NEVAL_HCUBE,
 )
-from vegasflow.monte_carlo import wrapper, sampler
+from vegasflow.monte_carlo import wrapper, sampler, MonteCarloFlow
 from vegasflow.vflow import VegasFlow
 from vegasflow.utils import consume_array_into_indices
 
@@ -146,8 +146,7 @@ class VegasFlowPlus(VegasFlow):
             raise ValueError("Hypercubes are not equal to n_strat^n_dim")
 
         self.min_neval_hcube = int(neval_eff // len(hypercubes))
-        if self.min_neval_hcube < 2:
-            self.min_neval_hcube = 2
+        self.min_neval_hcube = max(self.min_neval_hcube, 2)
 
         self.n_ev = tf.fill([1, len(hypercubes)], self.min_neval_hcube)
         self.n_ev = tf.cast(tf.reshape(self.n_ev, [-1]), dtype=DTYPEINT)
@@ -176,7 +175,8 @@ class VegasFlowPlus(VegasFlow):
 
     def _generate_random_array_plus(self, n_events, n_ev):
         """Generate a random array for a given number of events divided in hypercubes"""
-        rnds, _, _ = super(VegasFlow, self)._generate_random_array(n_events)
+        # Needs to skip parent and go directly to the random array generation of MonteCarloFlow
+        rnds, _, _ = MonteCarloFlow._generate_random_array(self, n_events)
         # Get random numbers from hypercubes
         x, ind, w, segm = generate_samples_in_hypercubes(
             rnds,
@@ -251,7 +251,8 @@ class VegasFlowPlus(VegasFlow):
         return res, sigma
 
     def run_event(self, tensorize_events=None, **kwargs):
-        """Tensorizes the number of events so they are not python or numpy primitives if self._adaptive=True"""
+        """Tensorizes the number of events
+        so they are not python or numpy primitives if self._adaptive=True"""
         return super().run_event(tensorize_events=self._adaptive, **kwargs)
 
 

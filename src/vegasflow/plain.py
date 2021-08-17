@@ -2,7 +2,7 @@
     Plain implementation of the plainest possible MonteCarlo
 """
 
-from vegasflow.configflow import DTYPE, fone, fzero
+from vegasflow.configflow import fone, fzero
 from vegasflow.monte_carlo import MonteCarloFlow, wrapper, sampler
 import tensorflow as tf
 
