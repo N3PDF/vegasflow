@@ -341,6 +341,25 @@ class VegasFlow(MonteCarloFlow):
         x, ind, w = _generate_random_array(rnds, self.divisions)
         return x, ind, w * xjac
 
+    def _importance_sampling_array_filling(self, results2, indices):
+        """Receives an array of results squared for every event
+        and an array of indices describing in which bin each result fall.
+        Fills a array with the total result in each bin to be used by
+        the importance sampling algorithm
+        """
+        if not self.train:
+            return []
+
+        arr_res2 = []
+        # If the training is active, save the result of the integral sq
+        for j in range(self.n_dim):
+            arr_res2.append(
+                consume_array_into_indices(
+                    results2, indices[:, j : j + 1], int_me(self.grid_bins - 1)
+                )
+            )
+        return tf.reshape(arr_res2, (self.n_dim, -1))
+
     def _run_event(self, integrand, ncalls=None):
         """Runs one step of Vegas.
 
@@ -371,14 +390,7 @@ class VegasFlow(MonteCarloFlow):
         res = tf.reduce_sum(tmp)
         res2 = tf.reduce_sum(tmp2)
 
-        arr_res2 = []
-        if self.train:
-            # If the training is active, save the result of the integral sq
-            for j in range(self.n_dim):
-                arr_res2.append(
-                    consume_array_into_indices(tmp2, ind[:, j : j + 1], int_me(self.grid_bins - 1))
-                )
-            arr_res2 = tf.reshape(arr_res2, (self.n_dim, -1))
+        arr_res2 = self._importance_sampling_array_filling(tmp2, ind)
 
         return res, res2, arr_res2
 

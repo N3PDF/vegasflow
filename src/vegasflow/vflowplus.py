@@ -122,7 +122,7 @@ class VegasFlowPlus(VegasFlow):
         self.min_neval_hcube = max(self.min_neval_hcube, 2)
 
         self.n_ev = tf.fill([1, len(hypercubes)], self.min_neval_hcube)
-        self.n_ev = tf.cast(tf.reshape(self.n_ev, [-1]), dtype=DTYPEINT)
+        self.n_ev = int_me(tf.reshape(self.n_ev, [-1]))
         self._n_events = int(tf.reduce_sum(self.n_ev))
         self.my_xjac = float_me(1 / len(hypercubes))
 
@@ -174,12 +174,11 @@ class VegasFlowPlus(VegasFlow):
 
         Returns
         -------
-            `res`: sum of the result of the integrand for all events
-            `res2`: sum of the result squared of the integrand for all events
+            `res`: sum of the result of the integrand for all events per segement
+            `res2`: sum of the result squared of the integrand for all events per segment
             `arr_res2`: result of the integrand squared per dimension and grid bin
         """
         # NOTE: needs to receive both ncalls and n_ev
-
         x, ind, xjac, segm = self._generate_random_array_plus(ncalls, n_ev)
 
         # compute integrand
@@ -190,22 +189,17 @@ class VegasFlowPlus(VegasFlow):
         ress = tf.math.segment_sum(tmp, segm)
         ress2 = tf.math.segment_sum(tmp2, segm)
 
-        Fn_ev = tf.cast(n_ev, DTYPE)
-        arr_var = ress2 * Fn_ev - tf.square(ress)
-
-        arr_res2 = []
-        if self.train:
-            # If the training is active, save the result of the integral sq
-            for j in range(self.n_dim):
-                arr_res2.append(
-                    consume_array_into_indices(tmp2, ind[:, j : j + 1], int_me(self.grid_bins - 1))
-                )
-            arr_res2 = tf.reshape(arr_res2, (self.n_dim, -1))
+        fn_ev = float_me(n_ev)
+        arr_var = ress2 * fn_ev - tf.square(ress)
+        arr_res2 = self._importance_sampling_array_filling(tmp2, ind)
 
         return ress, arr_var, arr_res2
 
     def _iteration_content(self):
-        """Steps to follow per iteration"""
+        """Steps to follow per iteration
+        Differently from importance-sampling Vegas, the result of the integration
+        is a result _per segment_ and thus the total result needs to be computed at this point
+        """
         ress, arr_var, arr_res2 = self.run_event(n_ev=self.n_ev)
 
         # Compute the rror
