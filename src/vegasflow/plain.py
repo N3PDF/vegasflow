@@ -38,9 +38,10 @@ class PlainFlow(MonteCarloFlow):
 
 
 def plain_wrapper(*args, **kwargs):
-    """ Wrapper around PlainFlow """
+    """Wrapper around PlainFlow"""
     return wrapper(PlainFlow, *args, **kwargs)
 
+
 def plain_sampler(*args, **kwargs):
-    """ Wrapper sampler around PlainFlow """
+    """Wrapper sampler around PlainFlow"""
     return sampler(PlainFlow, *args, **kwargs)

@@ -16,14 +16,13 @@ from vegasflow.configflow import (
     fone,
     fzero,
     float_me,
-    ione,
     int_me,
     BINS_MAX,
     BETA,
     MAX_NEVAL_HCUBE,
 )
 from vegasflow.monte_carlo import wrapper, sampler, MonteCarloFlow
-from vegasflow.vflow import VegasFlow
+from vegasflow.vflow import VegasFlow, importance_sampling_digest
 from vegasflow.utils import consume_array_into_indices
 
 import logging
@@ -31,26 +30,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 FBINS = float_me(BINS_MAX)
-
-
-@tf.function(input_signature=3 * [tf.TensorSpec(shape=[None, None], dtype=DTYPE)])
-def _compute_x(x_ini, xn, xdelta):
-    """Helper function for ``generate_samples_in_hypercubes``"""
-    aux_rand = xn - tf.math.floor(xn)
-    return x_ini + xdelta * aux_rand
-
-
-# same as vegasflow generate_random_array
-@tf.function(input_signature=2 * [tf.TensorSpec(shape=[None, None], dtype=DTYPE)])
-def _digest(xn, divisions):
-    ind_i = tf.cast(xn, DTYPEINT)
-    # Get the value of the left and right sides of the bins
-    ind_f = ind_i + ione
-    x_ini = tf.gather(divisions, ind_i, batch_dims=1)
-    x_fin = tf.gather(divisions, ind_f, batch_dims=1)
-    # Compute the width of the bins
-    xdelta = x_fin - x_ini
-    return ind_i, x_ini, xdelta
 
 
 @tf.function(
@@ -62,7 +41,7 @@ def _digest(xn, divisions):
         tf.TensorSpec(shape=[None, None], dtype=DTYPE),
     ]
 )
-def generate_samples_in_hypercubes(rnds_t, n_strat, n_ev, hypercubes, divisions):
+def generate_samples_in_hypercubes(rnds, n_strat, n_ev, hypercubes, divisions):
     """Receives an array of random numbers 0 and 1 and
     distribute them in each hypercube according to the
     number of samples in each hypercube specified by n_ev
@@ -82,27 +61,21 @@ def generate_samples_in_hypercubes(rnds_t, n_strat, n_ev, hypercubes, divisions)
         `ind`: division index in which each (n_dim) set of random numbers fall
         `segm` : segmentantion for later computations
     """
-    rnds = tf.transpose(rnds_t)
+    # Use the event-per-hypercube information to fix each random event to a hypercub
     indices = tf.repeat(tf.range(tf.shape(hypercubes, out_type=DTYPEINT)[0]), n_ev)
     points = float_me(tf.gather(hypercubes, indices))
     n_evs = float_me(tf.gather(n_ev, indices))
-    xn = tf.transpose((points + tf.transpose(rnds)) * FBINS / float_me(n_strat))
-    segm = indices
 
-    ind_i, x_ini, xdelta = _digest(xn, divisions)
-    # Compute the random number between 0 and 1
-    # This is the heavy part of the calc
+    # Compute in which division of the importance_sampling grid the points fall
+    xn = tf.transpose(points + rnds) * FBINS / float_me(n_strat)
 
-    x = _compute_x(x_ini, xn, xdelta)
-    # Compute the random number between the limits
-    #     x = reg_i + rand_x * (reg_f - reg_i)
-    # and the weight
-    weights = tf.reduce_prod(xdelta * FBINS, axis=0)
+    ind_xn, x, weights = importance_sampling_digest(xn, divisions)
+
+    # Reweight taking into account the number of events per hypercub
     final_weights = weights / n_evs
-    x_t = tf.transpose(x)
-    int_xn = tf.transpose(ind_i)
 
-    return x_t, int_xn, final_weights, segm
+    segm = indices
+    return x, ind_xn, final_weights, segm
 
 
 class VegasFlowPlus(VegasFlow):

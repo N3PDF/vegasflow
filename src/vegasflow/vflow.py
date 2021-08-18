@@ -4,12 +4,21 @@
     The main interfaces of this class are the class `VegasFlow` and the
     `vegas_wrapper`
 """
-from vegasflow.configflow import DTYPE, DTYPEINT, fone, fzero, float_me, ione, int_me
 import json
 import numpy as np
 import tensorflow as tf
 
-from vegasflow.configflow import BINS_MAX, ALPHA
+from vegasflow.configflow import (
+    DTYPE,
+    DTYPEINT,
+    fone,
+    fzero,
+    float_me,
+    ione,
+    int_me,
+    BINS_MAX,
+    ALPHA,
+)
 from vegasflow.monte_carlo import MonteCarloFlow, wrapper, sampler
 from vegasflow.utils import consume_array_into_indices
 
@@ -18,6 +27,59 @@ import logging
 logger = logging.getLogger(__name__)
 
 FBINS = float_me(BINS_MAX)
+
+
+@tf.function(
+    input_signature=[
+        tf.TensorSpec(shape=[None, None], dtype=DTYPE),
+        tf.TensorSpec(shape=[None, BINS_MAX + 1], dtype=DTYPE),
+    ]
+)
+def importance_sampling_digest(xn, divisions):
+    """Importance sampling algorithm:
+    receives a random array (number of dimensions, number of dim)
+    containing information about from which bins in the
+    grid (n_dims, BINS_MAX+1) the random points have to be sampled
+
+    This algorithm is shared between the simplest form of Vegas
+    (VegasFlow: only importance sampling)
+    and Vegas+ (VegasFlowPlus: importance and stratified sampling)
+    and so it has been lifted to its own function
+
+    Parameters:
+    ----------
+        xn: float tensor (n_dim, n_events)
+            which bins to sample from
+        divisions: float tensor (n_dims, BINS_MAX+1)
+            grid of divisions for the importance sampling algorithm
+
+    Returns
+    -------
+        ind_i: integer tensor (n_events, n_dim)
+            index in the divisions grid from which the points should be sampled
+        x: float tensor (n_events, n_dim)
+            random values sampled in the divisions grid
+        xdelta: float tensor (n_events,)
+            weight of the random points
+    """
+    ind_i = int_me(xn)
+    # Get the value of the left and right sides of the bins
+    ind_f = ind_i + ione
+    x_ini = tf.gather(divisions, ind_i, batch_dims=1)
+    x_fin = tf.gather(divisions, ind_f, batch_dims=1)
+    # Compute the width of the bins
+    xdelta = x_fin - x_ini
+    # Take the decimal part of bin (i.e., how deep within the bin)
+    aux_rand = xn - tf.math.floor(xn)
+    x = x_ini + xdelta * aux_rand
+    # Compute the weight of the points
+    weights = tf.reduce_prod(xdelta * FBINS, axis=0)
+
+    # Tranpose the output to be what the external functions expect
+    x = tf.transpose(x)
+    ind_i = tf.transpose(ind_i)
+    return ind_i, x, weights
+
 
 # Auxiliary functions for Vegas
 @tf.function(
@@ -34,7 +96,7 @@ def _generate_random_array(rnds, divisions):
     ----------
         rnds: array shaped (None, n_dim)
             Random numbers used as an input for Vegas
-        divisions: array shaped (n_dim, BINS_MAX)
+        divisions: array shaped (n_dim, BINS_MAX+1)
             vegas grid
 
     Returns
@@ -52,33 +114,14 @@ def _generate_random_array(rnds, divisions):
     # Get the index of the division we are interested in
     xn = FBINS * (fone - tf.transpose(rnds))
 
-    @tf.function(
-        input_signature=[
-            tf.TensorSpec(shape=[None, None], dtype=DTYPE),
-        ]
-    )
-    def digest(xn):
-        ind_i = tf.cast(xn, DTYPEINT)
-        # Get the value of the left and right sides of the bins
-        ind_f = ind_i + ione
-        x_ini = tf.gather(divisions, ind_i, batch_dims=1)
-        x_fin = tf.gather(divisions, ind_f, batch_dims=1)
-        # Compute the width of the bins
-        xdelta = x_fin - x_ini
-        return ind_i, x_ini, xdelta
-
-    ind_i, x_ini, xdelta = digest(xn)
     # Compute the random number between 0 and 1
-    aux_rand = xn - tf.math.floor(xn)
-    x = x_ini + xdelta * aux_rand
+    # and the index of the bin where it has been sampled from
+    ind_xn, x, weights = importance_sampling_digest(xn, divisions)
 
     # Compute the random number between the limits
+    # commented, for now only from 0 to 1
     #     x = reg_i + rand_x * (reg_f - reg_i)
-    # and the weight
-    weights = tf.reduce_prod(xdelta * FBINS, axis=0)
-    x_t = tf.transpose(x)
-    int_xn = tf.transpose(ind_i)
-    return x_t, int_xn, weights
+    return x, ind_xn, weights
 
 
 @tf.function(
