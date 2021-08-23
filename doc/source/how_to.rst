@@ -189,6 +189,51 @@ The way ``TensorFlow`` seeding works can be consulted here `here <https://www.te
 .. note:: Even when using seed, reproducibility is not guaranteed between two different versions of TensorFlow.
 
 
+Constructing differentiable and compilable integrations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+While there is no currently a supported interface to generate integrations that can be used
+inside a TensorFlow library (for instance, inside a Neural Network) and ``VegasFlow`` behaves
+(with respect to any graphs) as the top-level library.
+It is possible to get the desired behavior so that an integration with ``VegasFlow`` can be used
+inside a `tf.function` environment (and be differentiated).
+
+Some approximations are however necessary,
+first of all, we consider in this example that we are interested in the integration itself
+and not in the specific of the grid-refining process.
+Therefore, any derivatives (or actual integration) need only to care about the last iteration.
+In this case, one can just call `run_event` instead of `run_iteration`.
+While `run_iteration` returns the total result after running a number of iterations,
+`run_event` runs the `ncall` number of events just once:
+
+.. code-block:: python
+
+    from vegasflow import VegasFlow, float_me
+    import tensorflow as tf
+
+    dims = 4
+    n_calls = int(1e4)
+    vegas_instance = VegasFlow(dims, n_calls, verbose=False)
+
+    @tf.function
+    def some_complicated_function(x):
+        
+        def example_integrand(z, **kwargs):
+            y = 0.0
+            for d in range(dims):
+                y += z[:,d] + x
+            return y
+
+        integration_result, error, _ = vegas_instance._run_event(example_integrand, n_calls)
+        return integration_result
+
+    my_x = float_me(4.0)
+    result = some_complicated_function(my_x)
+
+    with tf.GradientTape() as tape:
+        y = some_complicated_function(my_x)
+    tape.gradient(my_x, y)
+
 Running in distributed systems
 ==============================
 

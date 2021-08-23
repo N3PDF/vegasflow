@@ -24,9 +24,9 @@ It is developed with a focus on speed and efficiency, enabling researchers to pe
 
 Some of the key features of VegasFlow are:
 
-    - Integrates efficiently high dimensional functions on single (multi-threading) and multi CPU, single and multi GPU, many GPUs or clusters.
-    - Compatible with Python, C, C++ or Fortran.
-    - Implementation of different Monte Carlo algorithms.
+   * Integrates efficiently high dimensional functions on single (multi-threading) and multi CPU, single and multi GPU, many GPUs or clusters.
+   * Compatible with Python, C, C++ or Fortran.
+   * Implementation of different Monte Carlo algorithms.
 
 How to obtain the code
 ======================
