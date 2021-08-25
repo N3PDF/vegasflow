@@ -83,7 +83,7 @@ class VegasFlowPlus(VegasFlow):
     Implementation of the VEGAS+ algorithm
     """
 
-    def __init__(self, n_dim, n_events, train=True, adaptive=None, **kwargs):
+    def __init__(self, n_dim, n_events, train=True, adaptive=False, **kwargs):
         _ = kwargs.setdefault("events_limit", n_events)
         super().__init__(n_dim, n_events, train, **kwargs)
 
@@ -91,7 +91,7 @@ class VegasFlowPlus(VegasFlow):
         self._init_calls = n_events
 
         # Don't use adaptive if the number of dimension is too big
-        if n_dim > 13 and adaptive is None:
+        if n_dim > 13 and adaptive:
             self._adaptive = False
             logger.warning("Disabling adaptive mode from VegasFlowPlus, too many dimensions!")
         else:
