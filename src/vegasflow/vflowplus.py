@@ -83,9 +83,18 @@ class VegasFlowPlus(VegasFlow):
     Implementation of the VEGAS+ algorithm
     """
 
-    def __init__(self, n_dim, n_events, train=True, adaptive=False, **kwargs):
-        _ = kwargs.setdefault("events_limit", n_events)
-        super().__init__(n_dim, n_events, train, **kwargs)
+    def __init__(self, n_dim, n_events, train=True, adaptive=False, events_limit=None, **kwargs):
+        # https://github.com/N3PDF/vegasflow/issues/78
+        if events_limit is None:
+            logger.info("Events per device limit set to %d", n_events)
+            events_limit = n_events
+        elif events_limit < n_events:
+            logger.warning("VegasFlowPlus needs to hold all events in memory at once, "
+                    "setting the `events_limit` to be equal to `n_events=%d`", n_events)
+            events_limit = n_events
+        super().__init__(n_dim, n_events, train, events_limit=events_limit, **kwargs)
+
+
 
         # Save the initial number of events
         self._init_calls = n_events
