@@ -128,6 +128,8 @@ of ``VegasFlow``:
 As it can be seen, the only change has been to substitute the ``VegasFlow`` class
 with ``VegasFlowPlus``.
 
+.. note:: ``VegasFlowPlus`` does not support multi-device running, as it cannot break the integration in several pieces, an issue tracked at `#78 <https://github.com/N3PDF/vegasflow/issues/78>`_.
+
 Integration Wrapper
 ^^^^^^^^^^^^^^^^^^^
 
