@@ -99,7 +99,7 @@ VegasFlowPlus
 Overview
 ^^^^^^^^
 While ``VegasFlow`` is limited to the importance sampling algorithm,
-``VegasFlowPlus`` includes the latest version of importance plus stratified sampling
+``VegasFlowPlus`` includes the latest version of importance plus adaptive stratified sampling
 from Lepage's `latest paper <https://arxiv.org/abs/2009.05112>`_.
 
 The usage and interfaces exposed by ``VegasFlowPlus`` are equivalent to those
