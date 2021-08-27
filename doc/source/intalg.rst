@@ -92,6 +92,55 @@ Note, however, that loading a new grid will destroy the current grid.
     :show-inheritance:
     :members: freeze_grid, unfreeze_grid, save_grid, load_grid
 
+
+VegasFlowPlus
+=============
+
+Overview
+^^^^^^^^
+While ``VegasFlow`` is limited to the importance sampling algorithm,
+``VegasFlowPlus`` includes the latest version of importance plus adaptive stratified sampling
+from Lepage's `latest paper <https://arxiv.org/abs/2009.05112>`_.
+
+The usage and interfaces exposed by ``VegasFlowPlus`` are equivalent to those
+of ``VegasFlow``:
+
+
+.. code-block:: python
+
+    from vegasflow import VegasFlowPlus
+    dims = 4
+    n_calls = int(1e6)
+    vegas_instance = VegasFlowPlus(dims, n_calls)
+
+    def example_integrand(x, **kwargs):
+        y = 0.0
+        for d in range(dims):
+            y += x[:,d]
+        return y
+
+    vegas_instance.compile(example_integrand)
+
+    n_iter = 3
+    result = vegas_instance.run_integration(n_iter)
+
+
+As it can be seen, the only change has been to substitute the ``VegasFlow`` class
+with ``VegasFlowPlus``.
+
+.. note:: ``VegasFlowPlus`` does not support multi-device running, as it cannot break the integration in several pieces, an issue tracked at `#78 <https://github.com/N3PDF/vegasflow/issues/78>`_.
+
+Integration Wrapper
+^^^^^^^^^^^^^^^^^^^
+
+A wrapper is also provided for simplicity:
+
+.. code-block:: python
+
+   from vegasflow import vegasflowplus_wrapper
+   n_iter = 5
+   result = vegasflowplus_wrapper(example_integrand, dims, n_iter, n_calls)
+
  
 PlainFlow
 =========
