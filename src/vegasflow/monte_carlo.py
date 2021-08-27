@@ -48,6 +48,7 @@ from vegasflow.configflow import (
     DTYPEINT,
     TECH_CUT,
     float_me,
+    int_me,
 )
 
 
@@ -330,7 +331,7 @@ class MonteCarloFlow(ABC):
         self.cluster = queue_object
         self.distribute = True
 
-    def run_event(self, **kwargs):
+    def run_event(self, tensorize_events=False, **kwargs):
         """
         Runs the Monte Carlo event. This corresponds to a number of calls
         decided by the `events_per_run` variable. The variable `acc` is exposed
@@ -358,7 +359,10 @@ class MonteCarloFlow(ABC):
             ncalls = min(events_left, self.events_per_run)
             pc += ncalls / self.n_events * 100
             percentages.append(pc)
-            events_to_do.append(ncalls)
+            if tensorize_events:
+                events_to_do.append(int_me(ncalls))
+            else:
+                events_to_do.append(ncalls)
             events_left -= self.events_per_run
 
         if self.devices:
