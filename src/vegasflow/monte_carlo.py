@@ -331,6 +331,37 @@ class MonteCarloFlow(ABC):
         self.cluster = queue_object
         self.distribute = True
 
+    def make_differentiable(self):
+        """Modifies the attributes of the integration so that it can be compiled inside
+        Tensorflow functions (and, therefore, gradients calculated)
+        Returns a reference to `run_event`, a method that upon calling it with no arguments
+        will produce results and unceranties for a ncalls number of events
+        """
+        if self.distribute:
+            raise ValueError("Differentiation is not compatible with distribution")
+        if self.devices and len(self.devices) > 1:
+            main_device = None
+            self.devices = {}
+
+            # Look for devices
+            for device, active in self.devices.items():
+                if active:
+                    main_device = device
+                    logger.warning(
+                        "Limiting the integration to device #0: %s to make the run differentiable",
+                        main_device[0],
+                    )
+                    break
+
+            if main_device is not None:
+                self.devices = {main_device: True}
+
+        if self.event:
+            logger.warning("You should call `make_differentiable` before compiling, recompiling...")
+            self._recompile()
+
+        return self.run_event
+
     def run_event(self, tensorize_events=False, **kwargs):
         """
         Runs the Monte Carlo event. This corresponds to a number of calls
@@ -365,7 +396,7 @@ class MonteCarloFlow(ABC):
                 events_to_do.append(ncalls)
             events_left -= self.events_per_run
 
-        if self.devices:
+        if self.devices and len(self.devices) > 1:
             running_pool = []
             for ncalls, pc in zip(events_to_do, percentages):
                 delay_job = joblib.delayed(self.device_run)(ncalls, sent_pc=pc, **kwargs)
