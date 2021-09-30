@@ -357,7 +357,7 @@ class MonteCarloFlow(ABC):
                 self.devices = {main_device: True}
 
         if self.event:
-            logger.warning("You should call `make_differentiable` before compiling, recompiling...")
+            logger.warning("Recompiling...")
             self._recompile()
 
         return self.run_event

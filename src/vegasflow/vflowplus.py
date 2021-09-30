@@ -7,6 +7,7 @@
     The main interface is the `VegasFlowPlus` class.
 """
 from itertools import product
+from functools import partial
 import numpy as np
 import tensorflow as tf
 
@@ -139,6 +140,11 @@ class VegasFlowPlus(VegasFlow):
         if self._adaptive:
             logger.warning("Variable number of events requires function signatures all across")
 
+    def make_differentiable(self):
+        """Overrides make_differentiable to make sure the runner has a reference to n_ev"""
+        runner = super().make_differentiable()
+        return partial(runner, n_ev = self.n_ev)
+
     def redistribute_samples(self, arr_var):
         """Receives an array with the variance of the integrand in each
         hypercube and recalculate the samples per hypercube according
@@ -230,10 +236,6 @@ class VegasFlowPlus(VegasFlow):
     def run_event(self, tensorize_events=None, **kwargs):
         """Tensorizes the number of events
         so they are not python or numpy primitives if self._adaptive=True"""
-        if "n_ev" not in kwargs:
-            # This function is being called from the outside
-            # force 'n_ev' in
-            kwargs["n_ev"] = self.n_ev
         return super().run_event(tensorize_events=self._adaptive, **kwargs)
 
 
