@@ -250,7 +250,7 @@ class MonteCarloFlow(ABC):
 
     @abstractmethod
     def _run_event(self, integrand, ncalls=None):
-        """Run one single event of the Monte Carlo integration
+        """Run one single event (batch of calls) of the Monte Carlo integration
         the output must be a tuple"""
         result = self.event()
         return result, pow(result, 2)
@@ -536,14 +536,14 @@ class MonteCarloFlow(ABC):
                 return tf_integrand(xarr, n_dim=self.n_dim, **kwargs)
             return tf_integrand(xarr, **kwargs)
 
-        def run_event(**kwargs):
+        def batch_events(**kwargs):
             """Pass any arguments to the underlying integrand"""
             return self._run_event(new_integrand, **kwargs)
 
         if compilable:
-            self.event = tf.function(run_event)
+            self.event = tf.function(batch_events)
         else:
-            self.event = run_event
+            self.event = batch_events
 
         if trace:
             self.trace()

@@ -231,6 +231,13 @@ class VegasFlow(MonteCarloFlow):
         divisions_np = subdivision_np.repeat(n_dim).reshape(-1, n_dim).T
         self.divisions = tf.Variable(divisions_np, dtype=DTYPE)
 
+    def make_differentiable(self):
+        """Freeze the grid if the function is to be called within a graph"""
+        if self.train:
+            logger.warning("Freezing the grid")
+            self.freeze_grid()
+        return super().make_differentiable()
+
     def freeze_grid(self):
         """Stops the grid from refining any more"""
         self.train = False

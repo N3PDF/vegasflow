@@ -89,12 +89,13 @@ class VegasFlowPlus(VegasFlow):
             logger.info("Events per device limit set to %d", n_events)
             events_limit = n_events
         elif events_limit < n_events:
-            logger.warning("VegasFlowPlus needs to hold all events in memory at once, "
-                    "setting the `events_limit` to be equal to `n_events=%d`", n_events)
+            logger.warning(
+                "VegasFlowPlus needs to hold all events in memory at once, "
+                "setting the `events_limit` to be equal to `n_events=%d`",
+                n_events,
+            )
             events_limit = n_events
         super().__init__(n_dim, n_events, train, events_limit=events_limit, **kwargs)
-
-
 
         # Save the initial number of events
         self._init_calls = n_events
@@ -229,6 +230,10 @@ class VegasFlowPlus(VegasFlow):
     def run_event(self, tensorize_events=None, **kwargs):
         """Tensorizes the number of events
         so they are not python or numpy primitives if self._adaptive=True"""
+        if "n_ev" not in kwargs:
+            # This function is being called from the outside
+            # force 'n_ev' in
+            kwargs["n_ev"] = self.n_ev
         return super().run_event(tensorize_events=self._adaptive, **kwargs)
 
 
