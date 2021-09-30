@@ -335,7 +335,7 @@ class MonteCarloFlow(ABC):
         """Modifies the attributes of the integration so that it can be compiled inside
         Tensorflow functions (and, therefore, gradients calculated)
         Returns a reference to `run_event`, a method that upon calling it with no arguments
-        will produce results and unceranties for a ncalls number of events
+        will produce results and uncertainties for an intergation iteration of ncalls number of events
         """
         if self.distribute:
             raise ValueError("Differentiation is not compatible with distribution")

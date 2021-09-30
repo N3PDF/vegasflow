@@ -203,7 +203,7 @@ In the following example, we generate a function to be integrated
 Afterwards, the function is compiled (and trained) as a normal integrand,
 until we call ``make_differentiable``.
 At that point the grid is frozen and a ``runner`` is returned which will
-run a batch of ``n_calls`` points of the integrator.
+run the integration result.
 The ``runner`` can now be used inside a ``tf.function``-compiled function
 and gradients can be computed as shown below.
 
