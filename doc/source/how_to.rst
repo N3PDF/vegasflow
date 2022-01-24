@@ -192,19 +192,21 @@ The way ``TensorFlow`` seeding works can be consulted here `here <https://www.te
 Constructing differentiable and compilable integrations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While there is no currently a supported interface to generate integrations that can be used
-inside a TensorFlow library (for instance, inside a Neural Network) and ``VegasFlow`` behaves
-(with respect to any graphs) as the top-level library.
-It is possible to get the desired behavior so that an integration with ``VegasFlow`` can be used
-inside a `tf.function` environment (and be differentiated).
+An interface to generate integration callabales that can be used inside a TensorFlow library (for instance, inside a Neural Network)
+is provided through the ``make_differentiable`` method.
+This method will make the necessary changes to the integration, mainly
+such as freezing the grid and ensuring that only one device is used,
+and it returns a callable function that can be used as just another TensorFlow function.
 
-Some approximations are however necessary,
-first of all, we consider in this example that we are interested in the integration itself
-and not in the specific of the grid-refining process.
-Therefore, any derivatives (or actual integration) need only to care about the last iteration.
-In this case, one can just call `run_event` instead of `run_iteration`.
-While `run_iteration` returns the total result after running a number of iterations,
-`run_event` runs the `ncall` number of events just once:
+In the following example, we generate a function to be integrated
+(which can depend on external input through the mutable variable ``z``).
+Afterwards, the function is compiled (and trained) as a normal integrand,
+until we call ``make_differentiable``.
+At that point the grid is frozen and a ``runner`` is returned which will
+run the integration result.
+The ``runner`` can now be used inside a ``tf.function``-compiled function
+and gradients can be computed as shown below.
+
 
 .. code-block:: python
 
@@ -214,25 +216,37 @@ While `run_iteration` returns the total result after running a number of iterati
     dims = 4
     n_calls = int(1e4)
     vegas_instance = VegasFlow(dims, n_calls, verbose=False)
+    z = tf.Variable(float_me(1.0))
+
+    def example_integrand(x, **kwargs):
+        y = tf.reduce_sum(x, axis=1)
+        return y*z
+
+    vegas_instance.compile(example_integrand)
+    # Now we run a few iterations to train the grid, but we can bin them
+    _ = vegas_instance.run_integration(3)
+
+    runner = vegas_instance.make_differentiable()
 
     @tf.function
     def some_complicated_function(x):
-        
-        def example_integrand(z, **kwargs):
-            y = 0.0
-            for d in range(dims):
-                y += z[:,d] + x
-            return y
-
-        integration_result, error, _ = vegas_instance._run_event(example_integrand, n_calls)
-        return integration_result
+        integration_result, error, _ = runner()
+        return x*integration_result
 
     my_x = float_me(4.0)
     result = some_complicated_function(my_x)
 
-    with tf.GradientTape() as tape:
-        y = some_complicated_function(my_x)
-    tape.gradient(my_x, y)
+    def compute_and_print_gradient():
+        with tf.GradientTape() as tape:
+            tape.watch(my_x)
+            y = some_complicated_function(my_x)
+
+        grad = tape.gradient(y, my_x)
+        print(f"Result {y.numpy():.3}, gradient: {grad.numpy():.3}")
+
+    compute_and_print_gradient()
+    z.assign(float_me(4.0))
+    compute_and_print_gradient()
 
 Running in distributed systems
 ==============================

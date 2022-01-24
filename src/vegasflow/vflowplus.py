@@ -7,6 +7,7 @@
     The main interface is the `VegasFlowPlus` class.
 """
 from itertools import product
+from functools import partial
 import numpy as np
 import tensorflow as tf
 
@@ -89,12 +90,13 @@ class VegasFlowPlus(VegasFlow):
             logger.info("Events per device limit set to %d", n_events)
             events_limit = n_events
         elif events_limit < n_events:
-            logger.warning("VegasFlowPlus needs to hold all events in memory at once, "
-                    "setting the `events_limit` to be equal to `n_events=%d`", n_events)
+            logger.warning(
+                "VegasFlowPlus needs to hold all events in memory at once, "
+                "setting the `events_limit` to be equal to `n_events=%d`",
+                n_events,
+            )
             events_limit = n_events
         super().__init__(n_dim, n_events, train, events_limit=events_limit, **kwargs)
-
-
 
         # Save the initial number of events
         self._init_calls = n_events
@@ -137,6 +139,11 @@ class VegasFlowPlus(VegasFlow):
 
         if self._adaptive:
             logger.warning("Variable number of events requires function signatures all across")
+
+    def make_differentiable(self):
+        """Overrides make_differentiable to make sure the runner has a reference to n_ev"""
+        runner = super().make_differentiable()
+        return partial(runner, n_ev = self.n_ev)
 
     def redistribute_samples(self, arr_var):
         """Receives an array with the variance of the integrand in each
