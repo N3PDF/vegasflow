@@ -21,7 +21,7 @@ The documentation for VegasFlow is available at [vegasflow.readthedocs.io](https
 
 ## Installation
 [![Anaconda-Server Badge](https://anaconda.org/conda-forge/vegasflow/badges/installer/conda.svg)](https://anaconda.org/conda-forge/vegasflow)
-[![AUR](https://img.shields.io/aur/version/python-vegasflow)](https://aur.archlinux.org/packages/python-vegasflow/)
+[![AUR](https://img.shields.io/badge/aur-vegasflow-blue)](https://aur.archlinux.org/packages/python-vegasflow/)
 
 The package can be installed with pip:
 ```bash
