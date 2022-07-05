@@ -218,7 +218,7 @@ class VegasFlow(MonteCarloFlow):
     Implementation of the important sampling algorithm from Vegas
     """
 
-    def __init__(self, n_dim, n_events, train=True, **kwargs):
+    def __init__(self, n_dim, n_events, train=True, main_dimension=0, **kwargs):
         super().__init__(n_dim, n_events, **kwargs)
 
         # If training is True, the grid will be changed after every iteration
@@ -230,6 +230,7 @@ class VegasFlow(MonteCarloFlow):
         subdivision_np = np.linspace(0, 1, self.grid_bins)
         divisions_np = subdivision_np.repeat(n_dim).reshape(-1, n_dim).T
         self.divisions = tf.Variable(divisions_np, dtype=DTYPE)
+        self._main_dimension = main_dimension
 
     def make_differentiable(self):
         """Freeze the grid if the function is to be called within a graph"""
@@ -390,7 +391,9 @@ class VegasFlow(MonteCarloFlow):
         x, ind, xjac = self._generate_random_array(n_events)
 
         # Now compute the integrand
-        tmp = xjac * integrand(x, weight=xjac)
+        int_result = integrand(x, weight=xjac)
+
+        tmp = xjac * int_result
         tmp2 = tf.square(tmp)
 
         # Compute the final result for this step

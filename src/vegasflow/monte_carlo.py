@@ -61,9 +61,9 @@ def print_iteration(it, res, error, extra="", threshold=0.1):
     # note: actually, the flag 'g' does this automatically
     # but I prefer to choose the precision myself...
     if res < threshold:
-        logger.info(f"Result for iteration {it}: {res:.3e} +/- {error:.3e}" + extra)
+        return f"Result for iteration {it}: {res:.3e} +/- {error:.3e}" + extra
     else:
-        logger.info(f"Result for iteration {it}: {res:.4f} +/- {error:.4f}" + extra)
+        return f"Result for iteration {it}: {res:.4f} +/- {error:.4f}" + extra
 
 
 def _accumulate(accumulators):
@@ -126,6 +126,7 @@ class MonteCarloFlow(ABC):
         self._events_limit = events_limit
         self._events_per_run = min(events_limit, n_events)
         self._compilation_arguments = None
+        self._vectorial = False
         self.distribute = False
         # If any of the pass variables below is set to true
         # the integrand will be expecting them so the integrator
@@ -255,6 +256,11 @@ class MonteCarloFlow(ABC):
         result = self.event()
         return result, pow(result, 2)
 
+    def _can_run_vectorial(self):
+        """Accepting vectorial integrands depends on the algorithm,
+        if an algorithm can run on vectorial algorithms it should implement this method and return True"""
+        return False
+
     #### Integration management
     def set_seed(self, seed):
         """Sets the interation seed"""
@@ -322,6 +328,7 @@ class MonteCarloFlow(ABC):
             import dask.distributed  # pylint: disable=import-error
         except ImportError as e:
             raise ImportError("Install dask and distributed to use `set_distribute`") from e
+
         if self.devices is not None:
             logger.warning("`set_distribute` overrides any previous device configuration")
         self.list_devices = None
@@ -421,6 +428,7 @@ class MonteCarloFlow(ABC):
             for ncalls, pc in zip(events_to_do, percentages):
                 res = self.device_run(ncalls, sent_pc=pc, **kwargs)
                 accumulators.append(res)
+
         return _accumulate(accumulators)
 
     def trace(self, n_events=50):
@@ -435,7 +443,7 @@ class MonteCarloFlow(ABC):
         self.n_events = true_events
         self._verbose = true_verbosity
 
-    def compile(self, integrand, compilable=True, signature=None, trace=False):
+    def compile(self, integrand, compilable=True, signature=None, trace=False, check=True):
         """Receives an integrand, prepares it for integration
         and tries to compile unless told otherwise.
 
@@ -477,7 +485,9 @@ class MonteCarloFlow(ABC):
                 is not passed through `tf.function`
             `signature`: (default: True)
                 whether to autodiscover the signature of the integrand
-
+            `check`: (default: True)
+                check whether the integrand produces expected results and whether it is vectorial
+                note, with check=False vectorial output will not work
         """
         kwargs = {"compilable": compilable, "signature": signature, "trace": trace}
         self._compilation_arguments = (integrand, kwargs)
@@ -522,7 +532,7 @@ class MonteCarloFlow(ABC):
             tf_integrand = integrand
 
         # The algorithms will always call the function with
-        # (xrand, weight=)
+        # (xrand, weight)
         # therefore create a wrapper withi whatever integrand to become this
         # n_dim was an option there during development and needs to be left because of legacy code
 
@@ -547,6 +557,32 @@ class MonteCarloFlow(ABC):
 
         if trace:
             self.trace()
+
+        if check:
+            event_size = 23
+            test_array, wgt, _ = self.generate_random_array(event_size)
+            res_tmp = new_integrand(test_array, weight=wgt).numpy()
+            res_shape = res_tmp.shape
+
+            expected_shape = (event_size,)
+
+            if len(res_shape) == 2:
+                self._vectorial = True
+                expected_shape = res_tmp.reshape(event_size, -1).shape
+                if not self._can_run_vectorial():
+                    raise NotImplementedError(
+                        f"""The {self.__class__.__name__} algorithm does not support vectorial integrands
+if you believe this to be a bug please open an issue in https://github.com/N3PDF/vegasflow/issues"""
+                    )
+
+            if res_shape != expected_shape:
+                error_str = "the shape of the integrand output should be: (n_events,"
+                if self._vectorial:
+                    error_str += " output_dim,"
+                logger.error(f"Wrong integrand output shape, {error_str})")
+                raise ValueError(
+                    f"The integrand is not returning a value per event, expected shape: {expected_shape}, found: {res_shape}"
+                )
 
     def _recompile(self):
         """Forces recompilation with the same arguments that have
@@ -613,7 +649,14 @@ class MonteCarloFlow(ABC):
             else:
                 time_str = ""
             if self._verbose:
-                print_iteration(i, res, error, extra=time_str)
+                all_info = []
+                if self._vectorial:
+                    for d, (rr, ee) in enumerate(zip(res, error)):
+                        append_str = f" [dimension {d}] {time_str}"
+                        all_info.append(print_iteration(i, rr, ee, extra=append_str))
+                else:
+                    all_info = [print_iteration(i, res, error, extra=time_str)]
+                logger.info("\n      ".join(all_info))
 
         # Once all iterations are finished, print out
         aux_res = 0.0
@@ -637,7 +680,13 @@ class MonteCarloFlow(ABC):
         final_result = aux_res / weight_sum
         sigma = np.sqrt(1.0 / weight_sum)
         if self._verbose:
-            logger.info(f" > Final results: {final_result.numpy():g} +/- {sigma:g}")
+            final_results = []
+            if self._vectorial:
+                for dim, (rr, ee) in enumerate(zip(final_result.numpy(), sigma)):
+                    final_results.append(f"Final results [{dim = }]: {rr:g} +/- {ee:g}")
+            else:
+                final_results = [f" > Final results: {final_result.numpy():g} +/- {sigma:g}"]
+            logger.info("\n     ".join(final_results))
         return final_result.numpy(), sigma
 
 
