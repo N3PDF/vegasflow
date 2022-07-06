@@ -18,7 +18,7 @@ import tensorflow as tf
 
 # Test setup
 dim = 2
-ncalls = np.int32(1e3)
+ncalls = np.int32(1e4)
 n_iter = 4
 
 
