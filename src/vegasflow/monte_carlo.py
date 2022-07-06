@@ -560,7 +560,8 @@ class MonteCarloFlow(ABC):
 
         if check:
             event_size = 23
-            test_array, wgt, _ = self.generate_random_array(event_size)
+            test_array = tf.random.uniform((event_size, self.n_dim), dtype=DTYPE)
+            wgt = tf.random.uniform((event_size,), dtype=DTYPE)
             res_tmp = new_integrand(test_array, weight=wgt).numpy()
             res_shape = res_tmp.shape
 

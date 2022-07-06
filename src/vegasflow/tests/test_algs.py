@@ -9,12 +9,12 @@ import json
 import tempfile
 import pytest
 import numpy as np
-import tensorflow as tf
-from vegasflow.configflow import DTYPE
+from vegasflow.configflow import DTYPE, run_eager
 from vegasflow.vflow import VegasFlow
 from vegasflow.plain import PlainFlow
 from vegasflow.vflowplus import VegasFlowPlus
 from vegasflow import plain_sampler, vegas_sampler
+import tensorflow as tf
 
 # Test setup
 dim = 2
@@ -67,7 +67,7 @@ def check_is_one(result, sigmas=3):
 
 
 def test_VegasFlow():
-    """ Test VegasFlow class, importance sampling algorithm"""
+    """Test VegasFlow class, importance sampling algorithm"""
     for mode in range(4):
         vegas_instance = instance_and_compile(VegasFlow, mode)
         _ = vegas_instance.run_integration(n_iter)
@@ -92,7 +92,7 @@ def test_VegasFlow():
 
 
 def test_VegasFlow_save_grid():
-    """ Test the grid saving feature of vegasflow """
+    """Test the grid saving feature of vegasflow"""
     tmp_filename = tempfile.mktemp()
     vegas_instance = instance_and_compile(VegasFlow)
     # Run an iteration so the grid is not trivial
@@ -141,7 +141,7 @@ def test_VegasFlow_load_grid():
 
 
 def test_PlainFlow():
-    # TODO: move the loop to hypothesis...
+    # We could use hypothesis here instead of this loop
     for mode in range(4):
         plain_instance = instance_and_compile(PlainFlow, mode)
         result = plain_instance.run_integration(n_iter)
@@ -177,15 +177,17 @@ def test_rng_generation(n_events=100):
     v = vegas_sampler(example_integrand, dim, n_events, training_steps=2)
     _ = helper_rng_tester(v, n_events)
 
+
 def test_VegasFlowPlus_ADAPTIVE_SAMPLING():
-    """ Test Vegasflow with Adaptive Sampling on (the default) """
+    """Test Vegasflow with Adaptive Sampling on (the default)"""
     for mode in range(4):
         vflowplus_instance = instance_and_compile(VegasFlowPlus, mode)
         result = vflowplus_instance.run_integration(n_iter)
         check_is_one(result)
 
+
 def test_VegasFlowPlus_NOT_ADAPTIVE_SAMPLING():
-    """ Test Vegasflow with Adaptive Sampling off (non-default) """
+    """Test Vegasflow with Adaptive Sampling off (non-default)"""
     vflowplus_instance = VegasFlowPlus(dim, ncalls, adaptive=False)
     vflowplus_instance.compile(example_integrand)
     result = vflowplus_instance.run_integration(n_iter)
