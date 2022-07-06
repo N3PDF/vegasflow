@@ -22,7 +22,7 @@ n_iter = 5
 @tf.function
 def test_function(xarr):
     res = tf.square((xarr - 1.0) ** 2)
-    return tf.exp(-res[:, 1])
+    return tf.exp(-res)
 
 
 if __name__ == "__main__":

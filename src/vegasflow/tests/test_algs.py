@@ -18,7 +18,7 @@ import tensorflow as tf
 
 # Test setup
 dim = 2
-ncalls = np.int32(1e4)
+ncalls = np.int32(1e3)
 n_iter = 4
 
 
@@ -34,24 +34,24 @@ def example_integrand(xarr, weight=None):
     return pref * tf.exp(-coef)
 
 
-def instance_and_compile(Integrator, mode=0):
+def instance_and_compile(Integrator, mode=0, integrand_function=example_integrand):
     """Wrapper for convenience"""
     if mode == 0:
-        integrand = example_integrand
+        integrand = integrand_function
     elif mode == 1:
 
         def integrand(xarr, n_dim=None):
-            return example_integrand(xarr)
+            return integrand_function(xarr)
 
     elif mode == 2:
 
         def integrand(xarr):
-            return example_integrand(xarr)
+            return integrand_function(xarr)
 
     elif mode == 3:
 
         def integrand(xarr, n_dim=None, weight=None):
-            return example_integrand(xarr, weight=None)
+            return integrand_function(xarr, weight=None)
 
     int_instance = Integrator(dim, ncalls)
     int_instance.compile(integrand)
@@ -61,7 +61,7 @@ def instance_and_compile(Integrator, mode=0):
 def check_is_one(result, sigmas=3):
     """Wrapper for convenience"""
     res = result[0]
-    err = result[1] * sigmas
+    err = np.mean(result[1] * sigmas)
     # Check that it passes by {sigmas} number of sigmas
     np.testing.assert_allclose(res, 1.0, atol=err)
 
