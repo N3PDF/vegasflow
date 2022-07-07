@@ -66,14 +66,20 @@ def check_is_one(result, sigmas=3):
     np.testing.assert_allclose(res, 1.0, atol=err)
 
 
-def test_VegasFlow():
+@pytest.mark.parametrize("mode", range(4))
+def test_VegasFlow(mode):
     """Test VegasFlow class, importance sampling algorithm"""
-    for mode in range(4):
-        vegas_instance = instance_and_compile(VegasFlow, mode)
-        _ = vegas_instance.run_integration(n_iter)
-        vegas_instance.freeze_grid()
-        result = vegas_instance.run_integration(n_iter)
-        check_is_one(result)
+    vegas_instance = instance_and_compile(VegasFlow, mode)
+    _ = vegas_instance.run_integration(n_iter)
+    vegas_instance.freeze_grid()
+    result = vegas_instance.run_integration(n_iter)
+    check_is_one(result)
+
+
+def test_VegasFlow_grid_management():
+    vegas_instance = instance_and_compile(VegasFlow, 1)
+    _ = vegas_instance.run_integration(n_iter)
+    vegas_instance.freeze_grid()
 
     # Change the number of events
     vegas_instance.n_events = 2 * ncalls
@@ -140,15 +146,18 @@ def test_VegasFlow_load_grid():
         vegas_instance.load_grid(file_name=tmp_filename)
 
 
-def test_PlainFlow():
-    # We could use hypothesis here instead of this loop
-    for mode in range(4):
-        plain_instance = instance_and_compile(PlainFlow, mode)
-        result = plain_instance.run_integration(n_iter)
-        check_is_one(result)
+@pytest.mark.parametrize("mode", range(4))
+def test_PlainFlow(mode):
+    plain_instance = instance_and_compile(PlainFlow, mode)
+    result = plain_instance.run_integration(n_iter)
+    check_is_one(result)
 
-    # Use the last instance to check that changing the number of events
-    # don't change the result
+
+def test_PlainFlow_change_nevents():
+    plain_instance = instance_and_compile(PlainFlow, 0)
+    result = plain_instance.run_integration(n_iter)
+    check_is_one(result)
+
     plain_instance.n_events = 2 * ncalls
     new_result = plain_instance.run_integration(n_iter)
     check_is_one(new_result)
@@ -178,12 +187,12 @@ def test_rng_generation(n_events=100):
     _ = helper_rng_tester(v, n_events)
 
 
-def test_VegasFlowPlus_ADAPTIVE_SAMPLING():
+@pytest.mark.parametrize("mode", range(4))
+def test_VegasFlowPlus_ADAPTIVE_SAMPLING(mode):
     """Test Vegasflow with Adaptive Sampling on (the default)"""
-    for mode in range(4):
-        vflowplus_instance = instance_and_compile(VegasFlowPlus, mode)
-        result = vflowplus_instance.run_integration(n_iter)
-        check_is_one(result)
+    vflowplus_instance = instance_and_compile(VegasFlowPlus, mode)
+    result = vflowplus_instance.run_integration(n_iter)
+    check_is_one(result)
 
 
 def test_VegasFlowPlus_NOT_ADAPTIVE_SAMPLING():
