@@ -12,6 +12,8 @@ class PlainFlow(MonteCarloFlow):
     Simple Monte Carlo integrator.
     """
 
+    _CAN_RUN_VECTORIAL = True
+
     def _run_event(self, integrand, ncalls=None):
         if ncalls is None:
             n_events = self.n_events
@@ -38,9 +40,6 @@ class PlainFlow(MonteCarloFlow):
         err_tmp2 = (res2 - tf.square(res)) / (self.n_events - fone)
         sigma = tf.sqrt(tf.maximum(err_tmp2, fzero))
         return res, sigma
-
-    def _can_run_vectorial(self):
-        return True
 
 
 def plain_wrapper(*args, **kwargs):

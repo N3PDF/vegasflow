@@ -243,8 +243,13 @@ class VegasFlow(MonteCarloFlow):
         self.divisions = tf.Variable(divisions_np, dtype=DTYPE)
         self._main_dimension = main_dimension
 
-    def _can_run_vectorial(self):
+    def _can_run_vectorial(self, expected_shape):
         # only implemented for the main class at the moment, not for children
+        if self._main_dimension >= expected_shape[-1]:
+            raise ValueError(
+                f"""The main dimension index ({self._main_dimension}) is greater than the dimensionality of the output ({expected_shape[-1]}).
+            Remember that arrays in python are 0-indexed!"""
+            )
         return self.__class__.__name__ == "VegasFlow"
 
     def make_differentiable(self):

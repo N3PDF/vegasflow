@@ -105,6 +105,8 @@ class MonteCarloFlow(ABC):
         `list_devices`: list of device type to use (use `None` to do the tensorflow default)
     """
 
+    _CAN_RUN_VECTORIAL = False
+
     def __init__(
         self,
         n_dim,
@@ -256,10 +258,10 @@ class MonteCarloFlow(ABC):
         result = self.event()
         return result, pow(result, 2)
 
-    def _can_run_vectorial(self):
+    def _can_run_vectorial(self, expected_shape=None):
         """Accepting vectorial integrands depends on the algorithm,
         if an algorithm can run on vectorial algorithms it should implement this method and return True"""
-        return False
+        return self._CAN_RUN_VECTORIAL
 
     #### Integration management
     def set_seed(self, seed):
@@ -570,7 +572,7 @@ class MonteCarloFlow(ABC):
             if len(res_shape) == 2:
                 self._vectorial = True
                 expected_shape = res_tmp.reshape(event_size, -1).shape
-                if not self._can_run_vectorial():
+                if not self._can_run_vectorial(expected_shape):
                     raise NotImplementedError(
                         f"""The {self.__class__.__name__} algorithm does not support vectorial integrands
 if you believe this to be a bug please open an issue in https://github.com/N3PDF/vegasflow/issues"""

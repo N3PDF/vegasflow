@@ -62,10 +62,26 @@ using the ``tf.function`` decorator.
 
 Constructing the integrand
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-Note that the ``example_integrand`` contained only ``TensorFlow`` operations.
-All ``VegasFlow`` integrands as such, in principle, depend only on python primitives
-and ``TensorFlow`` operations, otherwise the code cannot be compiled and as a result it cannot
-run on GPU or other ``TensorFlow``-supported hardware accelerators.
+Constructing an integrand for ``VegasFlow`` is similar to constructing an integrand for any other algorithm with a small difference:
+the output of the integrand should be a tensor of results instead of just one number.
+While most integration algorithms will take a function and then evaluate said function ``n`` number of times (to calculate ``n`` events)
+``VegasFlow`` takes the approach of evaluating as many events as possible at once.
+As such the input random array (``xarr``) is a tensor of shape (``(n_events, n_dim)``) instead of the usual (``(n_dim,)``)
+and, suitably, the output result is not a scalar bur rather a tensor of shape (``(n_events)``).
+
+Note that the ``example_integrand`` contains only ``TensorFlow`` function and method and operations between ``TensorFlow`` variables:
+
+.. code-block:: python
+
+    def example_integrand(xarr, weight=None):
+      s = tf.reduce_sum(xarr, axis=1)
+      result = tf.pow(0.1/s, 2)
+      return result
+
+
+By making ``VegasFlow`` integrand depend only on python and ``TensorFlow`` primitives the code can be understood by
+``TenosrFlow`` and be compiled to run on CPU, GPU or other hardware accelerators
+as well as to apply optimizations based on `XLA <https://www.tensorflow.org/api_docs/python/tf/function>`_.
 
 It is possible, however (and often useful when prototyping) to integrate functions not
 based on ``TensorFlow``, by passing the ``compilable`` flag at compile time.
@@ -85,12 +101,45 @@ the integration algorithm).
 
 .. note:: Integrands must always accept as first argument the random number (``xarr``)
   and can also accept the keyword argument ``weight``. The ``compile`` method of the integration
-   will try to find the most adequate signature in each situation.
+  will try to find the most adequate signature in each situation.
 
 
 It is also possible to completely avoid compilation,
 by leveraging ``TensorFlow``'s `eager execution <https://www.tensorflow.org/guide/eager>`_ as
 explained at :ref:`eager-label`.
+
+Integrating vector functions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It is also possible to integrate vector-valued functions with most algorithms included in ``VegasFlow`` while simply modifying
+the integrand to return a vector of values per event instead of a scalar (in other words, the output shape of the result
+should be (``(n_events, n_outputs)``).
+
+.. code-block:: python
+
+  @tf.function
+  def test_function(xarr):
+      res = tf.square((xarr - 1.0) ** 2)
+      return tf.exp(-res)
+
+
+For adaptative algorithms however only one of the dimensions is taken into account to adapt the grid 
+(by default it will be the first output).
+In ``VegasFlow`` it is possible to modify this beahaviour with the ``main_dimension`` keyword argument.
+
+
+.. code-block:: python
+
+    vegas = VegasFlow(dim, ncalls, main_dimension=1)
+
+
+``VegasFlow`` will automatically (by trying to evaluate the integrand with a small number of events) try to
+discover whether the functon is vector-valued and will check a) whether the algorithm can integrate vector-valued integrals
+and b) whether the ``main_dimension`` index is contained in the dimensionality of the output.
+
+
+.. note:: Remember that python lists and arrays are 0-indexed and such for an output with 2 components the index of the last dimension is 1 and not 2!
+
 
 Choosing the correct types
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

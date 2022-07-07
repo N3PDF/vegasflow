@@ -27,7 +27,7 @@ def test_function(xarr):
 
 if __name__ == "__main__":
     print("Testing a multidimensional integration")
-    vegas = VegasFlow(dim, ncalls)
+    vegas = VegasFlow(dim, ncalls, main_dimension=1)
     vegas.compile(test_function)
     all_results, all_err = vegas.run_integration(2)
     try:
