@@ -43,7 +43,7 @@ def test_working_vectorial(alg, mode):
     """Check that the algorithms that accept integrating vectorial functions can really do so"""
     inst = instance_and_compile(alg, mode=mode, integrand_function=_vector_integrand)
     result = inst.run_integration(2)
-    check_is_one(result, sigmas=4)
+    check_is_one(result, sigmas=5)
 
 
 @pytest.mark.parametrize("alg", [VegasFlowPlus])

@@ -309,7 +309,7 @@ class MonteCarloFlow(ABC):
 
     #### Integration management
     def set_seed(self, seed):
-        """Sets the interation seed"""
+        """Sets the random seed"""
         tf.random.set_seed(seed)
 
     #### Device management methods
@@ -388,7 +388,7 @@ class MonteCarloFlow(ABC):
         """Modifies the attributes of the integration so that it can be compiled inside
         Tensorflow functions (and, therefore, gradients calculated)
         Returns a reference to `run_event`, a method that upon calling it with no arguments
-        will produce results and uncertainties for an intergation iteration of ncalls number of events
+        will produce results and uncertainties for an integration iteration of ncalls number of events
         """
         if self.distribute:
             raise ValueError("Differentiation is not compatible with distribution")
@@ -666,7 +666,7 @@ if you believe this to be a bug please open an issue in https://github.com/N3PDF
                 monte carlo error
 
         Note: it is possible not to pass any histogram variable and still fill
-        some histogram variable at integration time, but then it is the responsability
+        some histogram variable at integration time, but then it is the responsibility
         of the integrand to empty the histograms each iteration and accumulate them.
 
         """

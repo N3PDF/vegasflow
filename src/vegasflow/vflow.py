@@ -1,5 +1,5 @@
 """
-    This module contains the VegasFlow class and all its auxuliary functions
+    This module contains the VegasFlow class and all its auxiliary functions
 
     The main interfaces of this class are the class `VegasFlow` and the
     `vegas_wrapper`
@@ -421,7 +421,7 @@ class VegasFlow(MonteCarloFlow):
         res = tf.reduce_sum(tmp, axis=0)
         res2 = tf.reduce_sum(tmp2, axis=0)
 
-        # If this is a vectorial integrnad, make sure that only the main dimenison
+        # If this is a vectorial integrand, make sure that only the main dimension
         # is used for the grid training
         if self._vectorial:
             tmp2 = tmp2[:, self._main_dimension]

@@ -60,9 +60,9 @@ def generate_samples_in_hypercubes(rnds, n_strat, n_ev, hypercubes, divisions):
         `x` : random numbers collocated in hypercubes
         `w` : weight of each event
         `ind`: division index in which each (n_dim) set of random numbers fall
-        `segm` : segmentantion for later computations
+        `segm` : segmentation for later computations
     """
-    # Use the event-per-hypercube information to fix each random event to a hypercub
+    # Use the event-per-hypercube information to fix each random event to a hypercube
     indices = tf.repeat(tf.range(tf.shape(hypercubes, out_type=DTYPEINT)[0]), n_ev)
     points = float_me(tf.gather(hypercubes, indices))
     n_evs = float_me(tf.gather(n_ev, indices))
@@ -72,7 +72,7 @@ def generate_samples_in_hypercubes(rnds, n_strat, n_ev, hypercubes, divisions):
 
     ind_xn, x, weights = importance_sampling_digest(xn, divisions)
 
-    # Reweight taking into account the number of events per hypercub
+    # Reweighs taking into account the number of events per hypercube
     final_weights = weights / n_evs
 
     segm = indices
@@ -201,7 +201,7 @@ class VegasFlowPlus(VegasFlow):
 
         Returns
         -------
-            `res`: sum of the result of the integrand for all events per segement
+            `res`: sum of the result of the integrand for all events per segment
             `res2`: sum of the result squared of the integrand for all events per segment
             `arr_res2`: result of the integrand squared per dimension and grid bin
         """
