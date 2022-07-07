@@ -13,13 +13,13 @@ from vegasflow.utils import generate_condition_function
 def test_consume_array_into_indices():
     # Select the size
     size_in = np.random.randint(5, 100)
-    size_out = np.random.randint(1, size_in-3)
+    size_out = np.random.randint(1, size_in - 3)
     # Generate the input array and the indices
     input_array = np.random.rand(size_in)
     indices = np.random.randint(0, size_out, size=size_in)
     # Make them into TF
     tf_input = tf.constant(input_array)
-    tf_indx = tf.constant(indices.reshape(-1,1), dtype=DTYPEINT)
+    tf_indx = tf.constant(indices.reshape(-1, 1), dtype=DTYPEINT)
     result = consume_array_into_indices(tf_input, tf_indx, int_me(size_out))
     py_result = py_consume_array_into_indices(tf_input, tf_indx, size_out)
     np.testing.assert_array_equal(result, py_result)
@@ -31,21 +31,23 @@ def test_consume_array_into_indices():
         check_result[i] += val
     np.testing.assert_allclose(check_result, result)
 
+
 def util_check(np_mask, tf_mask, tf_ind):
     np.testing.assert_array_equal(np_mask, tf_mask)
     # Numpy returns things the other way around
     np_indices = np.array(np_mask.nonzero()).T
     np.testing.assert_array_equal(np_indices, tf_ind)
 
+
 def test_generate_condition_function():
-    """ Tests generate_condition_function and its errors """
-    masks = 4 # Always > 2
+    """Tests generate_condition_function and its errors"""
+    masks = 4  # Always > 2
     vals = 15
     np_masks = np.random.randint(2, size=(masks, vals), dtype=bool)
     tf_masks = [tf.constant(i, dtype=tf.bool) for i in np_masks]
     # Generate the functions for and and or
-    f_and = generate_condition_function(masks, 'and')
-    f_or = generate_condition_function(masks, 'or')
+    f_and = generate_condition_function(masks, "and")
+    f_or = generate_condition_function(masks, "or")
     # Get the numpy and tf results
     np_ands = np.all(np_masks, axis=0)
     np_ors = np.any(np_masks, axis=0)
@@ -55,16 +57,16 @@ def test_generate_condition_function():
     util_check(np_ands, tf_ands, idx_ands)
     util_check(np_ors, tf_ors, idx_ors)
     # Check a combination
-    f_comb = generate_condition_function(3, ['and', 'or'])
+    f_comb = generate_condition_function(3, ["and", "or"])
     np_comb = np_masks[0] & np_masks[1] | np_masks[2]
     tf_comb, idx_comb = f_comb(*tf_masks[:3])
     util_check(np_comb, tf_comb, idx_comb)
     # Check failures
     with pytest.raises(ValueError):
-        generate_condition_function(1, 'and')
+        generate_condition_function(1, "and")
     with pytest.raises(ValueError):
-        generate_condition_function(5, 'bad_condition')
+        generate_condition_function(5, "bad_condition")
     with pytest.raises(ValueError):
-        generate_condition_function(5, ['or', 'and'])
+        generate_condition_function(5, ["or", "and"])
     with pytest.raises(ValueError):
-        generate_condition_function(3, ['or', 'bad_condition'])
+        generate_condition_function(3, ["or", "bad_condition"])

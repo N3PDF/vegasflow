@@ -143,7 +143,7 @@ class VegasFlowPlus(VegasFlow):
     def make_differentiable(self):
         """Overrides make_differentiable to make sure the runner has a reference to n_ev"""
         runner = super().make_differentiable()
-        return partial(runner, n_ev = self.n_ev)
+        return partial(runner, n_ev=self.n_ev)
 
     def redistribute_samples(self, arr_var):
         """Receives an array with the variance of the integrand in each

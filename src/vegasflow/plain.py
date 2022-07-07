@@ -12,6 +12,8 @@ class PlainFlow(MonteCarloFlow):
     Simple Monte Carlo integrator.
     """
 
+    _CAN_RUN_VECTORIAL = True
+
     def _run_event(self, integrand, ncalls=None):
         if ncalls is None:
             n_events = self.n_events
@@ -20,12 +22,15 @@ class PlainFlow(MonteCarloFlow):
 
         # Generate all random number for this iteration
         rnds, _, xjac = self._generate_random_array(n_events)
+
         # Compute the integrand
         tmp = integrand(rnds, weight=xjac) * xjac
         tmp2 = tf.square(tmp)
-        # Accumulate the current result
-        res = tf.reduce_sum(tmp)
-        res2 = tf.reduce_sum(tmp2)
+
+        # Accommodate multidimensional output by ensuring that only the event axis is accumulated
+        res = tf.reduce_sum(tmp, axis=0)
+        res2 = tf.reduce_sum(tmp2, axis=0)
+
         return res, res2
 
     def _run_iteration(self):

@@ -2,10 +2,12 @@
     Tests the gradients of the different algorithms
 """
 
+import numpy as np
+from pytest import mark
+
 from vegasflow import float_me, run_eager
 from vegasflow import VegasFlow, VegasFlowPlus, PlainFlow
 import tensorflow as tf
-import numpy as np
 
 
 def generate_integrand(variable):
@@ -70,17 +72,12 @@ def wrapper_test(iclass, x_point=5.0, alpha=10, integrator_kwargs=None):
     np.testing.assert_allclose(grad_1 * alpha, grad_2, rtol=1e-2)
 
 
-def test_gradient_Vegasflow():
-    """ "Test one can compile and generate gradients with VegasFlow"""
-    wrapper_test(VegasFlow)
+@mark.parametrize("algorithm", [VegasFlowPlus, VegasFlow, PlainFlow])
+def test_gradient(algorithm):
+    """ "Test one can compile and generate gradients with the different algorithms"""
+    wrapper_test(algorithm)
 
 
-def test_gradient_VegasflowPlus():
+def test_gradient_VegasflowPlus_adaptive():
     """ "Test one can compile and generate gradients with VegasFlowPlus"""
-    wrapper_test(VegasFlowPlus)
     wrapper_test(VegasFlowPlus, integrator_kwargs={"adaptive": True})
-
-
-def test_gradient_PlainFlow():
-    """ "Test one can compile and generate gradients with PlainFlow"""
-    wrapper_test(PlainFlow)

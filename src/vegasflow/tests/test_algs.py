@@ -9,12 +9,12 @@ import json
 import tempfile
 import pytest
 import numpy as np
-import tensorflow as tf
-from vegasflow.configflow import DTYPE
+from vegasflow.configflow import DTYPE, run_eager
 from vegasflow.vflow import VegasFlow
 from vegasflow.plain import PlainFlow
 from vegasflow.vflowplus import VegasFlowPlus
 from vegasflow import plain_sampler, vegas_sampler
+import tensorflow as tf
 
 # Test setup
 dim = 2
@@ -34,24 +34,24 @@ def example_integrand(xarr, weight=None):
     return pref * tf.exp(-coef)
 
 
-def instance_and_compile(Integrator, mode=0):
+def instance_and_compile(Integrator, mode=0, integrand_function=example_integrand):
     """Wrapper for convenience"""
     if mode == 0:
-        integrand = example_integrand
+        integrand = integrand_function
     elif mode == 1:
 
         def integrand(xarr, n_dim=None):
-            return example_integrand(xarr)
+            return integrand_function(xarr)
 
     elif mode == 2:
 
         def integrand(xarr):
-            return example_integrand(xarr)
+            return integrand_function(xarr)
 
     elif mode == 3:
 
         def integrand(xarr, n_dim=None, weight=None):
-            return example_integrand(xarr, weight=None)
+            return integrand_function(xarr, weight=None)
 
     int_instance = Integrator(dim, ncalls)
     int_instance.compile(integrand)
@@ -61,19 +61,25 @@ def instance_and_compile(Integrator, mode=0):
 def check_is_one(result, sigmas=3):
     """Wrapper for convenience"""
     res = result[0]
-    err = result[1] * sigmas
+    err = np.mean(result[1] * sigmas)
     # Check that it passes by {sigmas} number of sigmas
     np.testing.assert_allclose(res, 1.0, atol=err)
 
 
-def test_VegasFlow():
-    """ Test VegasFlow class, importance sampling algorithm"""
-    for mode in range(4):
-        vegas_instance = instance_and_compile(VegasFlow, mode)
-        _ = vegas_instance.run_integration(n_iter)
-        vegas_instance.freeze_grid()
-        result = vegas_instance.run_integration(n_iter)
-        check_is_one(result)
+@pytest.mark.parametrize("mode", range(4))
+def test_VegasFlow(mode):
+    """Test VegasFlow class, importance sampling algorithm"""
+    vegas_instance = instance_and_compile(VegasFlow, mode)
+    _ = vegas_instance.run_integration(n_iter)
+    vegas_instance.freeze_grid()
+    result = vegas_instance.run_integration(n_iter)
+    check_is_one(result)
+
+
+def test_VegasFlow_grid_management():
+    vegas_instance = instance_and_compile(VegasFlow, 1)
+    _ = vegas_instance.run_integration(n_iter)
+    vegas_instance.freeze_grid()
 
     # Change the number of events
     vegas_instance.n_events = 2 * ncalls
@@ -92,7 +98,7 @@ def test_VegasFlow():
 
 
 def test_VegasFlow_save_grid():
-    """ Test the grid saving feature of vegasflow """
+    """Test the grid saving feature of vegasflow"""
     tmp_filename = tempfile.mktemp()
     vegas_instance = instance_and_compile(VegasFlow)
     # Run an iteration so the grid is not trivial
@@ -140,15 +146,18 @@ def test_VegasFlow_load_grid():
         vegas_instance.load_grid(file_name=tmp_filename)
 
 
-def test_PlainFlow():
-    # TODO: move the loop to hypothesis...
-    for mode in range(4):
-        plain_instance = instance_and_compile(PlainFlow, mode)
-        result = plain_instance.run_integration(n_iter)
-        check_is_one(result)
+@pytest.mark.parametrize("mode", range(4))
+def test_PlainFlow(mode):
+    plain_instance = instance_and_compile(PlainFlow, mode)
+    result = plain_instance.run_integration(n_iter)
+    check_is_one(result)
 
-    # Use the last instance to check that changing the number of events
-    # don't change the result
+
+def test_PlainFlow_change_nevents():
+    plain_instance = instance_and_compile(PlainFlow, 0)
+    result = plain_instance.run_integration(n_iter)
+    check_is_one(result)
+
     plain_instance.n_events = 2 * ncalls
     new_result = plain_instance.run_integration(n_iter)
     check_is_one(new_result)
@@ -177,15 +186,17 @@ def test_rng_generation(n_events=100):
     v = vegas_sampler(example_integrand, dim, n_events, training_steps=2)
     _ = helper_rng_tester(v, n_events)
 
-def test_VegasFlowPlus_ADAPTIVE_SAMPLING():
-    """ Test Vegasflow with Adaptive Sampling on (the default) """
-    for mode in range(4):
-        vflowplus_instance = instance_and_compile(VegasFlowPlus, mode)
-        result = vflowplus_instance.run_integration(n_iter)
-        check_is_one(result)
+
+@pytest.mark.parametrize("mode", range(4))
+def test_VegasFlowPlus_ADAPTIVE_SAMPLING(mode):
+    """Test Vegasflow with Adaptive Sampling on (the default)"""
+    vflowplus_instance = instance_and_compile(VegasFlowPlus, mode)
+    result = vflowplus_instance.run_integration(n_iter)
+    check_is_one(result)
+
 
 def test_VegasFlowPlus_NOT_ADAPTIVE_SAMPLING():
-    """ Test Vegasflow with Adaptive Sampling off (non-default) """
+    """Test Vegasflow with Adaptive Sampling off (non-default)"""
     vflowplus_instance = VegasFlowPlus(dim, ncalls, adaptive=False)
     vflowplus_instance.compile(example_integrand)
     result = vflowplus_instance.run_integration(n_iter)

@@ -5,6 +5,10 @@
 
     The example integrands are variations of the Genz functions definged in
     Novak et al, 1999 (J. of Comp and Applied Maths, 112 (1999) 215-228 and implemented from http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.123.8452&rep=rep1&type=pdf
+
+    Note, when possible the ``multidimensional_integral.py`` features should be utilized
+    as then the error computation is automatically taken into account by the algorithms
+    in VegasFlow instead of having to implement it by hand.
 """
 import vegasflow
 from vegasflow.configflow import DTYPE
