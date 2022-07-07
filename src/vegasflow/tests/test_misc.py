@@ -19,15 +19,18 @@ def _wrong_integrand(xarr):
     """Integrand with the wrong output shape"""
     return tf.reduce_sum(xarr)
 
+
 def _simple_integrand(xarr):
     """Integrand f(x) = x"""
     return tf.reduce_prod(xarr, axis=1)
 
+
 def _simple_integral(xmin, xmax):
     """Integated version of simple_ingrand"""
-    xm = np.array(xmin)**2/2.0
-    xp = np.array(xmax)**2/2.0
-    return np.prod(xp-xm)
+    xm = np.array(xmin) ** 2 / 2.0
+    xp = np.array(xmax) ** 2 / 2.0
+    return np.prod(xp - xm)
+
 
 def _wrong_vector_integrand(xarr):
     """Vector integrand with the wrong output shape"""
@@ -66,16 +69,28 @@ def test_wrong_shape(wrong_fun):
 
 
 @pytest.mark.parametrize("alg", [PlainFlow, VegasFlow, VegasFlowPlus])
-def test_integration_limits(alg, dims=3, ncalls=int(1e4)):
+def test_integration_limits(alg, ncalls=int(1e4)):
     """Test an integration where the integration limits are modified"""
-    xmin = -1.0 + np.random.rand(dims)*2.0
+    dims = np.random.randint(1, 5)
+    xmin = -1.0 + np.random.rand(dims) * 2.0
     xmax = 3.0 + np.random.rand(dims)
     inst = alg(dims, ncalls, xmin=xmin, xmax=xmax)
     inst.compile(_simple_integrand)
-    result =  inst.run_integration(5)
+    result = inst.run_integration(5)
     expected_result = _simple_integral(xmin, xmax)
     check_is_one(result, target_result=expected_result)
 
 
 def test_integration_limits_checks():
     """Test that the errors for wrong limits actually work"""
+    # use hypothesis to check other corner cases
+    with pytest.raises(ValueError):
+        PlainFlow(1, 10, xmin=[10], xmax=[1])
+    with pytest.raises(ValueError):
+        PlainFlow(1, 10, xmin=[10])
+    with pytest.raises(ValueError):
+        PlainFlow(1, 10, xmax=[10])
+    with pytest.raises(ValueError):
+        PlainFlow(2, 10, xmin=[0], xmax=[1])
+    with pytest.raises(ValueError):
+        PlainFlow(2, 10, xmin=[0, 1], xmax=[1])

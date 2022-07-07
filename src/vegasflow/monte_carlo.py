@@ -266,10 +266,10 @@ class MonteCarloFlow(ABC):
         # Now allow for the algorithm to produce the random numbers for the integration
         rnds, wgts_raw, *extra = self._digest_random_generation(rnds_raw, *args)
 
-        wgts = wgts_raw*self.xjac
+        wgts = wgts_raw * self.xjac
         if self._xdelta is not None:
             # Now apply integration limits
-            rnds = self._xmin + rnds*self._xdelta
+            rnds = self._xmin + rnds * self._xdelta
             wgts *= self._xdeltajac
         return rnds, wgts, *extra
 
