@@ -195,7 +195,15 @@ Changing the integration limits
 By default ``VegasFlow`` provides random number only in the 0 to 1 range (and so all integrals are expected to be integrals from 0 to 1).
 But it is possible to choose any other ranges by passing to the initializer of the algorithm the ``xmin`` and ``xman`` variables.
 
-Note that if any limit is to be changed all ``xmin`` and ``xmax`` must be provided.
+Note that if any limit is to be changed all ``xmin`` and ``xmax`` must be provided:
+
+.. code-block:: python
+
+    from vegasflow import VegasFlow
+
+    dimensions = 2
+    vegas_instance = VegasFlow(dimensions, n_calls, xmin=[0, -4], xmax=[1, 10])
+
 
 Seeding the random number generator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
