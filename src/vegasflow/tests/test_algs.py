@@ -166,21 +166,38 @@ def test_PlainFlow_change_nevents():
 def helper_rng_tester(sampling_function, n_events):
     """Ensure the random number generated have the correct shape
     Return the random numbers and the jacobian"""
-    rnds, _, px = sampling_function(n_events)
+    rnds, px = sampling_function(n_events)
     np.testing.assert_equal(rnds.shape, (n_events, dim))
     return rnds, px
 
 
-def test_rng_generation(n_events=100):
-    """Test that the random generation genrates the correct type of arrays"""
+def test_rng_generation_plain(n_events=100):
+    """Test the random number generation with plainflow"""
     plain_sampler_instance = instance_and_compile(PlainFlow)
     _, px = helper_rng_tester(plain_sampler_instance.generate_random_array, n_events)
     np.testing.assert_equal(px.numpy(), 1.0 / n_events)
+
+
+def test_rng_generation_vegasflow(n_events=100):
+    """Test the random number generation with vegasflow"""
     vegas_sampler_instance = instance_and_compile(VegasFlow)
+    # Train a bit the grid
     vegas_sampler_instance.run_integration(2)
     _, px = helper_rng_tester(vegas_sampler_instance.generate_random_array, n_events)
     np.testing.assert_equal(px.shape, (n_events,))
-    # Test the wrappers
+
+
+def test_rng_generation_vegasflowplus(n_events=100):
+    """Test the random number generation with vegasflow"""
+    vegas_sampler_instance = instance_and_compile(VegasFlowPlus)
+    # Train a bit the grid
+    #     vegas_sampler_instance.run_integration(2)
+    _, px = helper_rng_tester(vegas_sampler_instance.generate_random_array, n_events)
+    np.testing.assert_equal(px.shape, (n_events,))
+
+
+def test_rng_generation_wrappers(n_events=100):
+    """Test the wrappers for the samplers"""
     p = plain_sampler(example_integrand, dim, n_events, training_steps=2, return_class=True)
     _ = helper_rng_tester(p.generate_random_array, n_events)
     v = vegas_sampler(example_integrand, dim, n_events, training_steps=2)

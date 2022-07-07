@@ -189,6 +189,14 @@ The full list of integration algorithms and wrappers can be consulted at: :ref:`
 Tips and Tricks
 ===============
 
+Changing the integration limits
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default ``VegasFlow`` provides random number only in the 0 to 1 range (and so all integrals are expected to be integrals from 0 to 1).
+But it is possible to choose any other ranges by passing to the initializer of the algorithm the ``xmin`` and ``xman`` variables.
+
+Note that if any limit is to be changed all ``xmin`` and ``xmax`` must be provided.
+
 Seeding the random number generator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

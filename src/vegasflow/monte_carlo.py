@@ -114,6 +114,8 @@ class MonteCarloFlow(ABC):
         events_limit=MAX_EVENTS_LIMIT,
         list_devices=DEFAULT_ACTIVE_DEVICES,  # pylint: disable=dangerous-default-value
         verbose=True,
+        xmin=None,
+        xmax=None,
         **kwargs,
     ):
         if "simplify_signature" in kwargs:
@@ -150,6 +152,20 @@ class MonteCarloFlow(ABC):
             self.pool = joblib.Parallel(n_jobs=len(devices), prefer="threads")
         else:
             self.devices = None
+
+        if xmin is not None or xmax is not None:
+            # If the ranges are provided, check that they are correct
+            if xmin is None or xmax is None:
+                raise ValueError(
+                    "Both xmin and xmax must be provided if the integration limits are to change"
+                )
+            if not (len(xmin) == len(xmax) == n_dim):
+                raise ValueError("The integration limits must be given for all dimensions")
+            self._xmin = np.array(xmin)
+            self._xmax = np.array(xmax)
+        else:
+            self._xmin = 0.0
+            self._xmax = 1.0
 
     # Note:
     # The number of events to run in a single iteration is `n_events`
@@ -203,7 +219,7 @@ class MonteCarloFlow(ABC):
         """The default jacobian is 1 / total number of events"""
         return float_me([1.0 / self.n_events])
 
-    def generate_random_array(self, n_events):
+    def generate_random_array(self, n_events, *args):
         """External interface for the generation of random
         points as a 2D array of (n_events, n_dim).
         It calls the internal version of ``_generate_random_array``
@@ -216,16 +232,14 @@ class MonteCarloFlow(ABC):
         Returns
         -------
             `rnds`: array of (n_events, n_dim) random points
-            `idx` : index associated to each random point
             `p(x)` : p(x) associated to the random points
         """
-        rnds, idx, xjac_raw = self._generate_random_array(n_events)
-        # returns a p(x) corresponding to the number of events
-        # the algorithm was trained with, reweight
-        xjac = xjac_raw / self.xjac / n_events
-        return rnds, idx, xjac
+        rnds, xjac_raw, *extra = self._generate_random_array(n_events, *args)
+        # Since the n_events of this method might not be the "evaluation" value, reweight
+        xjac = xjac_raw / (self.xjac * n_events)
+        return rnds, xjac
 
-    def _generate_random_array(self, n_events):
+    def _generate_random_array(self, n_events, *args):
         """Generate a 2D array of (n_events, n_dim) points
         For the weight of the given point, this function is considered
         as part of an integration with ``self.n_events`` calls.
@@ -240,11 +254,12 @@ class MonteCarloFlow(ABC):
             `idx` : index associated to each random point
             `wgt` : wgt associated to the random point
         """
-        rnds = tf.random.uniform(
+        rnds_raw = tf.random.uniform(
             (n_events, self.n_dim), minval=TECH_CUT, maxval=1.0 - TECH_CUT, dtype=DTYPE
         )
-        idx = 0
-        return rnds, idx, self.xjac
+        # Now allow for the algorithm to produce the random numbers for the integration
+        rnds, wgt, *extra = self._digest_random_generation(rnds_raw, *args)
+        return rnds, wgt * self.xjac, *extra
 
     #### Abstract methods
     @abstractmethod
@@ -258,6 +273,22 @@ class MonteCarloFlow(ABC):
         the output must be a tuple"""
         result = self.event()
         return result, pow(result, 2)
+
+    def _digest_random_generation(self, xrand, *args):
+        """All implemented algorithms will take a vector of uniform noise (n_events, n_dim)
+        and make it into a vector of random numbers (n_events, n_dim) with an associated weight.
+
+        It must return at least a tensor (n_events, n_dim) of random numbers
+        and of weights (n_events,) and can return any extra parameters
+        which will pass untouched by _generate_random_array
+        """
+        return xrand, 1.0  # , any extra param
+
+    def _apply_integration_limits(self, rand):
+        """Apply the integration limits (if any)
+        Receives a tensor of random numbers (n_events, n_dim) and returns
+        a transformed array (n_events, n_dim) and the associated jacobian (n_events,)
+        """
 
     def _can_run_vectorial(self, expected_shape=None):
         """Accepting vectorial integrands depends on the algorithm,

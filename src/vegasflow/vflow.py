@@ -103,10 +103,10 @@ def _generate_random_array(rnds, divisions):
     -------
         x: array (None, n_dim)
             Vegas random output
-        div_index: array (None, n_dim)
-            division index in which each (n_dim) set of random numbers fall
         w: array (None,)
             Weight of each set of (n_dim) random numbers
+        div_index: array (None, n_dim)
+            division index in which each (n_dim) set of random numbers fall
     """
     # Get the boundaries of the random numbers
     #     reg_i = fzero
@@ -121,7 +121,7 @@ def _generate_random_array(rnds, divisions):
     # Compute the random number between the limits
     # commented, for now only from 0 to 1
     #     x = reg_i + rand_x * (reg_f - reg_i)
-    return x, ind_xn, weights
+    return x, weights, ind_xn
 
 
 @tf.function(
@@ -362,12 +362,11 @@ class VegasFlow(MonteCarloFlow):
             new_divisions = refine_grid_per_dimension(arr_res2[j, :], self.divisions[j, :])
             self.divisions[j, :].assign(new_divisions)
 
-    def _generate_random_array(self, n_events):
-        """Uses the internal array to generate ``n_events`` random numbers"""
-        rnds, _, xjac = super()._generate_random_array(n_events)
-        # Pass them through the Vegas digestion
-        x, ind, w = _generate_random_array(rnds, self.divisions)
-        return x, ind, w * xjac
+    def _digest_random_generation(self, rnds):
+        """Generates ``n_events`` random numbers sampled in the
+        adapted Vegas Grid"""
+        x, w, ind = _generate_random_array(rnds, self.divisions)
+        return x, w, ind
 
     def _importance_sampling_array_filling(self, results2, indices):
         """Receives an array of results squared for every event
@@ -408,7 +407,7 @@ class VegasFlow(MonteCarloFlow):
             n_events = ncalls
 
         # Generate all random number for this iteration
-        x, ind, xjac = self._generate_random_array(n_events)
+        x, xjac, ind = self._generate_random_array(n_events)
 
         # Now compute the integrand
         int_result = integrand(x, weight=xjac)
