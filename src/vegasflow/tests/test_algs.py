@@ -58,12 +58,12 @@ def instance_and_compile(Integrator, mode=0, integrand_function=example_integran
     return int_instance
 
 
-def check_is_one(result, sigmas=3):
+def check_is_one(result, sigmas=3, target_result=1.0):
     """Wrapper for convenience"""
     res = result[0]
     err = np.mean(result[1] * sigmas)
     # Check that it passes by {sigmas} number of sigmas
-    np.testing.assert_allclose(res, 1.0, atol=err)
+    np.testing.assert_allclose(res, target_result, atol=err)
 
 
 @pytest.mark.parametrize("mode", range(4))

@@ -49,6 +49,8 @@ from vegasflow.configflow import (
     TECH_CUT,
     float_me,
     int_me,
+    fone,
+    fzero,
 )
 
 
@@ -161,11 +163,15 @@ class MonteCarloFlow(ABC):
                 )
             if not (len(xmin) == len(xmax) == n_dim):
                 raise ValueError("The integration limits must be given for all dimensions")
-            self._xmin = np.array(xmin)
-            self._xmax = np.array(xmax)
+            self._xmin = float_me(xmin)
+            self._xdelta = float_me(xmax) - float_me(xmin)
+            if any(self._xdelta < 0.0):
+                raise ValueError(f"No xmin ({xmin}) can be bigger than xmax ({xmax})")
+            self._xdeltajac = tf.reduce_prod(self._xdelta)
         else:
-            self._xmin = 0.0
-            self._xmax = 1.0
+            self._xmin = None
+            self._xdelta = None
+            self._xdeltajac = None
 
     # Note:
     # The number of events to run in a single iteration is `n_events`
@@ -258,8 +264,14 @@ class MonteCarloFlow(ABC):
             (n_events, self.n_dim), minval=TECH_CUT, maxval=1.0 - TECH_CUT, dtype=DTYPE
         )
         # Now allow for the algorithm to produce the random numbers for the integration
-        rnds, wgt, *extra = self._digest_random_generation(rnds_raw, *args)
-        return rnds, wgt * self.xjac, *extra
+        rnds, wgts_raw, *extra = self._digest_random_generation(rnds_raw, *args)
+
+        wgts = wgts_raw*self.xjac
+        if self._xdelta is not None:
+            # Now apply integration limits
+            rnds = self._xmin + rnds*self._xdelta
+            wgts *= self._xdeltajac
+        return rnds, wgts, *extra
 
     #### Abstract methods
     @abstractmethod
