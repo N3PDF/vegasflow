@@ -121,6 +121,7 @@ class MonteCarloFlow(ABC):
         # Save some parameters
         self.n_dim = n_dim
         self._integrand = None
+        self._tf_integrand = None
         self.event = None
         self._verbose = verbose
         self._history = []
@@ -434,16 +435,11 @@ class MonteCarloFlow(ABC):
         return _accumulate(accumulators)
 
     def trace(self, n_events=50):
-        """Run a mock integration with just 50 events to trigger compilation"""
-        true_events = self.n_events
-        true_verbosity = self._verbose
-        # Change the integration options
-        self.n_events = n_events
-        self._verbose = False
-        self.run_integration(1, log_time=False)
-        # Recover the actual values
-        self.n_events = true_events
-        self._verbose = true_verbosity
+        """Trace part of the integration (only integrand and random number generator).
+        Note that this is not able to trace post-integration steps as the base class is blind to them
+        """
+        rnds, _, wgt = self._generate_random_array(n_events)
+        self._tf_integrand(rnds, weight=wgt)
 
     def compile(self, integrand, compilable=True, signature=None, trace=False, check=True):
         """Receives an integrand, prepares it for integration
@@ -557,11 +553,14 @@ class MonteCarloFlow(ABC):
         else:
             self.event = batch_events
 
-        if trace:
-            self.trace()
-
+        event_size = 23
+        self._tf_integrand = new_integrand
         if check:
-            event_size = 23
+            if not trace:
+                # Tell the user a retrace is happening
+                logger.info(
+                    "Checking whether the integrand outputs the correct shape (note, this will run a very small number of events and potentially trigger a retrace)"
+                )
             test_array = tf.random.uniform((event_size, self.n_dim), dtype=DTYPE)
             wgt = tf.random.uniform((event_size,), dtype=DTYPE)
             res_tmp = new_integrand(test_array, weight=wgt).numpy()
@@ -586,6 +585,9 @@ if you believe this to be a bug please open an issue in https://github.com/N3PDF
                 raise ValueError(
                     f"The integrand is not returning a value per event, expected shape: {expected_shape}, found: {res_shape}"
                 )
+
+        if trace:
+            self.trace(n_events=event_size)
 
     def _recompile(self):
         """Forces recompilation with the same arguments that have
