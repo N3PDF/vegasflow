@@ -21,7 +21,7 @@ class PlainFlow(MonteCarloFlow):
             n_events = ncalls
 
         # Generate all random number for this iteration
-        rnds, _, xjac = self._generate_random_array(n_events)
+        rnds, xjac = self._generate_random_array(n_events)
 
         # Compute the integrand
         tmp = integrand(rnds, weight=xjac) * xjac

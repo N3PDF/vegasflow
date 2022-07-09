@@ -49,6 +49,8 @@ from vegasflow.configflow import (
     TECH_CUT,
     float_me,
     int_me,
+    fone,
+    fzero,
 )
 
 
@@ -114,6 +116,8 @@ class MonteCarloFlow(ABC):
         events_limit=MAX_EVENTS_LIMIT,
         list_devices=DEFAULT_ACTIVE_DEVICES,  # pylint: disable=dangerous-default-value
         verbose=True,
+        xmin=None,
+        xmax=None,
         **kwargs,
     ):
         if "simplify_signature" in kwargs:
@@ -150,6 +154,24 @@ class MonteCarloFlow(ABC):
             self.pool = joblib.Parallel(n_jobs=len(devices), prefer="threads")
         else:
             self.devices = None
+
+        if xmin is not None or xmax is not None:
+            # If the ranges are provided, check that they are correct
+            if xmin is None or xmax is None:
+                raise ValueError(
+                    "Both xmin and xmax must be provided if the integration limits are to change"
+                )
+            if not (len(xmin) == len(xmax) == n_dim):
+                raise ValueError("The integration limits must be given for all dimensions")
+            self._xmin = float_me(xmin)
+            self._xdelta = float_me(xmax) - float_me(xmin)
+            if any(self._xdelta < 0.0):
+                raise ValueError(f"No xmin ({xmin}) can be bigger than xmax ({xmax})")
+            self._xdeltajac = tf.reduce_prod(self._xdelta)
+        else:
+            self._xmin = None
+            self._xdelta = None
+            self._xdeltajac = None
 
     # Note:
     # The number of events to run in a single iteration is `n_events`
@@ -203,7 +225,7 @@ class MonteCarloFlow(ABC):
         """The default jacobian is 1 / total number of events"""
         return float_me([1.0 / self.n_events])
 
-    def generate_random_array(self, n_events):
+    def generate_random_array(self, n_events, *args):
         """External interface for the generation of random
         points as a 2D array of (n_events, n_dim).
         It calls the internal version of ``_generate_random_array``
@@ -216,16 +238,14 @@ class MonteCarloFlow(ABC):
         Returns
         -------
             `rnds`: array of (n_events, n_dim) random points
-            `idx` : index associated to each random point
             `p(x)` : p(x) associated to the random points
         """
-        rnds, idx, xjac_raw = self._generate_random_array(n_events)
-        # returns a p(x) corresponding to the number of events
-        # the algorithm was trained with, reweight
-        xjac = xjac_raw / self.xjac / n_events
-        return rnds, idx, xjac
+        rnds, xjac_raw, *extra = self._generate_random_array(n_events, *args)
+        # Since the n_events of this method might not be the "evaluation" value, reweight
+        xjac = xjac_raw / (self.xjac * n_events)
+        return rnds, xjac
 
-    def _generate_random_array(self, n_events):
+    def _generate_random_array(self, n_events, *args):
         """Generate a 2D array of (n_events, n_dim) points
         For the weight of the given point, this function is considered
         as part of an integration with ``self.n_events`` calls.
@@ -240,11 +260,18 @@ class MonteCarloFlow(ABC):
             `idx` : index associated to each random point
             `wgt` : wgt associated to the random point
         """
-        rnds = tf.random.uniform(
+        rnds_raw = tf.random.uniform(
             (n_events, self.n_dim), minval=TECH_CUT, maxval=1.0 - TECH_CUT, dtype=DTYPE
         )
-        idx = 0
-        return rnds, idx, self.xjac
+        # Now allow for the algorithm to produce the random numbers for the integration
+        rnds, wgts_raw, *extra = self._digest_random_generation(rnds_raw, *args)
+
+        wgts = wgts_raw * self.xjac
+        if self._xdelta is not None:
+            # Now apply integration limits
+            rnds = self._xmin + rnds * self._xdelta
+            wgts *= self._xdeltajac
+        return rnds, wgts, *extra
 
     #### Abstract methods
     @abstractmethod
@@ -259,6 +286,22 @@ class MonteCarloFlow(ABC):
         result = self.event()
         return result, pow(result, 2)
 
+    def _digest_random_generation(self, xrand, *args):
+        """All implemented algorithms will take a vector of uniform noise (n_events, n_dim)
+        and make it into a vector of random numbers (n_events, n_dim) with an associated weight.
+
+        It must return at least a tensor (n_events, n_dim) of random numbers
+        and of weights (n_events,) and can return any extra parameters
+        which will pass untouched by _generate_random_array
+        """
+        return xrand, 1.0  # , any extra param
+
+    def _apply_integration_limits(self, rand):
+        """Apply the integration limits (if any)
+        Receives a tensor of random numbers (n_events, n_dim) and returns
+        a transformed array (n_events, n_dim) and the associated jacobian (n_events,)
+        """
+
     def _can_run_vectorial(self, expected_shape=None):
         """Accepting vectorial integrands depends on the algorithm,
         if an algorithm can run on vectorial algorithms it should implement this method and return True"""
@@ -266,7 +309,7 @@ class MonteCarloFlow(ABC):
 
     #### Integration management
     def set_seed(self, seed):
-        """Sets the interation seed"""
+        """Sets the random seed"""
         tf.random.set_seed(seed)
 
     #### Device management methods
@@ -345,7 +388,7 @@ class MonteCarloFlow(ABC):
         """Modifies the attributes of the integration so that it can be compiled inside
         Tensorflow functions (and, therefore, gradients calculated)
         Returns a reference to `run_event`, a method that upon calling it with no arguments
-        will produce results and uncertainties for an intergation iteration of ncalls number of events
+        will produce results and uncertainties for an integration iteration of ncalls number of events
         """
         if self.distribute:
             raise ValueError("Differentiation is not compatible with distribution")
@@ -623,7 +666,7 @@ if you believe this to be a bug please open an issue in https://github.com/N3PDF
                 monte carlo error
 
         Note: it is possible not to pass any histogram variable and still fill
-        some histogram variable at integration time, but then it is the responsability
+        some histogram variable at integration time, but then it is the responsibility
         of the integrand to empty the histograms each iteration and accumulate them.
 
         """

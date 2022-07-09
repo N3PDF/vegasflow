@@ -60,9 +60,9 @@ def generate_samples_in_hypercubes(rnds, n_strat, n_ev, hypercubes, divisions):
         `x` : random numbers collocated in hypercubes
         `w` : weight of each event
         `ind`: division index in which each (n_dim) set of random numbers fall
-        `segm` : segmentantion for later computations
+        `segm` : segmentation for later computations
     """
-    # Use the event-per-hypercube information to fix each random event to a hypercub
+    # Use the event-per-hypercube information to fix each random event to a hypercube
     indices = tf.repeat(tf.range(tf.shape(hypercubes, out_type=DTYPEINT)[0]), n_ev)
     points = float_me(tf.gather(hypercubes, indices))
     n_evs = float_me(tf.gather(n_ev, indices))
@@ -72,11 +72,11 @@ def generate_samples_in_hypercubes(rnds, n_strat, n_ev, hypercubes, divisions):
 
     ind_xn, x, weights = importance_sampling_digest(xn, divisions)
 
-    # Reweight taking into account the number of events per hypercub
+    # Reweighs taking into account the number of events per hypercube
     final_weights = weights / n_evs
 
     segm = indices
-    return x, ind_xn, final_weights, segm
+    return x, final_weights, ind_xn, segm
 
 
 class VegasFlowPlus(VegasFlow):
@@ -135,10 +135,14 @@ class VegasFlowPlus(VegasFlow):
         self.n_ev = tf.fill([1, len(hypercubes)], self.min_neval_hcube)
         self.n_ev = int_me(tf.reshape(self.n_ev, [-1]))
         self._n_events = int(tf.reduce_sum(self.n_ev))
-        self.my_xjac = float_me(1 / len(hypercubes))
+        self._modified_jac = float_me(1 / len(hypercubes))
 
         if self._adaptive:
             logger.warning("Variable number of events requires function signatures all across")
+
+    @property
+    def xjac(self):
+        return self._modified_jac
 
     def make_differentiable(self):
         """Overrides make_differentiable to make sure the runner has a reference to n_ev"""
@@ -157,24 +161,31 @@ class VegasFlowPlus(VegasFlow):
         self.n_ev = int_me(new_n_ev)
         self.n_events = int(tf.reduce_sum(self.n_ev))
 
-    def _generate_random_array(self, n_events):
-        """Interface compatible with other algorithms dropping the segmentation in hypercubes"""
-        x, ind, w, _ = self._generate_random_array_plus(n_events, self.n_ev)
-        return x, ind, w
-
-    def _generate_random_array_plus(self, n_events, n_ev):
+    def _digest_random_generation(self, rnds, n_ev):
         """Generate a random array for a given number of events divided in hypercubes"""
-        # Needs to skip parent and go directly to the random array generation of MonteCarloFlow
-        rnds, _, _ = MonteCarloFlow._generate_random_array(self, n_events)
         # Get random numbers from hypercubes
-        x, ind, w, segm = generate_samples_in_hypercubes(
+        x, w, ind, segm = generate_samples_in_hypercubes(
             rnds,
             self._n_strat,
             n_ev,
             self._hypercubes,
             self.divisions,
         )
-        return x, ind, w * self.my_xjac, segm
+        return x, w, ind, segm
+
+    def generate_random_array(self, n_events, *args):
+        """Override the behaviour of ``generate_random_array``
+        to accomodate for the peculiarities of VegasFlowPlus
+        """
+        rnds = []
+        wgts = []
+        for _ in range(n_events // self.n_events + 1):
+            r, w = super().generate_random_array(self.n_events, self.n_ev)
+            rnds.append(r)
+            wgts.append(w)
+        final_r = tf.concat(rnds, axis=0)[:n_events]
+        final_w = tf.concat(wgts, axis=0)[:n_events] * self.n_events / n_events
+        return final_r, final_w
 
     def _run_event(self, integrand, ncalls=None, n_ev=None):
         """Run one step of VegasFlowPlus
@@ -190,12 +201,12 @@ class VegasFlowPlus(VegasFlow):
 
         Returns
         -------
-            `res`: sum of the result of the integrand for all events per segement
+            `res`: sum of the result of the integrand for all events per segment
             `res2`: sum of the result squared of the integrand for all events per segment
             `arr_res2`: result of the integrand squared per dimension and grid bin
         """
         # NOTE: needs to receive both ncalls and n_ev
-        x, ind, xjac, segm = self._generate_random_array_plus(ncalls, n_ev)
+        x, xjac, ind, segm = self._generate_random_array(ncalls, n_ev)
 
         # compute integrand
         tmp = xjac * integrand(x, weight=xjac)
