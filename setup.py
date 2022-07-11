@@ -61,7 +61,7 @@ setup(name='vegasflow',
             'tensorflow>2.2', # dask needs a more-pickable tensorflow
             ],
           },
-      python_requires='>=3.6',
+      python_requires='>=3.9',
       long_description=long_description,
       long_description_content_type="text/markdown",
 )
