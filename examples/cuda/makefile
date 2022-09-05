@@ -4,9 +4,9 @@ TF_CFLAGS=`python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_c
 TF_LFLAGS=`python -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))' 2>/dev/null`
 
 CXX=g++
-CXFLAGS=-std=c++11 -shared -fPIC -O2
+CXFLAGS=-std=c++17 -shared -fPIC -O2
 KERNEL_DEF=-D KERNEL_CUDA=1
-NCCFLAGS=-std=c++11 $(KERNEL_DEF) -x cu -Xcompiler -fPIC --disable-warnings
+NCCFLAGS=-std=c++17 $(KERNEL_DEF) -x cu -Xcompiler -fPIC --disable-warnings
 
 # Check whether there's nvcc
 ifeq (,$(shell which nvcc 2>/dev/null))
