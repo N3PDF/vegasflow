@@ -4,6 +4,7 @@ import random as rn
 from multiprocessing.pool import ThreadPool as Pool
 from functools import partial
 from vegasflow.configflow import DTYPE, MAX_EVENTS_LIMIT, run_eager
+
 run_eager(True)
 from pdfflow.pflow import mkPDF
 import pineappl
@@ -15,23 +16,21 @@ import tensorflow as tf
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--ncalls', default=np.int64(10000000),
-                    type=np.int64, help='Number of calls.')
-parser.add_argument('--pineappl', action="store_true",
-                    help='Enable pineappl fill grid.')
-args = vars(parser.parse_args())
+parser.add_argument('--ncalls', default=np.int64(10000000), type=np.int64, help='Number of calls.')
+parser.add_argument('--pineappl', action="store_true", help='Enable pineappl fill grid.')
+args = parser.parse_args()
 
 
 # Seed everything seedable
 seed = 7
 np.random.seed(seed)
-rn.seed(seed+1)
-tf.random.set_seed(seed+2)
+rn.seed(seed + 1)
+tf.random.set_seed(seed + 2)
 
 
 # configuration
 dim = 3
-ncalls = args['ncalls']
+ncalls = args.ncalls
 n_iter = 3
 events_limit = MAX_EVENTS_LIMIT
 
@@ -106,8 +105,10 @@ def fill_grid(xarr, weight=1, **kwargs):
     x1 = tf.boolean_mask(x1, full_mask, axis=0)
     x2 = tf.boolean_mask(x2, full_mask, axis=0)
     yll = tf.boolean_mask(yll, full_mask, axis=0)
-    vweight = wgt  * tf.boolean_mask(weight, full_mask, axis=0)
+    vweight = wgt * tf.boolean_mask(weight, full_mask, axis=0)
 
+    # This is a very convoluted way of doing an operation on the data during a computation
+    # another solution is to send the pool with `py_function` like in the `multiple_integrals.py` example
     if kwargs.get('fill_pineappl'):
         q2 = 90.0 * 90.0 * tf.ones(weight.shape, dtype=tf.float64)
         kwargs.get('pool').apply_async(fill, [kwargs.get('grid'), x1.numpy(), x2.numpy(),
@@ -122,28 +123,27 @@ if __name__ == "__main__":
     grid = None
     pool = Pool(processes=1)
 
-    if args['pineappl']:
-        lumi = pineappl.lumi()
-        pdg_ids = [22, 22]
-        ckm_factors = [1.0]
-        lumi.add(pdg_ids, ckm_factors)
-
-        # only LO $\alpha_\mathrm{s}^0 \alpha^2 \log^0(\xi_\mathrm{R}) \log^0(\xi_\mathrm{F})$
-        orders = [0, 2, 0, 0]
+    if args.pineappl:
+        lumi = [(22, 22, 1.0)]
+        pine_lumi = [pineappl.lumi.LumiEntry(lumi)]
+        pine_orders = [pineappl.grid.Order(0, 2, 0, 0)]
+        pine_params = pineappl.subgrid.SubgridParams()
         bins = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2,
                 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4]
-        grid = pineappl.grid(lumi, orders, bins)
+        # Initialize the grid
+        # only LO $\alpha_\mathrm{s}^0 \alpha^2 \log^0(\xi_\mathrm{R}) \log^0(\xi_\mathrm{F})$
+        grid = pineappl.grid.Grid.create(pine_lumi, pine_orders, bins, pine_params)
+    else:
+        print("pineappl not active, use --pineappl")
 
     # fill the grid with phase-space points
     print('Generating events, please wait...')
 
     print(f"VEGAS MC, ncalls={ncalls}:")
     mc_instance = VegasFlow(dim, ncalls, events_limit=events_limit)
-    mc_instance.compile(
-        partial(fill_grid, fill_pineappl=False, grid=grid, pool=pool))
+    mc_instance.compile(partial(fill_grid, fill_pineappl=False, grid=grid, pool=pool))
     mc_instance.run_integration(n_iter)
-    mc_instance.compile(
-        partial(fill_grid, fill_pineappl=args['pineappl'], grid=grid, pool=pool))
+    mc_instance.compile(partial(fill_grid, fill_pineappl=args.pineappl, grid=grid, pool=pool))
     mc_instance.freeze_grid()
     mc_instance.run_integration(1)
     end = time.time()
@@ -155,7 +155,7 @@ if __name__ == "__main__":
     end = time.time()
     print(f"Pool took: time (s): {end-start}")
 
-    if args['pineappl']:
+    if args.pineappl:
         # write the grid to disk
         filename = 'DY-LO-AA.pineappl'
         print(f'Writing PineAPPL grid to disk: {filename}')
@@ -172,7 +172,7 @@ if __name__ == "__main__":
             return pdf.py_alphasQ2([q2])
 
         # perform convolution
-        dxsec = grid.convolute(xfx, xfx, alphas, None, None, 1.0, 1.0)
+        dxsec = grid.convolute_with_one(2212, xfx, alphas)
         for i in range(len(dxsec)):
             print(f'{bins[i]:.1f} {bins[i + 1]:.1f} {dxsec[i]:.3e}')
 
