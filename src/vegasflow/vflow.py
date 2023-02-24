@@ -124,6 +124,32 @@ def _generate_random_array(rnds, divisions):
     return x, weights, ind_xn
 
 
+###### Auxiliary functions for the while loop
+@tf.function
+def while_check(bin_weight, *args):
+    """Checks whether the bin has enough weight
+    to beat the average"""
+    return bin_weight < ave_t
+
+@tf.function(
+    input_signature=[
+        tf.TensorSpec(shape=[], dtype=DTYPE),
+        tf.TensorSpec(shape=[], dtype=DTYPEINT),
+        tf.TensorSpec(shape=[], dtype=DTYPE),
+        tf.TensorSpec(shape=[], dtype=DTYPE),
+    ]
+)
+def while_body(bin_weight, n_bin, cur, prev):
+    """Fills the bin weight until it surpassed the avg
+    once it's done, returns the limits of the last bin"""
+    n_bin += 1
+    bin_weight += wei_t[n_bin]
+    prev = cur
+    cur = subdivisions[n_bin + 1]
+    return bin_weight, n_bin, cur, prev
+
+##########################
+
 @tf.function(
     input_signature=[
         tf.TensorSpec(shape=[BINS_MAX], dtype=DTYPE),
@@ -163,31 +189,6 @@ def refine_grid_per_dimension(t_res_sq, subdivisions):
     wei_t = tf.pow(aux_t, ALPHA)
     ave_t = tf.reduce_sum(wei_t) / BINS_MAX
 
-    ###### Auxiliary functions for the while loop
-    @tf.function
-    def while_check(bin_weight, *args):
-        """Checks whether the bin has enough weight
-        to beat the average"""
-        return bin_weight < ave_t
-
-    @tf.function(
-        input_signature=[
-            tf.TensorSpec(shape=[], dtype=DTYPE),
-            tf.TensorSpec(shape=[], dtype=DTYPEINT),
-            tf.TensorSpec(shape=[], dtype=DTYPE),
-            tf.TensorSpec(shape=[], dtype=DTYPE),
-        ]
-    )
-    def while_body(bin_weight, n_bin, cur, prev):
-        """Fills the bin weight until it surpassed the avg
-        once it's done, returns the limits of the last bin"""
-        n_bin += 1
-        bin_weight += wei_t[n_bin]
-        prev = cur
-        cur = subdivisions[n_bin + 1]
-        return bin_weight, n_bin, cur, prev
-
-    ###########################
 
     # And now resize all bins
     new_bins = [fzero]
