@@ -71,17 +71,13 @@ other implemented integrators.
     _ = sampler.run_integration(10)
     
     # Now we can use sampler to generate random numbers
-    rnds, _, px = sampler.generate_random_array(100)
+    rnds, px = sampler.generate_random_array(100)
     
 The first object returned by ``generate_random_array`` are the random points,
 in the case in the example an array of shape ``(100, 10)``, i.e., the first axis
 is the number of requested events and the second axis the number of dimensions.
 
-The second object, ignored in this example, is whatever information the algorithm
-need to train. Since we are just generating random numbers and not training anymore
-we can ignore that.
-
-Finally, ``generate_random_array`` returns also the probability distribution
+Then ``generate_random_array`` returns also the probability distribution
 of the random points (i.e., the weight they carry).
 
 For convenience we include sampler wrappers which directly return a trained
@@ -92,7 +88,7 @@ reference to the ``generate_random_array`` method:
   from vegasflow import vegas_sampler
   
   sampler = vegas_sampler(my_complicated_fun, n_dim, n_events)
-  rnds, _, px = sampler(100)
+  rnds, px = sampler(100)
 
 
 It is possible to change the number of training steps (default 5) or to retrieve
@@ -102,7 +98,7 @@ arguments.
 .. code-block:: python
   
   sampler_class = vegas_sampler(my_complicated_fun, n_dim, n_events, training_steps=1, return_class=True)
-  rnds, _, px = sampler_class.generate_random_array(100)
+  rnds, px = sampler_class.generate_random_array(100)
 
 Integrating a numpy function
 ============================
