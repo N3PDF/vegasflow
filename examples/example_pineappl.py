@@ -61,7 +61,7 @@ def hadronic_pspgen(xarr, mmin, mmax):
     x2 = tau / y
     s = tau * smax
 
-    jacobian = np.math.log(tau0) * np.math.log(tau0) * tau * r1
+    jacobian = np.log(tau0) * np.log(tau0) * tau * r1
 
     # theta integration (in the CMS)
     cos_theta = 2.0 * r3 - 1.0
@@ -71,7 +71,7 @@ def hadronic_pspgen(xarr, mmin, mmax):
     u = -0.5 * s * (1.0 + cos_theta)
 
     # phi integration
-    jacobian *= 2.0 * np.math.acos(-1.0)
+    jacobian *= 2.0 * np.acos(-1.0)
 
     return s, t, u, x1, x2, jacobian
 

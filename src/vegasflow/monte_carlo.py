@@ -606,7 +606,7 @@ class MonteCarloFlow(ABC):
                 )
             test_array = tf.random.uniform((event_size, self.n_dim), dtype=DTYPE)
             wgt = tf.random.uniform((event_size,), dtype=DTYPE)
-            res_tmp = new_integrand(test_array, weight=wgt).numpy()
+            res_tmp = new_integrand(test_array, weight=wgt)#.numpy()
             res_shape = res_tmp.shape
 
             expected_shape = (event_size,)
