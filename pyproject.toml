@@ -24,6 +24,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies] 
+quantum = [
+  "qibolab[qrng] @ git+https://github.com/qiboteam/qibolab@qrng"
+]
 docs = [
 'sphinx',
 'sphinx_rtd_theme',
