@@ -4,10 +4,9 @@
 
 import numpy as np
 from pytest import mark
-
-from vegasflow import float_me, run_eager
-from vegasflow import VegasFlow, VegasFlowPlus, PlainFlow
 import tensorflow as tf
+
+from vegasflow import PlainFlow, VegasFlow, VegasFlowPlus, float_me, run_eager
 
 
 def generate_integrand(variable):

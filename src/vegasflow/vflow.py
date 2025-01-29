@@ -4,25 +4,26 @@
     The main interfaces of this class are the class `VegasFlow` and the
     `vegas_wrapper`
 """
+
 import json
+import logging
+
 import numpy as np
 import tensorflow as tf
 
 from vegasflow.configflow import (
+    ALPHA,
+    BINS_MAX,
     DTYPE,
     DTYPEINT,
+    float_me,
     fone,
     fzero,
-    float_me,
-    ione,
     int_me,
-    BINS_MAX,
-    ALPHA,
+    ione,
 )
-from vegasflow.monte_carlo import MonteCarloFlow, wrapper, sampler
+from vegasflow.monte_carlo import MonteCarloFlow, sampler, wrapper
 from vegasflow.utils import consume_array_into_indices
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -198,10 +199,7 @@ def refine_grid_per_dimension(t_res_sq, subdivisions):
     prev = fzero
     for _ in range(BINS_MAX - 1):
         bin_weight, n_bin, cur, prev = tf.while_loop(
-            while_check,
-            while_body,
-            (bin_weight, n_bin, cur, prev),
-            parallel_iterations=1,
+            while_check, while_body, (bin_weight, n_bin, cur, prev), parallel_iterations=1
         )
         bin_weight -= ave_t
         delta = (cur - prev) * bin_weight / wei_t[n_bin]

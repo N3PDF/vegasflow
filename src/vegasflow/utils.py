@@ -2,8 +2,9 @@
     This module contains tensorflow_compiled utilities
 """
 
-from vegasflow.configflow import DTYPEINT, DTYPE, float_me, int_me, fzero
 import tensorflow as tf
+
+from vegasflow.configflow import DTYPE, DTYPEINT, float_me, fzero, int_me
 
 
 @tf.function(
