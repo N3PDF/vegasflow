@@ -1,17 +1,18 @@
 """
 Run integration with qibo as the backend
+and compares it to other algorithms
 """
 
-from vegasflow.quantum import quantum_wrapper
-from vegasflow import float_me
+from vegasflow.quantum import quantum_wrapper, quantumflow_wrapper
+from vegasflow import float_me, vegas_wrapper, plain_wrapper, run_eager
 import time
 import numpy as np
 import tensorflow as tf
 
-
+run_eager(True)
 # MC integration setup
 dim = 2
-ncalls = int(1e2)
+ncalls = int(1e5)
 n_iter = 5
 
 
@@ -27,9 +28,19 @@ def symgauss(xarr):
     return pref * tf.exp(-coef)
 
 
-if __name__ == "__main__":
-    """Testing several different integrations"""
-    print(f"VEGAS MC, ncalls={ncalls}:")
+def test_me(wrapper, nev):
+    nev = int(nev)
+    algo = wrapper.__name__.split("_")[0]
+    print(f"> Running {algo} for {nev} events")
     start = time.time()
-    result = quantum_wrapper(symgauss, dim, n_iter, ncalls)
+    result = wrapper(symgauss, dim, n_iter, nev)
     end = time.time()
+    print(f"This run took {end-start}\n")
+    return result
+
+
+if __name__ == "__main__":
+    test_me(plain_wrapper, ncalls)
+    test_me(vegas_wrapper, ncalls)
+    test_me(quantum_wrapper, ncalls)
+    test_me(quantumflow_wrapper, ncalls)

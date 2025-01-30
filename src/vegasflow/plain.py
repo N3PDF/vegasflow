@@ -1,5 +1,5 @@
 """
-    Plain implementation of the plainest possible MonteCarlo
+Plain implementation of the plainest possible MonteCarlo
 """
 
 import tensorflow as tf
