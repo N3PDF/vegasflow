@@ -1,35 +1,35 @@
 """
-    Abstract class for Monte Carlo integrators
-    implements a distribution of events across multiple devices and tensorflow graph technology
+Abstract class for Monte Carlo integrators
+implements a distribution of events across multiple devices and tensorflow graph technology
 
-    Usage:
-        In order to implement a new MonteCarloFlow integrator
-        it is necessary to implement (at least) two methods:
+Usage:
+    In order to implement a new MonteCarloFlow integrator
+    it is necessary to implement (at least) two methods:
 
-        - `_run_event`: integrand
-            This function defines what to do in order to run one event
-            of the Monte Carlo. It is used only for compilation, as the
-            actual integration is done by the `run_event` method.
-            In order to use the full capabilities of this library, `_run_event`
-            can take a number of events as its input so it can run more than one
-            event at the same time.
-            All results from `_run_event` will be accumulated before being passed
-            to `_run_iteration`.
+    - `_run_event`: integrand
+        This function defines what to do in order to run one event
+        of the Monte Carlo. It is used only for compilation, as the
+        actual integration is done by the `run_event` method.
+        In order to use the full capabilities of this library, `_run_event`
+        can take a number of events as its input so it can run more than one
+        event at the same time.
+        All results from `_run_event` will be accumulated before being passed
+        to `_run_iteration`.
 
-        - `_run_iteration`:
-            This function defines what to do in a full iteration of the
-            MonteCarlo (i.e., what to do in order to run for n_events)
+    - `_run_iteration`:
+        This function defines what to do in a full iteration of the
+        MonteCarlo (i.e., what to do in order to run for n_events)
 
-    Device distribution:
-        The default behaviour is defined in the `configflow.py` file.
+Device distribution:
+    The default behaviour is defined in the `configflow.py` file.
 
-    This class will go through the devices given in the `list_devices` argument and consider
-    them all active and enabled. Then the integration will be broken in batches of `events_limit`
-    which will be given to the first idle device found.
-    This means if device A is two times faster than device B, it will be expected to get two times
-    as many events.
-    Equally so, if `events_limit` is greater than `n_events`, all events will be given to device A
-    as it is the first one found idle.
+This class will go through the devices given in the `list_devices` argument and consider
+them all active and enabled. Then the integration will be broken in batches of `events_limit`
+which will be given to the first idle device found.
+This means if device A is two times faster than device B, it will be expected to get two times
+as many events.
+Equally so, if `events_limit` is greater than `n_events`, all events will be given to device A
+as it is the first one found idle.
 """
 
 from abc import ABC, abstractmethod
@@ -246,6 +246,12 @@ class MonteCarloFlow(ABC):
         xjac = xjac_raw / (self.xjac * n_events)
         return rnds, xjac
 
+    def _internal_sampler(self, n_events):
+        """Latent uniform sampler to be digested by the MC algorithm"""
+        return tf.random.uniform(
+            (n_events, self.n_dim), minval=TECH_CUT, maxval=1.0 - TECH_CUT, dtype=DTYPE
+        )
+
     def _generate_random_array(self, n_events, *args):
         """Generate a 2D array of (n_events, n_dim) points
         For the weight of the given point, this function is considered
@@ -261,9 +267,8 @@ class MonteCarloFlow(ABC):
             `idx` : index associated to each random point
             `wgt` : wgt associated to the random point
         """
-        rnds_raw = tf.random.uniform(
-            (n_events, self.n_dim), minval=TECH_CUT, maxval=1.0 - TECH_CUT, dtype=DTYPE
-        )
+        rnds_raw = self._internal_sampler(n_events)
+
         # Now allow for the algorithm to produce the random numbers for the integration
         rnds, wgts_raw, *extra = self._digest_random_generation(rnds_raw, *args)
 
