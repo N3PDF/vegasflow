@@ -2,15 +2,22 @@
 A Monte Carlo integrator built upon Qibo for quantum integration
 """
 
-from .monte_carlo import wrapper, sampler
-from .plain import PlainFlow  # start building upon a naive idiotic integrator
-from .configflow import run_eager, DTYPE
 import tensorflow as tf
 
+from .configflow import DTYPE, run_eager
+from .monte_carlo import MonteCarloFlow, sampler, wrapper
+from .plain import PlainFlow
+from .vflow import VegasFlow
 
-class QuantumIntegrator(PlainFlow):
+
+class QuantumBase(MonteCarloFlow):
     """
-    Simple Monte Carlo integrator.
+    This class serves as a basis for the quantum monte carlo integrator.
+    At initialization it tries to import qibolab and connect to the quantum device,
+    if successful, saves the reference to _quantum_sampler.
+
+    This class is compatible with all ``MonteCarloFlow`` classes, it overrides
+    the uniform sampling and uses the quantum device instead.
     """
 
     _CAN_RUN_VECTORIAL = False
@@ -25,44 +32,44 @@ class QuantumIntegrator(PlainFlow):
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError("You can do pip install vegasflow[quantum]") from e
 
+        qaddress = "/dev/ttyACM0"
         try:
-            qrng = QRNG(address="/dev/ttyACM0")
+            # Check whether the quantum device is available and we can connect
+            qrng = QRNG(address=qaddress)
             qrng.connect()
+            qrng.disconnect()
         except SerialException as e:
-            raise SerialException("No quantum device found") from e
+            raise SerialException(f"No quantum device found at {qaddress}") from e
+
+        print(f"Sucessfuly connected to quantum device in {qaddress}")
 
         self._quantum_sampler = qrng
         super().__init__(*args, **kwargs)
 
-    def run_integration(self, *args, **kwargs):
-        ret = super().run_integration(*args, **kwargs)
-        self._quantum_sampler.disconnect()
-        return ret
-
-    def _generate_random_array(self, n_events, *args):
-        """
-        Returns
-            -------
-                `rnds`: array of (n_events, n_dim) random points
-                `idx` : index associated to each random point
-                `wgt` : wgt associated to the random point
-        """
+    def _internal_sampler(self, n_events):
+        """Sample ``n_events x n_dim`` numbers from the quantum device
+        and cast them to a TF DTYPE to pass down to the MC algorithm"""
+        self._quantum_sampler.connect()
         quantum_rnds_raw = self._quantum_sampler.random((n_events, self.n_dim))
-        rnds_raw = tf.cast(quantum_rnds_raw, dtype=DTYPE)
+        self._quantum_sampler.disconnect()
+        return tf.cast(quantum_rnds_raw, dtype=DTYPE)
 
-        rnds, wgts_raw, *extra = self._digest_random_generation(rnds_raw, *args)
 
-        wgts = wgts_raw * self.xjac
-        if self._xdelta is not None:
-            # Now apply integration limits
-            rnds = self._xmin + rnds * self._xdelta
-            wgts *= self._xdeltajac
-        return rnds, wgts, *extra
+class QuantumIntegrator(PlainFlow, QuantumBase):
+    pass
+
+
+class QuantumFlow(VegasFlow, QuantumBase):
+    pass
 
 
 def quantum_wrapper(*args, **kwargs):
     """Wrapper around QuantumIntegrator"""
     return wrapper(QuantumIntegrator, *args, **kwargs)
+
+
+def quantumflow_wrapper(*args, **kwargs):
+    return wrapper(QuantumFlow, *args, **kwargs)
 
 
 def quantum_sampler(*args, **kwargs):
