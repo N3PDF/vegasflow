@@ -7,14 +7,16 @@
 everything works """
 import json
 import tempfile
-import pytest
+
 import numpy as np
-from vegasflow.configflow import DTYPE, run_eager
-from vegasflow.vflow import VegasFlow
-from vegasflow.plain import PlainFlow
-from vegasflow.vflowplus import VegasFlowPlus
-from vegasflow import plain_sampler, vegas_sampler
+import pytest
 import tensorflow as tf
+
+from vegasflow import plain_sampler, vegas_sampler
+from vegasflow.configflow import DTYPE, run_eager
+from vegasflow.plain import PlainFlow
+from vegasflow.vflow import VegasFlow
+from vegasflow.vflowplus import VegasFlowPlus
 
 # Test setup
 dim = 2

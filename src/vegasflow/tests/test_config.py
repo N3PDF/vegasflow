@@ -2,11 +2,13 @@
     Test that the configuration is consistent
 """
 
-import os
-import numpy as np
 import importlib
+import os
+
+import numpy as np
+
 import vegasflow.configflow
-from vegasflow.configflow import DTYPE, DTYPEINT, int_me, float_me
+from vegasflow.configflow import DTYPE, DTYPEINT, float_me, int_me
 
 
 def test_int_me():

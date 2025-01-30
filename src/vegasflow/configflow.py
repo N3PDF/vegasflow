@@ -1,9 +1,12 @@
 """
 Define some constants, header style
 """
+
+import logging
+
 # Most of this can be moved to a yaml file without loss of generality
 import os
-import logging
+
 import numpy as np
 
 # Some global parameters
@@ -94,6 +97,8 @@ def run_eager(flag=True):
 
 
 FMAX = tf.constant(np.finfo(np.float64).max, dtype=DTYPE)
+
+
 # The wrappers below transform tensors and array to the correct type
 def int_me(i):
     """Cast the input to the `DTYPEINT` type"""

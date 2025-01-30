@@ -1,13 +1,11 @@
 """ Test the utilities """
 
 import numpy as np
-import tensorflow as tf
 import pytest
+import tensorflow as tf
 
 from vegasflow.configflow import DTYPEINT, int_me
-from vegasflow.utils import consume_array_into_indices, py_consume_array_into_indices
-
-from vegasflow.utils import generate_condition_function
+from vegasflow.utils import consume_array_into_indices, generate_condition_function, py_consume_array_into_indices
 
 
 def test_consume_array_into_indices():

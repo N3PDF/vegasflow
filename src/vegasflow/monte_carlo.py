@@ -32,27 +32,28 @@
     as it is the first one found idle.
 """
 
-import inspect
-import time
+from abc import ABC, abstractmethod
 import copy
-import threading
+import inspect
 import logging
-from abc import abstractmethod, ABC
+import threading
+import time
+
 import joblib
 import numpy as np
 import tensorflow as tf
+
 from vegasflow.configflow import (
-    MAX_EVENTS_LIMIT,
     DEFAULT_ACTIVE_DEVICES,
     DTYPE,
     DTYPEINT,
+    MAX_EVENTS_LIMIT,
     TECH_CUT,
     float_me,
-    int_me,
     fone,
     fzero,
+    int_me,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -304,7 +305,8 @@ class MonteCarloFlow(ABC):
 
     def _can_run_vectorial(self, expected_shape=None):
         """Accepting vectorial integrands depends on the algorithm,
-        if an algorithm can run on vectorial algorithms it should implement this method and return True"""
+        if an algorithm can run on vectorial algorithms it should implement this method and return True
+        """
         return self._CAN_RUN_VECTORIAL
 
     #### Integration management
@@ -561,7 +563,7 @@ class MonteCarloFlow(ABC):
                     signature = False
 
             compile_options = {
-                "experimental_autograph_options": tf.autograph.experimental.Feature.ALL,
+                "experimental_autograph_options": tf.autograph.experimental.Feature.ALL
             }
             if signature is None:
                 signature = autodiscover_signature
@@ -606,14 +608,14 @@ class MonteCarloFlow(ABC):
                 )
             test_array = tf.random.uniform((event_size, self.n_dim), dtype=DTYPE)
             wgt = tf.random.uniform((event_size,), dtype=DTYPE)
-            res_tmp = new_integrand(test_array, weight=wgt).numpy()
+            res_tmp = new_integrand(test_array, weight=wgt)  # .numpy()
             res_shape = res_tmp.shape
 
             expected_shape = (event_size,)
 
             if len(res_shape) == 2:
                 self._vectorial = True
-                expected_shape = res_tmp.reshape(event_size, -1).shape
+                expected_shape = tf.reshape(res_tmp, (event_size, -1)).shape
                 if not self._can_run_vectorial(expected_shape):
                     raise NotImplementedError(
                         f"""The {self.__class__.__name__} algorithm does not support vectorial integrands

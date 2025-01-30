@@ -6,27 +6,28 @@
 
     The main interface is the `VegasFlowPlus` class.
 """
-from itertools import product
+
 from functools import partial
+from itertools import product
+import logging
+
 import numpy as np
 import tensorflow as tf
 
 from vegasflow.configflow import (
+    BETA,
+    BINS_MAX,
     DTYPE,
     DTYPEINT,
+    MAX_NEVAL_HCUBE,
+    float_me,
     fone,
     fzero,
-    float_me,
     int_me,
-    BINS_MAX,
-    BETA,
-    MAX_NEVAL_HCUBE,
 )
-from vegasflow.monte_carlo import wrapper, sampler, MonteCarloFlow
-from vegasflow.vflow import VegasFlow, importance_sampling_digest
+from vegasflow.monte_carlo import MonteCarloFlow, sampler, wrapper
 from vegasflow.utils import consume_array_into_indices
-
-import logging
+from vegasflow.vflow import VegasFlow, importance_sampling_digest
 
 logger = logging.getLogger(__name__)
 
@@ -165,11 +166,7 @@ class VegasFlowPlus(VegasFlow):
         """Generate a random array for a given number of events divided in hypercubes"""
         # Get random numbers from hypercubes
         x, w, ind, segm = generate_samples_in_hypercubes(
-            rnds,
-            self._n_strat,
-            n_ev,
-            self._hypercubes,
-            self.divisions,
+            rnds, self._n_strat, n_ev, self._hypercubes, self.divisions
         )
         return x, w, ind, segm
 

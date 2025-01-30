@@ -1,13 +1,14 @@
 """
     Miscellaneous tests that don't really fit anywhere else
 """
-import pytest
-import numpy as np
 
-from vegasflow import VegasFlow, VegasFlowPlus, PlainFlow
+import numpy as np
+import pytest
 import tensorflow as tf
 
-from .test_algs import instance_and_compile, check_is_one
+from vegasflow import PlainFlow, VegasFlow, VegasFlowPlus
+
+from .test_algs import check_is_one, instance_and_compile
 
 
 def _vector_integrand(xarr, weight=None):
