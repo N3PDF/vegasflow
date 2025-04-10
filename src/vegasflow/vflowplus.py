@@ -1,10 +1,10 @@
 """
-    Implementation of vegas+ algorithm:
+Implementation of vegas+ algorithm:
 
-    adaptive importance sampling + adaptive stratified sampling
-    from https://arxiv.org/abs/2009.05112
+adaptive importance sampling + adaptive stratified sampling
+from https://arxiv.org/abs/2009.05112
 
-    The main interface is the `VegasFlowPlus` class.
+The main interface is the `VegasFlowPlus` class.
 """
 
 from functools import partial
