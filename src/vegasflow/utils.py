@@ -1,5 +1,5 @@
 """
-    This module contains tensorflow_compiled utilities
+This module contains tensorflow_compiled utilities
 """
 
 import tensorflow as tf
@@ -25,11 +25,11 @@ def consume_array_into_indices(input_arr, indices, result_size):
 
     Parameters
     ----------
-    `input_arr`
+    input_arr
         Array of results to be consumed
-    `indices`
+    indices
         Indices of the bins in which to accumulate the input array
-    `result_size`
+    result_size
         size of the output array
 
     Returns
@@ -53,15 +53,27 @@ def py_consume_array_into_indices(input_arr, indices, result_size):
 
 
 def generate_condition_function(n_mask, condition="and"):
-    """Generates a function that takes a number of masks
+    r"""Generates a function that takes a number of masks
     and returns a combination of all n_masks for the given condition.
 
     It is possible to pass a list of allowed conditions, in that case
-    the length of the list should be n_masks - 1 and will be apply
-    sequentially.
+    the length of the list should be n_masks - 1 and will be applied sequentially.
+    Note that for 2 masks you can directly use ``&`` and ``|``.
 
-    Note that for 2 masks you can directly use & and |
+    Parameters
+    ----------
+    n_mask: int
+        Number of masks the function should accept
+    condition: str (default="and")
+        Condition to apply to all masks. Accepted values are: ``and``, ``or``
 
+    Returns
+    -------
+    condition_to_idx: function
+        ``function(*masks)`` -> full_mask, true indices
+
+    Example
+    -------
     >>> from vegasflow.utils import generate_condition_function
     >>> import tensorflow as tf
     >>> f_cond = generate_condition_function(2, condition='or')
@@ -69,32 +81,18 @@ def generate_condition_function(n_mask, condition="and"):
     >>> t_2 = tf.constant([False, False, True])
     >>> full_mask, indices = f_cond(t_1, t_2)
     >>> print(f"{full_mask=}\n{indices=}")
-    full_mask=<tf.Tensor: shape=(3,), dtype=bool, numpy=array([ True, False,  True])>
-    indices=<tf.Tensor: shape=(2, 1), dtype=int32, numpy=
-    array([[0],
-        [2]], dtype=int32)>
+        full_mask=<tf.Tensor: shape=(3,), dtype=bool, numpy=array([ True, False,  True])>
+        indices=<tf.Tensor: shape=(2, 1), dtype=int32, numpy= array([[0], [2]], dtype=int32)>
+
     >>> f_cond = generate_condition_function(3, condition=['or', 'and'])
     >>> t_1 = tf.constant([True, False, True])
     >>> t_2 = tf.constant([False, False, True])
     >>> t_3 = tf.constant([True, False, False])
     >>> full_mask, indices = f_cond(t_1, t_2, t_3)
     >>> print(f"{full_mask=}\n{indices=}")
-    full_mask=<tf.Tensor: shape=(3,), dtype=bool, numpy=array([ True, False, False])>
-    indices=<tf.Tensor: shape=(1, 1), dtype=int32, numpy=array([[0]], dtype=int32)>
+        full_mask=<tf.Tensor: shape=(3,), dtype=bool, numpy=array([ True, False, False])>
+        indices=<tf.Tensor: shape=(1, 1), dtype=int32, numpy=array([[0]], dtype=int32)>
 
-
-
-    Parameters
-    ----------
-    `n_mask`: int
-        Number of masks the function should accept
-    `condition`: str (default='and')
-        Condition to apply to all masks. Accepted values are: and, or
-
-    Returns
-    -------
-    `condition_to_idx`: function
-        function(*masks) -> full_mask, true indices
     """
     allowed_conditions = {"and": tf.math.logical_and, "or": tf.math.logical_or}
     allo = list(allowed_conditions.keys())
@@ -121,10 +119,10 @@ def generate_condition_function(n_mask, condition="and"):
 
         Returns
         -------
-            `res`: tf.bool
+            res: tf.bool
                 Mask that combines all masks
-            `indices`: tf.int
-                Indices in which `res` is True
+            indices: tf.int
+                Indices in which ``res`` is True
         """
         if is_list:
             res = masks[0]

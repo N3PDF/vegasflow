@@ -37,8 +37,9 @@ FBINS = float_me(BINS_MAX)
     ]
 )
 def importance_sampling_digest(xn, divisions):
-    """Importance sampling algorithm:
-    receives a random array (number of dimensions, number of dim)
+    """Common piece of the importance sampling algorithm.
+
+    Receives a random array (number of dimensions, number of dim)
     containing information about from which bins in the
     grid (n_dims, BINS_MAX+1) the random points have to be sampled
 
@@ -48,7 +49,7 @@ def importance_sampling_digest(xn, divisions):
     and so it has been lifted to its own function
 
     Parameters:
-    ----------
+    -----------
         xn: float tensor (n_dim, n_events)
             which bins to sample from
         divisions: float tensor (n_dims, BINS_MAX+1)

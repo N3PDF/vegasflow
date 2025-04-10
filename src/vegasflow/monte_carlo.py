@@ -1,35 +1,35 @@
 """
-    Abstract class for Monte Carlo integrators
-    implements a distribution of events across multiple devices and tensorflow graph technology
+Abstract class for Monte Carlo integrators
+implements a distribution of events across multiple devices and tensorflow graph technology
 
-    Usage:
-        In order to implement a new MonteCarloFlow integrator
-        it is necessary to implement (at least) two methods:
+Usage:
+    In order to implement a new MonteCarloFlow integrator
+    it is necessary to implement (at least) two methods:
 
-        - `_run_event`: integrand
-            This function defines what to do in order to run one event
-            of the Monte Carlo. It is used only for compilation, as the
-            actual integration is done by the `run_event` method.
-            In order to use the full capabilities of this library, `_run_event`
-            can take a number of events as its input so it can run more than one
-            event at the same time.
-            All results from `_run_event` will be accumulated before being passed
-            to `_run_iteration`.
+    - `_run_event`: integrand
+        This function defines what to do in order to run one event
+        of the Monte Carlo. It is used only for compilation, as the
+        actual integration is done by the `run_event` method.
+        In order to use the full capabilities of this library, `_run_event`
+        can take a number of events as its input so it can run more than one
+        event at the same time.
+        All results from `_run_event` will be accumulated before being passed
+        to `_run_iteration`.
 
-        - `_run_iteration`:
-            This function defines what to do in a full iteration of the
-            MonteCarlo (i.e., what to do in order to run for n_events)
+    - `_run_iteration`:
+        This function defines what to do in a full iteration of the
+        MonteCarlo (i.e., what to do in order to run for n_events)
 
-    Device distribution:
-        The default behaviour is defined in the `configflow.py` file.
+Device distribution:
+    The default behaviour is defined in the `configflow.py` file.
 
-    This class will go through the devices given in the `list_devices` argument and consider
-    them all active and enabled. Then the integration will be broken in batches of `events_limit`
-    which will be given to the first idle device found.
-    This means if device A is two times faster than device B, it will be expected to get two times
-    as many events.
-    Equally so, if `events_limit` is greater than `n_events`, all events will be given to device A
-    as it is the first one found idle.
+This class will go through the devices given in the `list_devices` argument and consider
+them all active and enabled. Then the integration will be broken in batches of `events_limit`
+which will be given to the first idle device found.
+This means if device A is two times faster than device B, it will be expected to get two times
+as many events.
+Equally so, if `events_limit` is greater than `n_events`, all events will be given to device A
+as it is the first one found idle.
 """
 
 from abc import ABC, abstractmethod
@@ -499,7 +499,7 @@ class MonteCarloFlow(ABC):
 
         - `integrand(array_random, weight = None)`,
 
-        the minimal working signature fo the integrand will be
+        the minimal working signature of the integrand will be
 
         - `integrand(array_random)`.
 
@@ -510,8 +510,9 @@ class MonteCarloFlow(ABC):
 
         This function will try to understand the signature of the function and compile
         it accordingly, this means:
-            <1> array_random: DTYPE of shape [None, n_dim]
-            <2> weight: DTYPE of shape [None]
+
+            - <1> array_random: DTYPE of shape [None, n_dim]
+            - <2> weight: DTYPE of shape [None]
 
         if the function posses any kewyword arguments not included in this list,
         it will be compiled with a generic `tf.function` call.

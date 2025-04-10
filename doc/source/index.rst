@@ -9,7 +9,7 @@ VegasFlow: accelerating Monte Carlo simulation across multiple hardware platform
 .. image:: https://img.shields.io/badge/j.%20Computer%20Physics%20Communication-2020%2F107376-blue
    :target: https://doi.org/10.1016/j.cpc.2020.107376
 
-.. image:: https://img.shields.io/badge/arXiv-physics.comp--ph%2F%20%20%20%202002.12921-%23B31B1B
+.. image:: https://img.shields.io/badge/physics.comp--ph-arXiv%3A2002.12921-B31B1B
    :target: https://arxiv.org/abs/2002.12921
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3691926.svg
@@ -132,14 +132,9 @@ Why the name ``VegasFlow``?
 
 It is a combination of the names `Vegas` and `Tensorflow`.
 
-- **Vegas**: this integration algorithm, created originally by `G.P. Lepage <https://www.sciencedirect.com/science/article/pii/S001046559900209X>`_
-sits at the core of many of the most advanced calculations in High Energy Physics,
-it powers `Madgraph <https://cp3.irmp.ucl.ac.be/projects/madgraph/>_`, `MCFM <https://mcfm.fnal.gov/>`_
-or `Sherpa <https://sherpa.hepforge.org/doc/SHERPA-MC-2.2.8.html#VEGAS>`_ among others.
-Lepage's own implementation is available in `github <https://github.com/gplepage/vegas>`_.
+- **Vegas**: this integration algorithm, created originally by `G.P. Lepage <https://www.sciencedirect.com/science/article/pii/S001046559900209X>`_ sits at the core of many of the most advanced calculations in High Energy Physics, it powers `Madgraph <https://cp3.irmp.ucl.ac.be/projects/madgraph/>_`, `MCFM <https://mcfm.fnal.gov/>`_ or `Sherpa <https://sherpa.hepforge.org/doc/SHERPA-MC-2.2.8.html#VEGAS>`_ among others. Lepage's own implementation is available in `github <https://github.com/gplepage/vegas>`_.
 
-- **TensorFlow**: the `tensorflow <https://www.tensorflow.org/>`_ is developed by Google and was made public in November of 2015.
-It is a perfect combination between performance and usability. With a focus on Deep Learning, TensorFlow provides an algebra library able to easily run operations in many different devices: CPUs, GPUs, TPUs with little input by the developer.
+- **TensorFlow**: the `tensorflow <https://www.tensorflow.org/>`_ is developed by Google and was made public in November of 2015. It is a perfect combination between performance and usability. With a focus on Deep Learning, TensorFlow provides an algebra library able to easily run operations in many different devices: CPUs, GPUs, TPUs with little input by the developer.
 
 I have a problem I can't solve
 ------------------------------

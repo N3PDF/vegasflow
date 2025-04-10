@@ -313,6 +313,22 @@ and gradients can be computed as shown below.
     z.assign(float_me(4.0))
     compute_and_print_gradient()
 
+
+Just In Time (jit) compilation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When compiling very large functions, ``tensorflow`` might take much more memory than expected.
+In those cases, and for recent versions of ``tensorflow``, it might be beneficial to compile
+the function using XLA, which you can enable with the optional argument ``jit_compile=True``. `See in the tensorflow docs <https://www.tensorflow.org/api_docs/python/tf/function#jit_compile>`_
+
+.. code-block:: python
+
+    @tf.function(jit_compile=True)
+    def some_complicated_function(x):
+        integration_result, error, _ = runner()
+        return x*integration_result
+
+
 Running in distributed systems
 ==============================
 
@@ -327,6 +343,8 @@ An example can be found in the `examples/cluster_dask.py <https://github.com/N3P
 a `SLURM <https://slurm.schedmd.com/documentation.html>`_ cluster is used as an example
 
 .. note:: When the distributing capabilities of dask are being useful, ``VegasFlow`` "forfeits" control of the devices in which to run, trusting ``TensorFlow``'s defaults. To run, for instance, two GPUs in one single node while using dask the user should send two separate dask jobs, each targetting a different GPU.
+
+
 
 Global configuration
 ====================

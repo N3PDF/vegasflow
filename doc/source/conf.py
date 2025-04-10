@@ -12,7 +12,6 @@
 #
 import os
 import sys
-from recommonmark.transform import AutoStructify
 
 sys.path.insert(0, os.path.abspath('..'))
 import vegasflow
@@ -43,7 +42,6 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
-    'recommonmark',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -56,8 +54,6 @@ templates_path = ['_templates']
 #
 source_suffix = {
     '.rst': 'restructuredtext',
-    '.txt': 'markdown',
-    '.md': 'markdown',
 }
 
 autosectionlabel_prefix_document = True
@@ -80,7 +76,7 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+#html_static_path = ['_static']
 
 
 # -- Intersphinx  -------------------------------------------------------------
@@ -95,12 +91,3 @@ doctest_path = [os.path.abspath('../examples')]
 # -- Autodoc ------------------------------------------------------------------
 #
 autodoc_member_order = 'bysource'
-
-# Adapted this from
-# https://github.com/readthedocs/recommonmark/blob/ddd56e7717e9745f11300059e4268e204138a6b1/docs/conf.py
-# app setup hook
-def setup(app):
-    app.add_config_value('recommonmark_config', {
-        'enable_eval_rst': True,
-    }, True)
-    app.add_transform(AutoStructify)
