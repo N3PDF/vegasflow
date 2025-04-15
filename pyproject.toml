@@ -25,7 +25,7 @@ dependencies = [
 
 [project.optional-dependencies] 
 quantum = [
-  "qibolab[qrng] @ git+https://github.com/qiboteam/qibolab@qrng"
+  "qibolab>=0.2.3"
 ]
 docs = [
 'sphinx',
