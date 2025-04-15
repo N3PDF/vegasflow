@@ -1,8 +1,8 @@
 """
-    This module contains the VegasFlow class and all its auxiliary functions
+This module contains the VegasFlow class and all its auxiliary functions
 
-    The main interfaces of this class are the class `VegasFlow` and the
-    `vegas_wrapper`
+The main interfaces of this class are the class `VegasFlow` and the
+`vegas_wrapper`
 """
 
 import json

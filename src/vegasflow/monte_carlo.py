@@ -246,6 +246,12 @@ class MonteCarloFlow(ABC):
         xjac = xjac_raw / (self.xjac * n_events)
         return rnds, xjac
 
+    def _internal_sampler(self, n_events):
+        """Latent uniform sampler to be digested by the MC algorithm"""
+        return tf.random.uniform(
+            (n_events, self.n_dim), minval=TECH_CUT, maxval=1.0 - TECH_CUT, dtype=DTYPE
+        )
+
     def _generate_random_array(self, n_events, *args):
         """Generate a 2D array of (n_events, n_dim) points
         For the weight of the given point, this function is considered
@@ -261,9 +267,8 @@ class MonteCarloFlow(ABC):
             `idx` : index associated to each random point
             `wgt` : wgt associated to the random point
         """
-        rnds_raw = tf.random.uniform(
-            (n_events, self.n_dim), minval=TECH_CUT, maxval=1.0 - TECH_CUT, dtype=DTYPE
-        )
+        rnds_raw = self._internal_sampler(n_events)
+
         # Now allow for the algorithm to produce the random numbers for the integration
         rnds, wgts_raw, *extra = self._digest_random_generation(rnds_raw, *args)
 
